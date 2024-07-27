@@ -1,0 +1,433 @@
+:root {
+  /* Define CSS variables for colors and styles */
+  --primary-color: #03a9f4;
+  --secondary-color: #f0f0f0;
+  --background-color: white;
+  --text-color: black;
+  --box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12),
+    0 3px 1px -2px rgba(0, 0, 0, 0.2);
+}
+
+* {
+  transition: all 0.5s ease;
+}
+
+.bg-white {
+  background-color: var(--background-color);
+}
+
+.text-black {
+  color: var(--text-color);
+}
+
+.rounded {
+  border-radius: 8px;
+}
+
+/* Card Container */
+ha-card {
+  overflow: visible !important
+}
+
+/* Main card styling */
+.card {
+  background-color: var(
+    --background-color,
+    var(--ha-card-background, var(--card-background-color, white))
+  );
+  border-radius: 8px;
+  box-shadow: var(
+    --ha-card-box-shadow,
+    0 2px 2px 0 rgba(0, 0, 0, 0.14),
+    0 1px 5px 0 rgba(0, 0, 0, 0.12),
+    0 3px 1px -2px rgba(0, 0, 0, 0.2)
+  );
+  color: var(--text-color, var(--primary-text-color, black));
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  font-size: 14px;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Add a pseudo-element for the border */
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.1);
+  z-index: 1;
+}
+
+/* Ensure all content is above the background and border */
+.header,
+.effect-select-wrapper,
+.effect-info,
+.attributes {
+  position: relative;
+  z-index: 2;
+}
+
+/* Card Background */
+.card-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.7;
+  transition: opacity 0.5s ease, background-image 0.5s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Header section */
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Light icon styling */
+.light-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 16px;
+  border-radius: 50%;
+  background-color: var(--accent-color, var(--primary-color, #03a9f4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0
+    rgba(var(--accent-color, var(--primary-color-rgb, 3, 169, 244)), 0);
+}
+
+/* Light icon image styling */
+.light-icon img {
+  width: 30px;
+  height: 30px;
+  filter: brightness(0.8);
+}
+
+/* Light icon when the light is on */
+.light-on .light-icon {
+  box-shadow: 0 0 15px var(--accent-color, var(--primary-color, #03a9f4));
+}
+
+.light-on .light-icon img {
+  filter: brightness(1.2) drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+}
+
+/* Light name styling */
+.light-name {
+  flex-grow: 1;
+  font-weight: bold;
+  font-size: 1.5em;
+  color: var(--text-color, var(--primary-text-color, black));
+  margin: 0 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Dropdown section */
+.effect-select-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+  z-index: 3;
+}
+
+/* Dropdown container */
+.dropdown {
+  position: relative;
+}
+
+/* Dropdown header styling */
+.dropdown-header {
+  padding: 8px 12px;
+  border: 2px solid var(--accent-color, var(--primary-color, #03a9f4));
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(
+    --background-color,
+    var(--card-background-color, white)
+  );
+  color: var(--text-color, var(--primary-text-color, black));
+  font-size: 1.1em;
+}
+
+.dropdown-header:hover {
+  background-color: var(
+    --accent-color,
+    var(--secondary-background-color, #f0f0f0)
+  );
+  color: var(--background-color, var(--primary-text-color, black));
+}
+
+.dropdown-header::after {
+  content: '▼';
+  font-size: 0.8em;
+}
+
+/* Dropdown when open */
+.dropdown.open .dropdown-header::after {
+  transform: rotate(180deg);
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(
+    --background-color,
+    var(--card-background-color, white)
+  );
+  border: 1px solid var(--accent-color, var(--primary-color, #03a9f4));
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 4;
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: top;
+  transform: scaleY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown.open .dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: scaleY(1);
+}
+
+/* Dropdown item styling */
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-color, var(--primary-text-color, black));
+  font-size: 1.1em;
+}
+
+.dropdown-item:hover {
+  background-color: var(--accent-color, var(--primary-color, #03a9f4));
+  color: var(--background-color, white);
+}
+
+/* Effect info section */
+.effect-info {
+  background-color: rgba(var(--background-color-rgb, 128, 128, 128), 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(var(--accent-color-rgb, 3, 169, 244), 0.3);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Effect info when visible */
+.effect-info.visible {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 200px;
+}
+
+/* Effect description styling */
+.effect-info-text {
+  flex: 1;
+}
+
+.effect-description {
+  font-style: italic;
+  color: var(--text-color, var(--primary-text-color, black));
+  font-weight: 500;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* Effect publisher styling */
+.effect-publisher {
+  font-size: 0.9em;
+  color: var(--text-color, var(--secondary-text-color, #666));
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Effect features styling */
+.effect-features {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 12px;
+}
+
+.effect-features ha-icon {
+  --mdc-icon-size: 20px;
+  color: var(--text-color, var(--secondary-text-color, #666));
+  margin-bottom: 4px;
+}
+
+.effect-features ha-icon:last-child {
+  margin-bottom: 0;
+}
+
+/* Attributes section */
+.attributes {
+  margin-top: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.attributes-header {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.attributes-header ha-icon {
+  --mdc-icon-size: 24px;
+  color: var(--text-color, var(--primary-text-color, black));
+  margin-right: 8px;
+}
+
+.attributes-header span {
+  font-weight: bold;
+  color: var(--text-color, var(--primary-text-color, black));
+  font-size: 1.1em;
+}
+
+.attributes.expanded .attributes-header ha-icon {
+  transform: rotate(180deg);
+}
+
+.attributes-content {
+  max-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  padding: 0;
+  margin-top: 8px;
+  background-color: rgba(var(--background-color-rgb, 128, 128, 128), 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.attributes.expanded .attributes-content {
+  max-height: 300px;
+  padding: 8px 12px;
+  overflow-y: auto;
+  border: 1px solid rgba(var(--accent-color-rgb, 3, 169, 244), 0.3);
+}
+
+/* Attribute list styling */
+.attribute-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.attribute-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12);
+  font-size: 0.9em;
+}
+
+.attribute-item:last-child {
+  border-bottom: none;
+}
+
+.attribute-key {
+  font-weight: bold;
+  margin-right: 8px;
+  color: var(--text-color, var(--primary-text-color, black));
+  flex: 0 0 40%;
+}
+
+.attribute-value {
+  flex: 0 0 58%;
+  text-align: right;
+  color: var(--text-color, var(--secondary-text-color, #666));
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-size: 0.9em;
+}
+
+/* Scrollbar styles */
+.dropdown-content::-webkit-scrollbar,
+.attributes.expanded .attributes-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown-content::-webkit-scrollbar-track,
+.attributes.expanded .attributes-content::-webkit-scrollbar-track {
+  background: rgba(var(--background-color-rgb, 128, 128, 128), 0.1);
+}
+
+.dropdown-content::-webkit-scrollbar-thumb,
+.attributes.expanded .attributes-content::-webkit-scrollbar-thumb {
+  background-color: var(--accent-color, var(--primary-color, #03a9f4));
+  border-radius: 4px;
+  border: 2px solid rgba(var(--background-color-rgb, 128, 128, 128), 0.1);
+}
+
+/* Toggle switch styles */
+ha-switch {
+  --switch-checked-color: var(--accent-color, var(--primary-color));
+  --switch-checked-button-color: var(
+    --switch-checked-color,
+    var(--primary-background-color)
+  );
+  --switch-checked-track-color: var(--switch-checked-color, #000000);
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .card {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .light-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .light-icon img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .light-name {
+    font-size: 1.5em;
+  }
+
+  .dropdown-header,
+  .dropdown-item {
+    padding: 6px 10px;
+  }
+}
