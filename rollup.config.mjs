@@ -15,7 +15,7 @@ const development = process.env.BUILD === 'development';
 export default {
   input: 'src/hyper-light-card.ts',
   output: {
-    file: 'dist/hyper-light-card.js',
+    dir: 'dist',
     format: 'es',
     sourcemap: true, // Always generate source map
   },

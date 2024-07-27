@@ -14,7 +14,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "copy:hass": "node scripts/copy-to-hass.js",
-    "dev": "npm run build:dev && npm run copy:hass"
+    "dev": "npm run build:dev && npm run copy:hass",
+    "build:hacs": "rollup -c --environment BUILD:production && cp dist/hyper-light-card.js dist/hyper-light-card-bundle.js"
   },
   "keywords": [
     "home-assistant",
@@ -22,8 +23,8 @@
     "custom-card",
     "signalrgb"
   ],
-  "author": "Your Name",
-  "license": "MIT",
+  "author": "hyperb1iss",
+  "license": "Apache 2.0",
   "devDependencies": {
     "@babel/core": "^7.24.9",
     "@babel/plugin-transform-typescript": "^7.25.0",
@@ -87,10 +88,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/hyper-light-card.git"
+    "url": "https://github.com/hyperb1iss/hyper-light-card.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/hyper-light-card/issues"
+    "url": "https://github.com/hyperb1iss/hyper-light-card/issues"
   },
-  "homepage": "https://github.com/your-username/hyper-light-card#readme"
+  "homepage": "https://github.com/hyperb1iss/hyper-light-card#readme"
 }
