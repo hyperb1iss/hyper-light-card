@@ -32,7 +32,7 @@ filesToCopy.forEach(file => {
   console.log(`Attempting to copy ${sourcePath} to ${destPath}`);
 
   if (fs.existsSync(sourcePath)) {
-    fs.copyFile(sourcePath, destPath, (err) => {
+    fs.copyFile(sourcePath, destPath, err => {
       if (err) {
         console.error(`Error copying ${file}: ${err}`);
       } else {

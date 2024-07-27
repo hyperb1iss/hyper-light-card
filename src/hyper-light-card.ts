@@ -386,6 +386,6 @@ customElements.define('hyper-light-card', HyperLightCard);
 
 const version = process.env.VERSION;
 console.log(
-  `%c 🚀✨🌟 HyperLightCard v${version} launched! 🌠🛸🌈 `,
+  `%c 🚀✨🌟 hyper-light-card v${version} launched! 🌠🛸🌈 `,
   'background: linear-gradient(90deg, #000033 0%, #0033cc 50%, #6600cc 100%); color: #00ffff; font-weight: bold; padding: 5px 10px; border-radius: 5px; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #00ffff, 0 0 35px #00ffff, 0 0 40px #00ffff, 0 0 50px #00ffff, 0 0 75px #00ffff;',
 );

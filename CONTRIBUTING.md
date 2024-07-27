@@ -1,4 +1,4 @@
-# 🌟 Contributing to Hyper Light Card
+# 🌟 Contributing to hyper-light-card
 
 🌠🌠🌠 Let's make beautiful pixels together! 🌠🌠🌠
 
@@ -12,7 +12,7 @@
 
 ### Forking and Branching
 
-1. 🍴 [Fork the Hyper Light Card repository](https://help.github.com/articles/fork-a-repo).
+1. 🍴 [Fork the hyper-light-card repository](https://help.github.com/articles/fork-a-repo).
 2. 🌿 Create a branch with a descriptive name:
    ```sh
    git checkout -b add-new-effect-selector
