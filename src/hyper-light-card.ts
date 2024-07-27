@@ -9,12 +9,18 @@ import {
 import styles from './hyper-light-card-styles.css';
 
 interface Hass {
-  states: Record<string, any>;
+  states: Record<string, HassEntity>;
   callService: (
     domain: string,
     service: string,
-    serviceData?: Record<string, any>,
+    serviceData?: Record<string, unknown>,
   ) => void;
+}
+
+interface HassEntity {
+  state: string;
+  attributes: Record<string, string>;
+  entity_id: string;
 }
 
 interface Config {
@@ -174,7 +180,7 @@ class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderBackground(stateObj: any) {
+  private _renderBackground(stateObj: HassEntity) {
     const backgroundImage = stateObj.attributes.effect_image
       ? `url(${stateObj.attributes.effect_image})`
       : 'none';
@@ -187,7 +193,7 @@ class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderHeader(stateObj: any) {
+  private _renderHeader(stateObj: HassEntity) {
     const name =
       this.config!.name ||
       stateObj.attributes.friendly_name ||
@@ -208,8 +214,10 @@ class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderEffectDropdown(stateObj: any) {
-    const effectList = stateObj.attributes.effect_list || [];
+  private _renderEffectDropdown(stateObj: HassEntity) {
+    const effectList: string[] = Array.isArray(stateObj.attributes.effect_list)
+      ? stateObj.attributes.effect_list
+      : [];
     return html`
       <div class="effect-select-wrapper">
         <div class="dropdown ${this._isDropdownOpen ? 'open' : ''}">
@@ -233,7 +241,7 @@ class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderEffectInfo(stateObj: any) {
+  private _renderEffectInfo(stateObj: HassEntity) {
     if (!this._showEffectInfo) return html``;
 
     const description =
@@ -272,7 +280,7 @@ class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderAttributes(stateObj: any) {
+  private _renderAttributes(stateObj: HassEntity) {
     if (!this._showEffectParameters) return html``;
 
     const effectParameters = stateObj.attributes.effect_parameters;
@@ -379,5 +387,5 @@ customElements.define('hyper-light-card', HyperLightCard);
 const version = process.env.VERSION;
 console.log(
   `%c 🚀✨🌟 HyperLightCard v${version} launched! 🌠🛸🌈 `,
-  'background: linear-gradient(90deg, #000033 0%, #0033cc 50%, #6600cc 100%); color: #00ffff; font-weight: bold; padding: 5px 10px; border-radius: 5px; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #00ffff, 0 0 35px #00ffff, 0 0 40px #00ffff, 0 0 50px #00ffff, 0 0 75px #00ffff;'
+  'background: linear-gradient(90deg, #000033 0%, #0033cc 50%, #6600cc 100%); color: #00ffff; font-weight: bold; padding: 5px 10px; border-radius: 5px; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #00ffff, 0 0 35px #00ffff, 0 0 40px #00ffff, 0 0 50px #00ffff, 0 0 75px #00ffff;',
 );

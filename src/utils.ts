@@ -15,7 +15,7 @@ export function ensureContrastLab(
 
   const maxAttempts = 200;
   let attempts = 0;
-  let step = 1; // Smaller step for finer adjustments
+  const step = 1; // Smaller step for finer adjustments
 
   while (contrast < 4.5 && attempts < maxAttempts) {
     if (bgColor.lab()[0] > 50) {
@@ -51,7 +51,6 @@ export function ensureContrastLab(
  */
 export function getAccessibleTextColors(rgb: number[]): number[] {
   const bgColor = chroma(rgb);
-  const complementaryHue = (bgColor.get('hsl.h') + 180) % 360;
   const complementaryColor = chroma.lab(
     bgColor.lab()[0],
     bgColor.get('lab.a'),
@@ -106,4 +105,3 @@ export function formatAttributeValue(value: boolean | number | string): string {
   }
   return value;
 }
-

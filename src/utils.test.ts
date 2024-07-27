@@ -12,22 +12,19 @@ describe('getAccessibleTextColors', () => {
     [[0, 0, 255], 'Blue background'],
     [[0, 0, 0], 'Black background'],
     [[255, 255, 255], 'White background'],
-  ])(
-    'getAccessibleTextColors returns accessible text colors (%s)',
-    (bgRgb, description) => {
-      const textColors = getAccessibleTextColors(bgRgb);
+  ])('getAccessibleTextColors returns accessible text colors (%s)', bgRgb => {
+    const textColors = getAccessibleTextColors(bgRgb);
 
-      // Ensure text is in a valid rgb format
-      const textRgb = textColors.map(Number);
-      if (!textRgb || textRgb.length !== 3) {
-        throw new Error(`Invalid RGB value returned: ${textColors}`);
-      }
+    // Ensure text is in a valid rgb format
+    const textRgb = textColors.map(Number);
+    if (!textRgb || textRgb.length !== 3) {
+      throw new Error(`Invalid RGB value returned: ${textColors}`);
+    }
 
-      const textContrast = chroma.contrast(chroma(bgRgb), chroma(textRgb));
+    const textContrast = chroma.contrast(chroma(bgRgb), chroma(textRgb));
 
-      expect(textContrast).toBeGreaterThanOrEqual(4.5);
-    },
-  );
+    expect(textContrast).toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 describe('ensureContrastLab', () => {
