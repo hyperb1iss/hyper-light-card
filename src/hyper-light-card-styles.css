@@ -45,7 +45,7 @@ ha-card {
   color: var(--text-color, var(--primary-text-color, black));
   padding: 16px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   z-index: 1;
   font-size: 14px;
   transition: background-color 0.5s ease, color 0.5s ease;
@@ -206,6 +206,7 @@ ha-card {
   visibility: hidden;
   transform-origin: top;
   transform: scaleY(0);
+  transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
