@@ -22,9 +22,23 @@
 - ℹ️ Detailed effect information display
 - 🔧 Customizable card appearance
 
-## 📸 Preview
-
-![hyper-light-card Preview](https://your-image-hosting.com/hyper-light-card-preview.gif)
+## 🌈 Screenshots
+<table>
+  <tr>
+    <td><img src="images/poison.png"/></td>
+    <td><img src="images/sakura.png"/></td>
+    <td><img src="images/cyber.png"/></td>
+  </tr>
+  <tr>
+    <td><img src="images/synth_sun.png"/></td>
+    <td><img src="images/cyberpunk_2077.png"/></td>
+    <td><img src="images/cotton_candy.png"/></td>
+  </tr>
+  <tr>
+    <td><img src="images/dark_matter_expanded.png"/></td>
+    <td><img src="images/corrosive_expanded.png"/></td>
+  </tr>
+</table>
 
 ## 🛠️ Installation
 <a name="installation"></a>
@@ -135,7 +149,7 @@ Distributed under the Apache License 2.0. See `LICENSE` for more information.
 
 Created by [Stefanie Jane 🌠](https://github.com/hyperb1iss)
 
-If you find this project useful, consider [buying me a Monster Ultra Violet!](https://ko-fi.com/hyperb1iss)! ⚡️
+If you find this project useful, [buy me a Monster Ultra Violet!](https://ko-fi.com/hyperb1iss)! ⚡️
 
 </div>
 
