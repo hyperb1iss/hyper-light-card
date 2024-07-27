@@ -283,7 +283,15 @@ class HyperLightCard extends LitElement {
   private _renderAttributes(stateObj: HassEntity) {
     if (!this._showEffectParameters) return html``;
 
-    const effectParameters = stateObj.attributes.effect_parameters;
+    const effectParameters = stateObj.attributes
+      .effect_parameters as unknown as
+      | Record<string, string | number | boolean>
+      | undefined;
+
+    if (!effectParameters || Object.keys(effectParameters).length === 0) {
+      return html``;
+    }
+
     return html`
       <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}">
         <div class="attributes-header" @click=${this._toggleAttributes}>
