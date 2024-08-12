@@ -26,7 +26,7 @@
 
 /* Card Container */
 ha-card {
-  overflow: visible !important
+  overflow: visible !important;
 }
 
 /* Main card styling */
@@ -48,7 +48,9 @@ ha-card {
   overflow: visible;
   z-index: 1;
   font-size: 14px;
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
 }
 
 /* Add a pseudo-element for the border */
@@ -84,7 +86,9 @@ ha-card {
   background-size: cover;
   background-position: center;
   opacity: 0.7;
-  transition: opacity 0.5s ease, background-image 0.5s ease;
+  transition:
+    opacity 0.5s ease,
+    background-image 0.5s ease;
   z-index: 0;
   pointer-events: none;
 }
@@ -206,7 +210,10 @@ ha-card {
   visibility: hidden;
   transform-origin: top;
   transform: scaleY(0);
-  transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+  transition:
+    opacity 0.3s,
+    visibility 0.3s,
+    transform 0.3s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -404,6 +411,119 @@ ha-switch {
     var(--primary-background-color)
   );
   --switch-checked-track-color: var(--switch-checked-color, #000000);
+}
+
+/* Brightness Slider */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 0 8px;
+}
+
+.brightness-slider {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  margin-right: 16px;
+}
+
+.brightness-slider ha-icon {
+  margin-right: 8px;
+  color: var(--text-color);
+}
+
+.brightness-slider input[type='range'] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--primary-text-color);
+  outline: none;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.brightness-slider input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--slider-color, var(--accent-color));
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color), 0.8);
+  margin-top: -5px; /* (18px - 8px) / 2 = 5px to center vertically */
+}
+
+.brightness-slider input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: var(--slider-color, var(--accent-color));
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color), 0.8);
+}
+
+.brightness-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, var(--accent-color)) 0%,
+    var(--slider-color, var(--accent-color)) var(--slider-percentage, 50%),
+    var(--primary-text-color) var(--slider-percentage, 50%),
+    var(--primary-text-color) 100%
+  );
+}
+
+.brightness-slider input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, var(--accent-color)) 0%,
+    var(--slider-color, var(--accent-color)) var(--slider-percentage, 50%),
+    var(--primary-text-color) var(--slider-percentage, 50%),
+    var(--primary-text-color) 100%
+  );
+}
+
+.brightness-slider input[type='range']:hover::-webkit-slider-thumb,
+.brightness-slider input[type='range']:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
+}
+
+.brightness-slider input[type='range']:hover::-moz-range-thumb,
+.brightness-slider input[type='range']:active::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
+}
+
+.attributes-toggle {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  background-color: rgba(var(--rgb-primary-text-color), 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.attributes-toggle:hover {
+  background-color: rgba(var(--rgb-primary-text-color), 0.2);
+}
+
+.attributes-toggle ha-icon {
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.attributes.expanded .attributes-toggle ha-icon {
+  transform: rotate(180deg);
 }
 
 /* Responsive design */

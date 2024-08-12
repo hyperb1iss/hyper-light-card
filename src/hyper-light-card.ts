@@ -1,5 +1,6 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import ColorThief from 'colorthief';
 import {
   getAccessibleTextColors,
@@ -44,6 +45,7 @@ class HyperLightCard extends LitElement {
   @property({ type: String, attribute: false }) _accentColor = '';
   @property({ type: Boolean, attribute: false }) _showEffectInfo = true;
   @property({ type: Boolean, attribute: false }) _showEffectParameters = true;
+  @state() private _brightness: number = 100;
 
   private _colorThief = new ColorThief();
   private _clickOutsideHandler: (event: Event) => void;
@@ -141,6 +143,19 @@ class HyperLightCard extends LitElement {
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     if (changedProperties.has('hass') || changedProperties.has('config')) {
       this._extractColors();
+      this._updateBrightness();
+    }
+  }
+
+  private _updateBrightness() {
+    if (this.hass && this.config) {
+      const stateObj = this.hass.states[this.config.entity];
+      if (stateObj && stateObj.attributes.brightness) {
+        // Convert 3-255 range from Home Assistant to 1-100 range
+        this._brightness = Math.round(
+          ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
+        );
+      }
     }
   }
 
@@ -161,6 +176,10 @@ class HyperLightCard extends LitElement {
     this._isOn = stateObj.state === 'on';
     this._currentEffect = stateObj.attributes.effect || 'No effect';
 
+    const sliderStyle = {
+      '--slider-color': this._accentColor,
+    };
+
     return html`
       <ha-card>
         <div
@@ -174,6 +193,10 @@ class HyperLightCard extends LitElement {
           ${this._renderBackground(stateObj)} ${this._renderHeader(stateObj)}
           ${this._renderEffectDropdown(stateObj)}
           ${this._showEffectInfo ? this._renderEffectInfo(stateObj) : ''}
+          <div class="controls-row">
+            ${this._renderBrightnessSlider(sliderStyle)}
+            ${this._showEffectParameters ? this._renderAttributesToggle() : ''}
+          </div>
           ${this._showEffectParameters ? this._renderAttributes(stateObj) : ''}
         </div>
       </ha-card>
@@ -280,6 +303,36 @@ class HyperLightCard extends LitElement {
     `;
   }
 
+  private _renderBrightnessSlider(sliderStyle: Record<string, string>) {
+    const updatedSliderStyle = {
+      ...sliderStyle,
+      '--slider-percentage': `${this._brightness}%`,
+      '--slider-color': this._accentColor,
+    };
+
+    return html`
+      <div class="brightness-slider" style=${styleMap(updatedSliderStyle)}>
+        <ha-icon icon="mdi:brightness-6"></ha-icon>
+        <input
+          type="range"
+          min="1"
+          max="100"
+          .value=${this._brightness.toString()}
+          @change=${this._handleBrightnessChange}
+          @input=${this._handleBrightnessChange}
+        />
+      </div>
+    `;
+  }
+
+  private _renderAttributesToggle() {
+    return html`
+      <div class="attributes-toggle" @click=${this._toggleAttributes}>
+        <ha-icon icon="mdi:chevron-down"></ha-icon>
+      </div>
+    `;
+  }
+
   private _renderAttributes(stateObj: HassEntity) {
     if (!this._showEffectParameters) return html``;
 
@@ -294,9 +347,6 @@ class HyperLightCard extends LitElement {
 
     return html`
       <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}">
-        <div class="attributes-header" @click=${this._toggleAttributes}>
-          <ha-icon icon="mdi:chevron-down"></ha-icon>
-        </div>
         <div class="attributes-content">
           ${this._renderAttributesList(effectParameters)}
         </div>
@@ -377,6 +427,24 @@ class HyperLightCard extends LitElement {
       this._isDropdownOpen = false;
       this.requestUpdate();
     }
+  }
+
+  private async _handleBrightnessChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const brightness = Number(target.value);
+    this._brightness = brightness;
+
+    if (this.hass && this.config) {
+      // Convert 1-100 range to 3-255 range for Home Assistant
+      const haBrightness = Math.round((brightness / 100) * 252) + 3;
+
+      await this.hass.callService('light', 'turn_on', {
+        entity_id: this.config.entity,
+        brightness: haBrightness,
+      });
+    }
+
+    this.requestUpdate();
   }
 
   connectedCallback() {
