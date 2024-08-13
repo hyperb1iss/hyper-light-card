@@ -104,6 +104,7 @@ class HyperLightCard extends LitElement {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
       img.src = stateObj.attributes.effect_image;
+      img.alt = `${stateObj.entity_id} effect image`;
       img.onload = () => {
         const palette = this._colorThief.getPalette(img, 3);
         console.debug('HyperLightCard: Color palette extracted', palette);
@@ -280,6 +281,7 @@ class HyperLightCard extends LitElement {
         class="card-background"
         style="background-image: ${backgroundImage}; opacity: ${this.config!
           .background_opacity};"
+        aria-hidden="true"
       ></div>
     `;
   }
@@ -291,16 +293,17 @@ class HyperLightCard extends LitElement {
       stateObj.entity_id;
     console.debug('HyperLightCard: Rendering header', name);
     return html`
-      <div class="header">
+      <div class="header" aria-label="${name}">
         <div class="light-icon ${this._isOn ? 'light-on' : ''}">
           ${this.config!.icon && this.config!.icon.startsWith('mdi:')
-            ? html`<ha-icon icon="${this.config!.icon}"></ha-icon>`
+            ? html`<ha-icon icon="${this.config!.icon}" aria-hidden="true"></ha-icon>`
             : html`<img src="${this.config!.icon}" alt="${name}" />`}
         </div>
         <div class="light-name" title="${name}">${name}</div>
         <ha-switch
           .checked=${this._isOn}
           @change=${this._toggleLight}
+          aria-label="Toggle light"
         ></ha-switch>
       </div>
     `;
@@ -314,15 +317,17 @@ class HyperLightCard extends LitElement {
     return html`
       <div class="effect-select-wrapper">
         <div class="dropdown ${this._isDropdownOpen ? 'open' : ''}">
-          <div class="dropdown-header" @click=${this._toggleDropdown}>
+          <div class="dropdown-header" @click=${this._toggleDropdown} aria-label="Current effect: ${this._currentEffect}" role="button">
             ${this._currentEffect}
           </div>
-          <div class="dropdown-content">
+          <div class="dropdown-content" role="menu">
             ${effectList.map(
               (effect: string) => html`
                 <div
                   class="dropdown-item"
                   @click=${() => this._selectEffect(effect)}
+                  role="menuitem"
+                  tabindex="0"
                 >
                   ${effect}
                 </div>
@@ -360,21 +365,23 @@ class HyperLightCard extends LitElement {
           <div class="effect-description">${description}</div>
           <div class="effect-publisher">Published by: ${publisher}</div>
         </div>
-        <div class="effect-features">
+        <div class="effect-features" aria-label="Effect features">
           ${usesAudio
             ? html`<ha-icon
                 icon="mdi:volume-high"
                 title="Uses Audio"
+                aria-label="Uses Audio"
               ></ha-icon>`
             : ''}
           ${usesInput
             ? html`<ha-icon
                 icon="mdi:gamepad-variant"
                 title="Uses Input"
+                aria-label="Uses Input"
               ></ha-icon>`
             : ''}
           ${usesVideo
-            ? html`<ha-icon icon="mdi:video" title="Uses Video"></ha-icon>`
+            ? html`<ha-icon icon="mdi:video" title="Uses Video" aria-label="Uses Video"></ha-icon>`
             : ''}
         </div>
       </div>
@@ -394,8 +401,8 @@ class HyperLightCard extends LitElement {
     );
 
     return html`
-      <div class="brightness-slider" style=${styleMap(updatedSliderStyle)}>
-        <ha-icon icon="mdi:brightness-6"></ha-icon>
+      <div class="brightness-slider" style=${styleMap(updatedSliderStyle)} role="slider" aria-valuemin="1" aria-valuemax="100" aria-valuenow="${this._brightness}">
+        <ha-icon icon="mdi:brightness-6" aria-hidden="true"></ha-icon>
         <input
           type="range"
           min="1"
@@ -403,6 +410,7 @@ class HyperLightCard extends LitElement {
           .value=${this._brightness.toString()}
           @change=${this._handleBrightnessChange}
           @input=${this._handleBrightnessChange}
+          aria-label="Adjust brightness"
         />
       </div>
     `;
@@ -411,7 +419,7 @@ class HyperLightCard extends LitElement {
   private _renderAttributesToggle() {
     console.debug('HyperLightCard: Rendering attributes toggle');
     return html`
-      <div class="attributes-toggle" @click=${this._toggleAttributes}>
+      <div class="attributes-toggle" @click=${this._toggleAttributes} role="button" aria-expanded="${this._isAttributesExpanded}" aria-label="Toggle effect parameters">
         <ha-icon icon="mdi:chevron-down"></ha-icon>
       </div>
     `;
@@ -433,7 +441,7 @@ class HyperLightCard extends LitElement {
     console.debug('HyperLightCard: Rendering attributes', effectParameters);
 
     return html`
-      <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}">
+      <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}" aria-hidden="${!this._isAttributesExpanded}">
         <div class="attributes-content">
           ${this._renderAttributesList(effectParameters)}
         </div>
