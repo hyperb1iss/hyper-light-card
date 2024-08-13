@@ -89,7 +89,7 @@ class HyperLightCard extends LitElement {
   firstUpdated() {
     console.debug('HyperLightCard: firstUpdated called');
     this._setupMutationObserver();
-    this._extractColors();
+    this._debouncedExtractColors();
   }
 
   private _extractColors() {
@@ -107,7 +107,14 @@ class HyperLightCard extends LitElement {
       img.onload = () => {
         const palette = this._colorThief.getPalette(img, 3);
         console.debug('HyperLightCard: Color palette extracted', palette);
-        this._applyColorTransition(palette);
+        if (palette && palette.length >= 2) {
+          this._applyColorTransition(palette);
+        } else {
+          console.warn(
+            'HyperLightCard: Insufficient colors in palette',
+            palette,
+          );
+        }
       };
     } else {
       console.debug('HyperLightCard: No effect image found');
@@ -133,6 +140,7 @@ class HyperLightCard extends LitElement {
       newTextColor,
       newAccentColor,
     );
+
     await new Promise(resolve => {
       requestAnimationFrame(() => {
         this.style.setProperty('--background-color', newBackgroundColor);
@@ -156,17 +164,30 @@ class HyperLightCard extends LitElement {
 
   private _debouncedUpdate = this._debounce(() => {
     this._updateStateFromHass();
+    this._debouncedExtractColors();
+  }, 100);
+
+  private _debouncedExtractColors = this._debounce(() => {
     this._extractColors();
-    this.requestUpdate();
   }, 100);
 
   private _updateStateFromHass() {
     if (this.hass && this.config) {
       const stateObj = this.hass.states[this.config.entity];
       if (stateObj) {
-        this._isOn = stateObj.state === 'on';
-        this._currentEffect = stateObj.attributes.effect || 'No effect';
-        this._updateBrightness();
+        const newIsOn = stateObj.state === 'on';
+        const newCurrentEffect = stateObj.attributes.effect || 'No effect';
+
+        // Only request an update if there are actual changes
+        if (
+          this._isOn !== newIsOn ||
+          this._currentEffect !== newCurrentEffect
+        ) {
+          this._isOn = newIsOn;
+          this._currentEffect = newCurrentEffect;
+          this._updateBrightness();
+          this.requestUpdate();
+        }
       }
     }
   }
@@ -185,10 +206,14 @@ class HyperLightCard extends LitElement {
       const stateObj = this.hass.states[this.config.entity];
       if (stateObj && stateObj.attributes.brightness) {
         // Convert 3-255 range from Home Assistant to 1-100 range
-        this._brightness = Math.round(
+        const newBrightness = Math.round(
           ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
         );
-        console.debug('HyperLightCard: Brightness updated', this._brightness);
+        if (this._brightness !== newBrightness) {
+          this._brightness = newBrightness;
+          console.debug('HyperLightCard: Brightness updated', this._brightness);
+          this.requestUpdate();
+        }
       } else {
         console.debug('HyperLightCard: No brightness attribute found');
       }
@@ -212,8 +237,6 @@ class HyperLightCard extends LitElement {
       `;
     }
 
-    this._isOn = stateObj.state === 'on';
-    this._currentEffect = stateObj.attributes.effect || 'No effect';
     console.debug('HyperLightCard: Rendering with state', {
       isOn: this._isOn,
       currentEffect: this._currentEffect,
