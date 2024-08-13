@@ -90,6 +90,11 @@ class HyperLightCard extends LitElement {
     console.debug('HyperLightCard: firstUpdated called');
     this._setupMutationObserver();
     this._debouncedExtractColors();
+
+    // Scroll to the current effect if the dropdown is already open
+    if (this._isDropdownOpen) {
+      this._scrollToCurrentEffect();
+    }
   }
 
   private _extractColors() {
@@ -296,7 +301,10 @@ class HyperLightCard extends LitElement {
       <div class="header" aria-label="${name}">
         <div class="light-icon ${this._isOn ? 'light-on' : ''}">
           ${this.config!.icon && this.config!.icon.startsWith('mdi:')
-            ? html`<ha-icon icon="${this.config!.icon}" aria-hidden="true"></ha-icon>`
+            ? html`<ha-icon
+                icon="${this.config!.icon}"
+                aria-hidden="true"
+              ></ha-icon>`
             : html`<img src="${this.config!.icon}" alt="${name}" />`}
         </div>
         <div class="light-name" title="${name}">${name}</div>
@@ -317,7 +325,12 @@ class HyperLightCard extends LitElement {
     return html`
       <div class="effect-select-wrapper">
         <div class="dropdown ${this._isDropdownOpen ? 'open' : ''}">
-          <div class="dropdown-header" @click=${this._toggleDropdown} aria-label="Current effect: ${this._currentEffect}" role="button">
+          <div
+            class="dropdown-header"
+            @click=${this._toggleDropdown}
+            aria-label="Current effect: ${this._currentEffect}"
+            role="button"
+          >
             ${this._currentEffect}
           </div>
           <div class="dropdown-content" role="menu">
@@ -381,7 +394,11 @@ class HyperLightCard extends LitElement {
               ></ha-icon>`
             : ''}
           ${usesVideo
-            ? html`<ha-icon icon="mdi:video" title="Uses Video" aria-label="Uses Video"></ha-icon>`
+            ? html`<ha-icon
+                icon="mdi:video"
+                title="Uses Video"
+                aria-label="Uses Video"
+              ></ha-icon>`
             : ''}
         </div>
       </div>
@@ -401,7 +418,14 @@ class HyperLightCard extends LitElement {
     );
 
     return html`
-      <div class="brightness-slider" style=${styleMap(updatedSliderStyle)} role="slider" aria-valuemin="1" aria-valuemax="100" aria-valuenow="${this._brightness}">
+      <div
+        class="brightness-slider"
+        style=${styleMap(updatedSliderStyle)}
+        role="slider"
+        aria-valuemin="1"
+        aria-valuemax="100"
+        aria-valuenow="${this._brightness}"
+      >
         <ha-icon icon="mdi:brightness-6" aria-hidden="true"></ha-icon>
         <input
           type="range"
@@ -419,7 +443,13 @@ class HyperLightCard extends LitElement {
   private _renderAttributesToggle() {
     console.debug('HyperLightCard: Rendering attributes toggle');
     return html`
-      <div class="attributes-toggle" @click=${this._toggleAttributes} role="button" aria-expanded="${this._isAttributesExpanded}" aria-label="Toggle effect parameters">
+      <div
+        class="attributes-toggle"
+        @click=${this._toggleAttributes}
+        role="button"
+        aria-expanded="${this._isAttributesExpanded}"
+        aria-label="Toggle effect parameters"
+      >
         <ha-icon icon="mdi:chevron-down"></ha-icon>
       </div>
     `;
@@ -441,7 +471,10 @@ class HyperLightCard extends LitElement {
     console.debug('HyperLightCard: Rendering attributes', effectParameters);
 
     return html`
-      <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}" aria-hidden="${!this._isAttributesExpanded}">
+      <div
+        class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}"
+        aria-hidden="${!this._isAttributesExpanded}"
+      >
         <div class="attributes-content">
           ${this._renderAttributesList(effectParameters)}
         </div>
@@ -502,6 +535,30 @@ class HyperLightCard extends LitElement {
     this.requestUpdate();
   }
 
+  private _getCurrentEffectIndex(): number {
+    const stateObj = this.hass?.states[this.config?.entity ?? ''];
+    const effectList: string[] = Array.isArray(stateObj?.attributes.effect_list)
+      ? stateObj?.attributes.effect_list
+      : [];
+
+    return effectList.indexOf(this._currentEffect);
+  }
+
+  private _scrollToCurrentEffect() {
+    requestAnimationFrame(() => {
+      const dropdownContent =
+        this.shadowRoot!.querySelector('.dropdown-content');
+      const currentEffectItem = dropdownContent?.querySelector(
+        `.dropdown-item:nth-child(${this._getCurrentEffectIndex() + 1})`,
+      );
+
+      if (currentEffectItem) {
+        currentEffectItem.scrollIntoView({ block: 'nearest' });
+        console.debug('HyperLightCard: Current effect scrolled into view');
+      }
+    });
+  }
+
   private _toggleDropdown(e: Event) {
     console.debug('HyperLightCard: _toggleDropdown called');
     e.stopPropagation();
@@ -510,6 +567,11 @@ class HyperLightCard extends LitElement {
       'HyperLightCard: Dropdown toggled, new state:',
       this._isDropdownOpen,
     );
+
+    if (this._isDropdownOpen) {
+      this._scrollToCurrentEffect();
+    }
+
     this.requestUpdate();
   }
 
