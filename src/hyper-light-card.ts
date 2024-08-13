@@ -54,6 +54,7 @@ class HyperLightCard extends LitElement {
   constructor() {
     super();
     this._clickOutsideHandler = this._handleClickOutside.bind(this);
+    console.debug('HyperLightCard: Constructor called');
   }
 
   static get styles() {
@@ -63,6 +64,7 @@ class HyperLightCard extends LitElement {
   }
 
   setConfig(config: Config) {
+    console.debug('HyperLightCard: setConfig called', config);
     if (!config.entity) {
       throw new Error('You need to define an entity');
     }
@@ -77,6 +79,7 @@ class HyperLightCard extends LitElement {
     };
     this._showEffectInfo = this.config.show_effect_info ?? true;
     this._showEffectParameters = this.config.show_effect_parameters ?? true;
+    console.debug('HyperLightCard: Config set', this.config);
   }
 
   getCardSize(): number {
@@ -84,27 +87,37 @@ class HyperLightCard extends LitElement {
   }
 
   firstUpdated() {
+    console.debug('HyperLightCard: firstUpdated called');
+    this._setupMutationObserver();
     this._extractColors();
   }
 
   private _extractColors() {
+    console.debug('HyperLightCard: _extractColors called');
     if (!this.config?.entity) {
+      console.debug('HyperLightCard: No entity configured');
       return;
     }
     const stateObj = this.hass?.states[this.config.entity];
     if (stateObj && stateObj.attributes.effect_image) {
+      console.debug('HyperLightCard: Extracting colors from effect image');
       const img = new Image();
       img.crossOrigin = 'Anonymous';
       img.src = stateObj.attributes.effect_image;
       img.onload = () => {
         const palette = this._colorThief.getPalette(img, 3);
+        console.debug('HyperLightCard: Color palette extracted', palette);
         this._applyColorTransition(palette);
       };
+    } else {
+      console.debug('HyperLightCard: No effect image found');
     }
   }
 
-  private _applyColorTransition(palette: number[][]) {
+  private async _applyColorTransition(palette: number[][]) {
+    console.debug('HyperLightCard: _applyColorTransition called', palette);
     if (this._transitionInProgress) {
+      console.debug('HyperLightCard: Color transition already in progress');
       return;
     }
     this._transitionInProgress = true;
@@ -115,39 +128,59 @@ class HyperLightCard extends LitElement {
     const newAccentColor = `rgb(${palette[1].join(',')})`;
 
     console.debug(
-      'New colors:',
+      'HyperLightCard: New colors:',
       newBackgroundColor,
       newTextColor,
       newAccentColor,
     );
-    requestAnimationFrame(() => {
-      this.style.setProperty('--background-color', newBackgroundColor);
-      this.style.setProperty('--text-color', newTextColor);
-      this.style.setProperty('--accent-color', newAccentColor);
-      this.style.setProperty('--switch-checked-color', newAccentColor);
-      this.style.setProperty('--switch-checked-button-color', newAccentColor);
-      this.style.setProperty('--switch-checked-track-color', newAccentColor);
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        this.style.setProperty('--background-color', newBackgroundColor);
+        this.style.setProperty('--text-color', newTextColor);
+        this.style.setProperty('--accent-color', newAccentColor);
+        this.style.setProperty('--switch-checked-color', newAccentColor);
+        this.style.setProperty('--switch-checked-button-color', newAccentColor);
+        this.style.setProperty('--switch-checked-track-color', newAccentColor);
 
-      this._backgroundColor = newBackgroundColor;
-      this._textColor = newTextColor;
-      this._accentColor = newAccentColor;
+        this._backgroundColor = newBackgroundColor;
+        this._textColor = newTextColor;
+        this._accentColor = newAccentColor;
 
-      this.requestUpdate();
-
-      setTimeout(() => {
-        this._transitionInProgress = false;
-      }, 500);
+        resolve(null);
+      });
     });
+
+    this._transitionInProgress = false;
+    this.requestUpdate();
+  }
+
+  private _debouncedUpdate = this._debounce(() => {
+    this._updateStateFromHass();
+    this._extractColors();
+    this.requestUpdate();
+  }, 100);
+
+  private _updateStateFromHass() {
+    if (this.hass && this.config) {
+      const stateObj = this.hass.states[this.config.entity];
+      if (stateObj) {
+        this._isOn = stateObj.state === 'on';
+        this._currentEffect = stateObj.attributes.effect || 'No effect';
+        this._updateBrightness();
+      }
+    }
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
+    console.debug('HyperLightCard: updated called', changedProperties);
+    super.updated(changedProperties);
     if (changedProperties.has('hass') || changedProperties.has('config')) {
-      this._extractColors();
-      this._updateBrightness();
+      this._debouncedUpdate();
     }
   }
 
   private _updateBrightness() {
+    console.debug('HyperLightCard: _updateBrightness called');
     if (this.hass && this.config) {
       const stateObj = this.hass.states[this.config.entity];
       if (stateObj && stateObj.attributes.brightness) {
@@ -155,17 +188,23 @@ class HyperLightCard extends LitElement {
         this._brightness = Math.round(
           ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
         );
+        console.debug('HyperLightCard: Brightness updated', this._brightness);
+      } else {
+        console.debug('HyperLightCard: No brightness attribute found');
       }
     }
   }
 
   render() {
+    console.debug('HyperLightCard: render called');
     if (!this.hass || !this.config) {
+      console.debug('HyperLightCard: hass or config not available');
       return html``;
     }
 
     const stateObj = this.hass.states[this.config.entity];
     if (!stateObj) {
+      console.debug('HyperLightCard: Entity not found', this.config.entity);
       return html`
         <ha-card>
           <div class="card">Entity not found: ${this.config.entity}</div>
@@ -175,6 +214,11 @@ class HyperLightCard extends LitElement {
 
     this._isOn = stateObj.state === 'on';
     this._currentEffect = stateObj.attributes.effect || 'No effect';
+    console.debug('HyperLightCard: Rendering with state', {
+      isOn: this._isOn,
+      currentEffect: this._currentEffect,
+      brightness: this._brightness,
+    });
 
     const sliderStyle = {
       '--slider-color': this._accentColor,
@@ -207,6 +251,7 @@ class HyperLightCard extends LitElement {
     const backgroundImage = stateObj.attributes.effect_image
       ? `url(${stateObj.attributes.effect_image})`
       : 'none';
+    console.debug('HyperLightCard: Rendering background', backgroundImage);
     return html`
       <div
         class="card-background"
@@ -221,6 +266,7 @@ class HyperLightCard extends LitElement {
       this.config!.name ||
       stateObj.attributes.friendly_name ||
       stateObj.entity_id;
+    console.debug('HyperLightCard: Rendering header', name);
     return html`
       <div class="header">
         <div class="light-icon ${this._isOn ? 'light-on' : ''}">
@@ -241,6 +287,7 @@ class HyperLightCard extends LitElement {
     const effectList: string[] = Array.isArray(stateObj.attributes.effect_list)
       ? stateObj.attributes.effect_list
       : [];
+    console.debug('HyperLightCard: Rendering effect dropdown', effectList);
     return html`
       <div class="effect-select-wrapper">
         <div class="dropdown ${this._isDropdownOpen ? 'open' : ''}">
@@ -276,6 +323,14 @@ class HyperLightCard extends LitElement {
     const usesInput = stateObj.attributes.effect_uses_input || false;
     const usesVideo = stateObj.attributes.effect_uses_video || false;
 
+    console.debug('HyperLightCard: Rendering effect info', {
+      description,
+      publisher,
+      usesAudio,
+      usesInput,
+      usesVideo,
+    });
+
     return html`
       <div class="effect-info ${this._isOn ? 'visible' : ''}">
         <div class="effect-info-text">
@@ -310,6 +365,11 @@ class HyperLightCard extends LitElement {
       '--slider-color': this._accentColor,
     };
 
+    console.debug(
+      'HyperLightCard: Rendering brightness slider',
+      updatedSliderStyle,
+    );
+
     return html`
       <div class="brightness-slider" style=${styleMap(updatedSliderStyle)}>
         <ha-icon icon="mdi:brightness-6"></ha-icon>
@@ -326,6 +386,7 @@ class HyperLightCard extends LitElement {
   }
 
   private _renderAttributesToggle() {
+    console.debug('HyperLightCard: Rendering attributes toggle');
     return html`
       <div class="attributes-toggle" @click=${this._toggleAttributes}>
         <ha-icon icon="mdi:chevron-down"></ha-icon>
@@ -342,8 +403,11 @@ class HyperLightCard extends LitElement {
       | undefined;
 
     if (!effectParameters || Object.keys(effectParameters).length === 0) {
+      console.debug('HyperLightCard: No effect parameters to render');
       return html``;
     }
+
+    console.debug('HyperLightCard: Rendering attributes', effectParameters);
 
     return html`
       <div class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}">
@@ -358,8 +422,14 @@ class HyperLightCard extends LitElement {
     effectParameters: Record<string, string | number | boolean>,
   ) {
     if (!effectParameters || Object.keys(effectParameters).length === 0) {
+      console.debug('HyperLightCard: No effect parameters to list');
       return html`<p>No effect parameters available.</p>`;
     }
+
+    console.debug(
+      'HyperLightCard: Rendering attributes list',
+      effectParameters,
+    );
 
     return html`
       <ul class="attribute-list">
@@ -378,6 +448,7 @@ class HyperLightCard extends LitElement {
   }
 
   private _toggleLight() {
+    console.debug('HyperLightCard: _toggleLight called');
     this._isOn = !this._isOn;
     this.hass!.callService('light', this._isOn ? 'turn_on' : 'turn_off', {
       entity_id: this.config!.entity,
@@ -386,50 +457,73 @@ class HyperLightCard extends LitElement {
     const effectInfo = this.shadowRoot!.querySelector('.effect-info');
     if (effectInfo) {
       if (this._isOn) {
-        setTimeout(() => effectInfo.classList.add('visible'), 50);
+        setTimeout(() => {
+          effectInfo.classList.add('visible');
+          console.debug('HyperLightCard: Effect info made visible');
+        }, 50);
       } else {
         effectInfo.classList.remove('visible');
+        console.debug('HyperLightCard: Effect info hidden');
       }
     }
 
+    console.debug('HyperLightCard: Light toggled, new state:', this._isOn);
     this.requestUpdate();
   }
 
   private _toggleDropdown(e: Event) {
+    console.debug('HyperLightCard: _toggleDropdown called');
     e.stopPropagation();
     this._isDropdownOpen = !this._isDropdownOpen;
+    console.debug(
+      'HyperLightCard: Dropdown toggled, new state:',
+      this._isDropdownOpen,
+    );
     this.requestUpdate();
   }
 
   private _selectEffect(effect: string) {
+    console.debug('HyperLightCard: _selectEffect called', effect);
     this._currentEffect = effect;
     this._isDropdownOpen = false;
+    this.requestUpdate();
+
     if (this._isOn) {
       this.hass!.callService('light', 'turn_on', {
         entity_id: this.config!.entity,
         effect: effect,
       });
+      console.debug('HyperLightCard: Effect applied via service call');
+    } else {
+      console.debug('HyperLightCard: Light is off, effect not applied');
     }
-    this.requestUpdate();
   }
 
   private _toggleAttributes() {
+    console.debug('HyperLightCard: _toggleAttributes called');
     this._isAttributesExpanded = !this._isAttributesExpanded;
+    console.debug(
+      'HyperLightCard: Attributes expanded:',
+      this._isAttributesExpanded,
+    );
     this.requestUpdate();
   }
 
   private _handleClickOutside(event: Event) {
+    console.debug('HyperLightCard: _handleClickOutside called');
     const path = event.composedPath();
     if (
       this._isDropdownOpen &&
       !path.includes(this.shadowRoot!.querySelector('.dropdown')!)
     ) {
       this._isDropdownOpen = false;
+      console.debug('HyperLightCard: Dropdown closed due to outside click');
       this.requestUpdate();
     }
   }
 
   private async _handleBrightnessChange(e: Event) {
+    console.debug('HyperLightCard: _handleBrightnessChange called');
     const target = e.target as HTMLInputElement;
     const brightness = Number(target.value);
     this._brightness = brightness;
@@ -442,19 +536,57 @@ class HyperLightCard extends LitElement {
         entity_id: this.config.entity,
         brightness: haBrightness,
       });
+      console.debug('HyperLightCard: Brightness updated', {
+        brightness: brightness,
+        haBrightness: haBrightness,
+      });
     }
 
     this.requestUpdate();
   }
 
+  private _debounce(func: () => void, delay: number) {
+    let timeoutId: number;
+
+    return function () {
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(func, delay);
+    };
+  }
+
+  private _setupMutationObserver() {
+    const targetNode = document.querySelector(
+      `ha-state-icon[data-entity="${this.config!.entity}"]`,
+    );
+    if (targetNode) {
+      const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+          if (
+            mutation.type === 'attributes' &&
+            mutation.attributeName === 'icon'
+          ) {
+            this._debouncedUpdate();
+          }
+        });
+      });
+      observer.observe(targetNode, { attributes: true });
+    }
+  }
+
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener('click', this._clickOutsideHandler);
+    console.debug(
+      'HyperLightCard: connectedCallback called, click listener added',
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('click', this._clickOutsideHandler);
+    console.debug(
+      'HyperLightCard: disconnectedCallback called, click listener removed',
+    );
   }
 }
 
