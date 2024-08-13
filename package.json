@@ -1,6 +1,6 @@
 {
   "name": "hyper-light-card",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "description": "A custom Lovelace card for Home Assistant to control SignalRGB",
   "main": "dist/hyper-light-card.js",
   "module": "dist/hyper-light-card.js",
@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "copy:hass": "node scripts/copy-to-hass.js",
     "dev": "npm run build:dev && npm run copy:hass",
-    "build:hacs": "rollup -c --environment BUILD:production && cp dist/hyper-light-card.js dist/hyper-light-card-bundle.js"
+    "build:hacs": "rollup -c --environment BUILD:production"
   },
   "keywords": [
     "home-assistant",
