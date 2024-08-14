@@ -1,6 +1,6 @@
 {
   "name": "hyper-light-card",
-  "version": "0.8.0",
+  "version": "0.9.2",
   "description": "A custom Lovelace card for Home Assistant to control SignalRGB",
   "main": "target/hyper-light-card.js",
   "module": "target/hyper-light-card.js",
