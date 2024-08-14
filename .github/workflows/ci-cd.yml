@@ -1,12 +1,18 @@
-name: Release
+name: hyper-light-card/build
 
 on:
   push:
+    branches:
+      - main
     tags:
-      - "v*.*.*"
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build_test_and_release:
+  build_and_test:
+    name: Build + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -32,8 +38,42 @@ jobs:
       - name: Run tests
         run: npm test
       - name: Build project
-        run: npm run build:hacs
-      - name: Create Release
+        run: npm run build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist
+
+  analyze:
+    name: Analyze project
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npx eslint .
+        continue-on-error: true
+      - name: Run TypeScript compiler
+        run: npx tsc --noEmit
+        continue-on-error: true
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: plugin
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -44,7 +84,7 @@ jobs:
           body_path: CHANGELOG.md
           draft: false
           prerelease: false
-      - name: Upload Release Asset
+      - name: Upload release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
