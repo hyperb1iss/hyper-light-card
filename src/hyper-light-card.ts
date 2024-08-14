@@ -90,11 +90,6 @@ class HyperLightCard extends LitElement {
     console.debug('HyperLightCard: firstUpdated called');
     this._setupMutationObserver();
     this._debouncedExtractColors();
-
-    // Scroll to the current effect if the dropdown is already open
-    if (this._isDropdownOpen) {
-      this._scrollToCurrentEffect();
-    }
   }
 
   private _extractColors() {
@@ -199,8 +194,16 @@ class HyperLightCard extends LitElement {
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
-    console.debug('HyperLightCard: updated called', changedProperties);
     super.updated(changedProperties);
+
+    console.debug('HyperLightCard: updated called', changedProperties);
+    console.debug('HyperLightCard: current state:', {
+      isOn: this._isOn,
+      currentEffect: this._currentEffect,
+      brightness: this._brightness,
+      isDropdownOpen: this._isDropdownOpen,
+    });
+
     if (changedProperties.has('hass') || changedProperties.has('config')) {
       this._debouncedUpdate();
     }
@@ -227,7 +230,12 @@ class HyperLightCard extends LitElement {
   }
 
   render() {
-    console.debug('HyperLightCard: render called');
+    console.debug('HyperLightCard: render called with state:', {
+      isOn: this._isOn,
+      currentEffect: this._currentEffect,
+      brightness: this._brightness,
+      isDropdownOpen: this._isDropdownOpen,
+    });
     if (!this.hass || !this.config) {
       console.debug('HyperLightCard: hass or config not available');
       return html``;
@@ -252,6 +260,14 @@ class HyperLightCard extends LitElement {
     const sliderStyle = {
       '--slider-color': this._accentColor,
     };
+
+    // Scroll and highlight
+    requestAnimationFrame(() => {
+      if (this._isDropdownOpen) {
+        this._scrollToCurrentEffect();
+        this._highlightCurrentEffect();
+      }
+    });
 
     return html`
       <ha-card>
@@ -559,6 +575,20 @@ class HyperLightCard extends LitElement {
     });
   }
 
+  private _highlightCurrentEffect() {
+    const dropdownContent = this.shadowRoot!.querySelector('.dropdown-content');
+    const items = dropdownContent?.querySelectorAll('.dropdown-item') || [];
+
+    items.forEach(item => {
+      item.classList.remove('selected');
+      if (item.textContent?.trim() === this._currentEffect) {
+        item.classList.add('selected');
+      }
+    });
+
+    console.debug('HyperLightCard: Highlighted current effect');
+  }
+
   private _toggleDropdown(e: Event) {
     console.debug('HyperLightCard: _toggleDropdown called');
     e.stopPropagation();
@@ -575,14 +605,14 @@ class HyperLightCard extends LitElement {
     this.requestUpdate();
   }
 
-  private _selectEffect(effect: string) {
+  private async _selectEffect(effect: string) {
     console.debug('HyperLightCard: _selectEffect called', effect);
     this._currentEffect = effect;
     this._isDropdownOpen = false;
     this.requestUpdate();
 
     if (this._isOn) {
-      this.hass!.callService('light', 'turn_on', {
+      await this.hass!.callService('light', 'turn_on', {
         entity_id: this.config!.entity,
         effect: effect,
       });
