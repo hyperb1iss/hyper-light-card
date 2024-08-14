@@ -7,7 +7,7 @@
     "skipLibCheck": true,
     "moduleResolution": "node",
     "baseUrl": "./",
-    "outDir": "./dist",
+    "outDir": "./target",
     "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

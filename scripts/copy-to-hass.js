@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
 
-const sourceDir = path.join(process.cwd(), 'dist');
+const sourceDir = path.join(process.cwd(), 'target');
 const destDir = path.join(config.hassConfigPath, 'www', 'hyper-light-card');
 
 console.log(`Source directory: ${sourceDir}`);
