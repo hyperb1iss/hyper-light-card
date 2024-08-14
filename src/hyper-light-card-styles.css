@@ -235,6 +235,11 @@ ha-card {
   color: var(--background-color, white);
 }
 
+.dropdown-item.selected {
+  background-color: var(--accent-color, #03a9f4);
+  color: var(--text-color, white);
+}
+
 /* Effect info section */
 .effect-info {
   background-color: rgba(var(--background-color-rgb, 128, 128, 128), 0.1);

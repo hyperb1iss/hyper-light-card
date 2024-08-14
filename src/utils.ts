@@ -105,3 +105,37 @@ export function formatAttributeValue(value: boolean | number | string): string {
   }
   return value;
 }
+
+/**
+ * Memoizes a function to cache its results based on the arguments provided.
+ * This can improve performance by avoiding repeated calculations for the same inputs.
+ *
+ * @param fn - The function to memoize.
+ * @returns A new function that caches the results of the original function.
+ */
+export function memoize<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => TResult,
+): (...args: TArgs) => TResult {
+  // Create a cache to store the results of the function calls.
+  const cache = new Map<string, TResult>();
+
+  // Return a new function that wraps the original function.
+  return function (...args: TArgs): TResult {
+    // Create a key based on the arguments provided.
+    const key = JSON.stringify(args);
+
+    // If the result for these arguments is already in the cache, return it.
+    if (cache.has(key)) {
+      return cache.get(key) as TResult;
+    }
+
+    // Otherwise, call the original function with the arguments.
+    const result = fn(...args);
+
+    // Store the result in the cache.
+    cache.set(key, result);
+
+    // Return the result.
+    return result;
+  };
+}
