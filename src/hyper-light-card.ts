@@ -36,7 +36,7 @@ interface Config {
   allowed_effects?: string[];
 }
 
-class HyperLightCard extends LitElement {
+export class HyperLightCard extends LitElement {
   @property({ type: Object }) hass?: Hass;
   @property({ type: Object }) config?: Config;
   @state() private _isOn = false;
@@ -236,13 +236,7 @@ class HyperLightCard extends LitElement {
   }
 
   render() {
-    console.debug('HyperLightCard: render called with state:', {
-      isOn: this._isOn,
-      currentEffect: this._currentEffect,
-      brightness: this._brightness,
-      isDropdownOpen: this._isDropdownOpen,
-    });
-    if (!this.hass || !this.config) {
+    if (!this.hass || !this.config || !this.hass.states) {
       console.debug('HyperLightCard: hass or config not available');
       return html``;
     }
