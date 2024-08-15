@@ -19,8 +19,10 @@
 - 📱 Responsive layout for both desktop and mobile
 - 🔀 Easy effect switching with a dropdown menu
 - 💡 Intuitive on/off toggle
+- 🔆 Brightness control slider
 - ℹ️ Detailed effect information display
 - 🔧 Customizable card appearance
+- 🎛️ Effect parameter display
 
 ## 🌈 Screenshots
 <table>
@@ -43,6 +45,7 @@
 
 - Home Assistant 2024.2.0 or newer
 - [SignalRGB Home Assistant Integration](https://github.com/hyperb1iss/signalrgb-homeassistant) (Required)
+- Latest SignalRGB Beta version (Required for full functionality)
 
 ### HACS Installation (Recommended)
 
@@ -90,7 +93,12 @@ name: "All The RGBeez"
 icon: mdi:led-strip-variant
 show_effect_info: true
 show_effect_parameters: true
+show_brightness_control: true
 background_opacity: 0.7
+allowed_effects:
+  - "Lava Lamp"
+  - "Bubbles"
+  - "Rave Visualizer"
 ```
 
 ### Configuration Options
@@ -102,7 +110,9 @@ background_opacity: 0.7
 | `icon` | string | `mdi:led-strip-variant` | Icon to display |
 | `show_effect_info` | boolean | `true` | Show effect description and publisher |
 | `show_effect_parameters` | boolean | `true` | Display effect parameters |
+| `show_brightness_control` | boolean | `true` | Display brightness slider |
 | `background_opacity` | number | `0.7` | Opacity of the effect image background (0-1) |
+| `allowed_effects` | string[] | `undefined` | List of effects to show in the dropdown. If not set, all effects will be shown. |
 
 ## 🚀 Usage
 <a name="usage"></a>
@@ -111,6 +121,7 @@ hyper-light-card provides an intuitive interface for controlling your SignalRGB 
 
 - **Power Toggle**: Click the switch to turn your SignalRGB setup on or off.
 - **Effect Selection**: Use the dropdown to choose from available effects.
+- **Brightness Control**: Adjust the brightness using the slider (if enabled).
 - **Effect Info**: View the current effect's description and publisher (if enabled).
 - **Effect Parameters**: See detailed parameters for the current effect (if enabled).
 
