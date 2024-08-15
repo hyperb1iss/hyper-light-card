@@ -51,8 +51,8 @@ class HyperLightCard extends LitElement {
   private _colorThief = new ColorThief();
   private _clickOutsideHandler: (event: Event) => void;
   private _transitionInProgress = false;
-  private _lastExtractedEffect: string | null = null;
   private _updateCount = 0;
+  private _lastEffectImage: string | null = null;
 
   constructor() {
     super();
@@ -107,14 +107,6 @@ class HyperLightCard extends LitElement {
       console.debug('HyperLightCard: No effect image found');
       return;
     }
-
-    if (this._lastExtractedEffect === stateObj.attributes.effect) {
-      console.debug(
-        'HyperLightCard: Effect unchanged, skipping color extraction',
-      );
-      return;
-    }
-    this._lastExtractedEffect = stateObj.attributes.effect;
 
     console.debug('HyperLightCard: Extracting colors from effect image');
     const img = new Image();
@@ -189,38 +181,43 @@ class HyperLightCard extends LitElement {
     super.updated(changedProperties);
 
     console.debug('HyperLightCard: updated called', changedProperties);
-    console.debug('HyperLightCard: current state:', {
-      isOn: this._isOn,
-      currentEffect: this._currentEffect,
-      brightness: this._brightness,
-      isDropdownOpen: this._isDropdownOpen,
-    });
+    console.debug(
+      'HyperLightCard: current hass state:',
+      this.hass?.states[this.config?.entity ?? ''],
+    );
 
-    if (changedProperties.has('hass') || changedProperties.has('config')) {
-      const stateObj = this.hass?.states[this.config?.entity ?? ''];
+    if (this.hass && this.config) {
+      const stateObj = this.hass.states[this.config.entity];
       if (stateObj) {
+        const newEffect = stateObj.attributes.effect || 'No effect';
         const newIsOn = stateObj.state === 'on';
-        const newCurrentEffect = stateObj.attributes.effect || 'No effect';
         const newBrightness = Math.round(
           ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
         );
 
+        console.debug('HyperLightCard: Potential new state:', {
+          effect: newEffect,
+          isOn: newIsOn,
+          brightness: newBrightness,
+        });
+
+        // Always update if there's a new effect image
+        if (stateObj.attributes.effect_image !== this._lastEffectImage) {
+          this._lastEffectImage = stateObj.attributes.effect_image;
+          this._debouncedExtractColors();
+        }
+
+        // Update state and trigger color extraction if anything has changed
         if (
+          this._currentEffect !== newEffect ||
           this._isOn !== newIsOn ||
-          this._currentEffect !== newCurrentEffect ||
           this._brightness !== newBrightness
         ) {
-          console.debug('HyperLightCard: State changed, updating', {
-            isOn: newIsOn,
-            currentEffect: newCurrentEffect,
-            brightness: newBrightness,
-          });
+          console.debug('HyperLightCard: State changed, updating');
+          this._currentEffect = newEffect;
           this._isOn = newIsOn;
-          this._currentEffect = newCurrentEffect;
           this._brightness = newBrightness;
-          this._debouncedUpdate();
-        } else {
-          console.debug('HyperLightCard: No significant state change');
+          this._debouncedExtractColors();
         }
       }
     }
