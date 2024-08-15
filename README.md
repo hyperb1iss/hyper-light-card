@@ -25,17 +25,13 @@
 ## 🌈 Screenshots
 <table>
   <tr>
-    <td><img src="images/poison.png"/></td>
+    <td><img src="images/dark_magic.png"/></td>
     <td><img src="images/sakura.png"/></td>
-    <td><img src="images/cyber.png"/></td>
+    <td><img src="images/rave_visualizer.png"/></td>
   </tr>
   <tr>
-    <td><img src="images/synth_sun.png"/></td>
-    <td><img src="images/cyberpunk_2077.png"/></td>
-    <td><img src="images/cotton_candy.png"/></td>
-  </tr>
-  <tr>
-    <td><img src="images/dark_matter_expanded.png"/></td>
+    <td><img src="images/poison_expanded.png"/></td>
+    <td><img src="images/cyberpunk_2077_expanded.png"/></td>
     <td><img src="images/corrosive_expanded.png"/></td>
   </tr>
 </table>
