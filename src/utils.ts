@@ -139,3 +139,29 @@ export function memoize<TArgs extends unknown[], TResult>(
     return result;
   };
 }
+
+// Logging utility
+let isLoggingEnabled = ('__IS_LOGGING_ENABLED__' as unknown) as boolean;
+
+export const log = {
+  debug: (...args: any[]) => {
+    if (isLoggingEnabled) {
+      console.debug(...args);
+    }
+  },
+  log: (...args: any[]) => {
+    if (isLoggingEnabled) {
+      console.log(...args);
+    }
+  },
+  warn: (...args: any[]) => {
+    if (isLoggingEnabled) {
+      console.warn(...args);
+    }
+  },
+  error: (...args: any[]) => {
+    if (isLoggingEnabled) {
+      console.error(...args);
+    }
+  },
+};

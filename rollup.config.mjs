@@ -22,6 +22,7 @@ export default {
   plugins: [
     replace({
       'process.env.VERSION': JSON.stringify(pkg.version),
+      '__IS_LOGGING_ENABLED__': JSON.stringify(!production),
       preventAssignment: true,
     }),
     nodePolyfills(),
