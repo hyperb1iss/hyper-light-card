@@ -32,6 +32,8 @@ interface Config {
   background_opacity?: number;
   show_effect_info?: boolean;
   show_effect_parameters?: boolean;
+  show_brightness_control?: boolean;
+  allowed_effects?: string[];
 }
 
 class HyperLightCard extends LitElement {
@@ -46,8 +48,9 @@ class HyperLightCard extends LitElement {
   @state() private _accentColor = '';
   @state() private _showEffectInfo = true;
   @state() private _showEffectParameters = true;
+  @state() private _showBrightnessControl = true;
   @state() private _brightness: number = 100;
-
+  @state() private _allowedEffects?: string[];
   private _colorThief = new ColorThief();
   private _clickOutsideHandler: (event: Event) => void;
   private _transitionInProgress = false;
@@ -78,10 +81,14 @@ class HyperLightCard extends LitElement {
       background_opacity: config.background_opacity || 0.7,
       show_effect_info: config.show_effect_info !== false,
       show_effect_parameters: config.show_effect_parameters !== false,
+      show_brightness_control: config.show_brightness_control ?? true,
+      allowed_effects: config.allowed_effects,
       ...config,
     };
     this._showEffectInfo = this.config.show_effect_info ?? true;
     this._showEffectParameters = this.config.show_effect_parameters ?? true;
+    this._showBrightnessControl = this.config.show_brightness_control ?? true;
+    this._allowedEffects = this.config.allowed_effects;
     console.debug('HyperLightCard: Config set', this.config);
   }
 
@@ -274,7 +281,9 @@ class HyperLightCard extends LitElement {
           ${this._renderEffectDropdown(stateObj)}
           ${this._showEffectInfo ? this._renderEffectInfo(stateObj) : ''}
           <div class="controls-row">
-            ${this._renderBrightnessSlider(sliderStyle)}
+            ${this._showBrightnessControl
+              ? this._renderBrightnessSlider(sliderStyle)
+              : ''}
             ${this._showEffectParameters ? this._renderAttributesToggle() : ''}
           </div>
           ${this._showEffectParameters ? this._renderAttributes(stateObj) : ''}
@@ -325,9 +334,16 @@ class HyperLightCard extends LitElement {
   }
 
   private _renderEffectDropdown(stateObj: HassEntity) {
-    const effectList: string[] = Array.isArray(stateObj.attributes.effect_list)
+    let effectList: string[] = Array.isArray(stateObj.attributes.effect_list)
       ? stateObj.attributes.effect_list
       : [];
+
+    if (this._allowedEffects) {
+      effectList = effectList.filter(effect =>
+        this._allowedEffects!.includes(effect),
+      );
+    }
+
     console.debug('HyperLightCard: Rendering effect dropdown', effectList);
     return html`
       <div class="effect-select-wrapper">
