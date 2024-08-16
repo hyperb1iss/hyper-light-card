@@ -11,7 +11,7 @@ import {
 } from './utils';
 import styles from './hyper-light-card-styles.css';
 
-interface Hass {
+export interface Hass {
   states: Record<string, HassEntity>;
   callService: (
     domain: string,
@@ -26,7 +26,7 @@ interface HassEntity {
   entity_id: string;
 }
 
-interface Config {
+export interface Config {
   entity: string;
   name?: string;
   icon?: string;

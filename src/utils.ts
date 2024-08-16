@@ -144,22 +144,22 @@ export function memoize<TArgs extends unknown[], TResult>(
 let isLoggingEnabled = ('__IS_LOGGING_ENABLED__' as unknown) as boolean;
 
 export const log = {
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]): void => {
     if (isLoggingEnabled) {
       console.debug(...args);
     }
   },
-  log: (...args: any[]) => {
+  log: (...args: unknown[]): void => {
     if (isLoggingEnabled) {
       console.log(...args);
     }
   },
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]): void => {
     if (isLoggingEnabled) {
       console.warn(...args);
     }
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]): void => {
     if (isLoggingEnabled) {
       console.error(...args);
     }

@@ -1,4 +1,4 @@
-import { HyperLightCard } from './hyper-light-card';
+import { HyperLightCard, Hass, Config } from './hyper-light-card';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;
@@ -21,7 +21,7 @@ describe('HyperLightCard', () => {
         },
       },
       callService: jest.fn(), // Mock the callService function
-    } as any;
+    } as unknown as Hass;
 
     // Set up the required config property
     card.setConfig({ entity: 'light.test_light' });
@@ -59,7 +59,7 @@ describe('HyperLightCard', () => {
 
     it('throws an error when no entity is provided', () => {
       expect(() => {
-        card.setConfig({} as any);
+        card.setConfig({} as Config);
       }).toThrow('You need to define an entity');
     });
 
@@ -107,7 +107,7 @@ describe('HyperLightCard', () => {
           },
         },
         callService: jest.fn(),
-      } as any;
+      } as unknown as Hass;
 
       // Set the initial internal state
       card['_isOn'] = true; // Light is initially on
