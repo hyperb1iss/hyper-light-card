@@ -720,7 +720,6 @@ export class HyperLightCard extends LitElement {
     return {
       entity: defaultEntity,
       name: '',
-      icon: '',
       show_effect_info: true,
       show_effect_parameters: true,
       show_brightness_control: true,
