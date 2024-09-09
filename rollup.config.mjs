@@ -15,21 +15,20 @@ const development = process.env.BUILD === 'development';
 export default {
   input: 'src/hyper-light-card.ts',
   output: {
-    dir: 'target',
+    file: 'target/hyper-light-card.js',
     format: 'es',
-    sourcemap: true, // Always generate source map
+    sourcemap: true,
   },
   plugins: [
     replace({
       'process.env.VERSION': JSON.stringify(pkg.version),
-      '__IS_LOGGING_ENABLED__': JSON.stringify(!production),
+      __IS_LOGGING_ENABLED__: JSON.stringify(!production),
       preventAssignment: true,
     }),
     nodePolyfills(),
     resolve({
       browser: true,
       preferBuiltins: false,
-      dedupe: ['lit-html', 'lit-element'],
     }),
     commonjs(),
     json(),
@@ -62,12 +61,7 @@ export default {
     production && terser(),
   ].filter(Boolean),
   onwarn(warning, warn) {
-    if (
-      warning.code === 'CIRCULAR_DEPENDENCY' &&
-      warning.importer.includes('node_modules/lit-html')
-    ) {
-      return;
-    }
+    if (warning.code === 'CIRCULAR_DEPENDENCY') return;
     if (warning.code === 'THIS_IS_UNDEFINED') return;
     warn(warning);
   },

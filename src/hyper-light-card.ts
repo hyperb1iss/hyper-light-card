@@ -11,6 +11,9 @@ import {
 } from './utils';
 import styles from './hyper-light-card-styles.css';
 
+// Import the editor component
+import './hyper-light-card-editor';
+
 export interface Hass {
   states: Record<string, HassEntity>;
   callService: (
@@ -699,6 +702,23 @@ export class HyperLightCard extends LitElement {
     log.debug(
       'HyperLightCard: disconnectedCallback called, click listener removed',
     );
+  }
+
+  static getConfigElement() {
+    return document.createElement('hyper-light-card-editor');
+  }
+
+  static getStubConfig() {
+    return {
+      entity: '',
+      name: 'SignalRGB',
+      icon: 'mdi:led-strip-variant',
+      show_effect_info: true,
+      show_effect_parameters: true,
+      show_brightness_control: true,
+      background_opacity: 0.7,
+      allowed_effects: [],
+    };
   }
 }
 
