@@ -13,6 +13,7 @@ import styles from './hyper-light-card-styles.css';
 
 // Import the editor component
 import './hyper-light-card-editor';
+import { HomeAssistant } from 'custom-card-helpers';
 
 export interface Hass {
   states: Record<string, HassEntity>;
@@ -708,11 +709,18 @@ export class HyperLightCard extends LitElement {
     return document.createElement('hyper-light-card-editor');
   }
 
-  static getStubConfig() {
+  static getStubConfig(hass: HomeAssistant, entities: string[]): Config {
+    const signalRGBEntities = entities.filter(entityId =>
+      entityId.match(/^light\.signalrgb_/),
+    );
+
+    const defaultEntity =
+      signalRGBEntities.length > 0 ? signalRGBEntities[0] : '';
+
     return {
-      entity: '',
-      name: 'SignalRGB',
-      icon: 'mdi:led-strip-variant',
+      entity: defaultEntity,
+      name: '',
+      icon: '',
       show_effect_info: true,
       show_effect_parameters: true,
       show_brightness_control: true,
@@ -723,6 +731,15 @@ export class HyperLightCard extends LitElement {
 }
 
 customElements.define('hyper-light-card', HyperLightCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'hyper-light-card',
+  name: 'Hyper Light Card',
+  description: 'A custom card for controlling SignalRGB.',
+  preview: true,
+  documentationURL: 'https://github.com/hyperb1iss/hyper-light-card',
+});
 
 const version = process.env.VERSION;
 console.log(
