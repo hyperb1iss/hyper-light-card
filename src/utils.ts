@@ -141,7 +141,7 @@ export function memoize<TArgs extends unknown[], TResult>(
 }
 
 // Logging utility
-let isLoggingEnabled = ('__IS_LOGGING_ENABLED__' as unknown) as boolean;
+const isLoggingEnabled = '__IS_LOGGING_ENABLED__' as unknown as boolean;
 
 export const log = {
   debug: (...args: unknown[]): void => {

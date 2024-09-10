@@ -1,16 +1,21 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, fireEvent } from 'custom-card-helpers';
+import { Config } from './hyper-light-card';
+
+interface ExtendedHTMLInputElement extends HTMLInputElement {
+  configValue?: keyof Config;
+}
 
 @customElement('hyper-light-card-editor')
 export class HyperLightCardEditor extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
-  @property() private _config!: any;
-  @property() private _helpers: any;
+  @property() private _config!: Config;
+  @property() private _helpers: unknown;
   @state() private _effects: string[] = [];
   @state() private _isDropdownOpen = false;
 
-  public setConfig(config: any): void {
+  public setConfig(config: Config): void {
     this._config = {
       ...config,
       allowed_effects: config.allowed_effects || [],
@@ -127,7 +132,7 @@ export class HyperLightCardEditor extends LitElement {
           min="0"
           max="1"
           step="0.1"
-          .value=${this._config.background_opacity || '0.7'}
+          .value=${this._config.background_opacity?.toString() || '0.7'}
           .configValue=${'background_opacity'}
           @input=${this._valueChanged}
         ></ha-textfield>
@@ -171,7 +176,7 @@ export class HyperLightCardEditor extends LitElement {
     if (!this._config || !this.hass) {
       return;
     }
-    const target = ev.target as any;
+    const target = ev.target as ExtendedHTMLInputElement;
     if (target.configValue) {
       if (target.value === '' && target.configValue !== 'name') {
         delete this._config[target.configValue];
@@ -183,17 +188,6 @@ export class HyperLightCardEditor extends LitElement {
         };
       }
     }
-    fireEvent(this, 'config-changed', { config: this._config });
-  }
-
-  private _effectsChanged(ev: CustomEvent): void {
-    const target = ev.target as any;
-    const newValue = target.value;
-
-    this._config = {
-      ...this._config,
-      allowed_effects: newValue.length > 0 ? newValue : undefined,
-    };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
