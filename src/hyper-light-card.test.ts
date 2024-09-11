@@ -1,6 +1,6 @@
-// hyper-light-card.test.ts
-import { HyperLightCard, Config } from './hyper-light-card';
+import { HyperLightCard } from './hyper-light-card';
 import { HomeAssistant } from 'custom-card-helpers';
+import { Config } from './config';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;

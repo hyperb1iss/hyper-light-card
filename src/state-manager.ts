@@ -1,34 +1,20 @@
 // src/state-manager.ts
-import { HomeAssistant } from 'custom-card-helpers';
-import { log } from './utils';
-import { HassEntity } from 'home-assistant-js-websocket';
-import { Config } from './hyper-light-card';
+import { State } from './state';
 import { ColorManager } from './color-manager';
+import { log } from './utils';
+import { HomeAssistant } from 'custom-card-helpers';
+import { HassEntity } from 'home-assistant-js-websocket';
+import { Config } from './config';
 
 export class StateManager {
   private _hass?: HomeAssistant;
   private _config: Config;
-  private _isOn = false;
-  private _currentEffect = 'No effect';
-  private _isDropdownOpen = false;
-  private _isAttributesExpanded = false;
-  private _backgroundColor = '';
-  private _textColor = '';
-  private _accentColor = '';
-  private _showEffectInfo = true;
-  private _showEffectParameters = true;
-  private _showBrightnessControl = true;
-  private _brightness: number = 100;
-  private _allowedEffects?: string[];
-  private _lastEffectImage: string | null = null;
+  private _state: State;
   private _colorManager: ColorManager;
 
-  constructor(config: Config) {
+  constructor(config: Config, state: State) {
     this._config = config;
-    this._showEffectInfo = config.show_effect_info ?? true;
-    this._showEffectParameters = config.show_effect_parameters ?? true;
-    this._showBrightnessControl = config.show_brightness_control ?? true;
-    this._allowedEffects = config.allowed_effects;
+    this._state = state;
     this._colorManager = new ColorManager();
     log.debug('StateManager: Initialized with config', config);
   }
@@ -42,108 +28,14 @@ export class StateManager {
     this.updateState();
   }
 
-  get isOn() {
-    return this._isOn;
-  }
-
-  get currentEffect() {
-    return this._currentEffect;
-  }
-
-  get isDropdownOpen() {
-    return this._isDropdownOpen;
-  }
-
-  get isAttributesExpanded() {
-    return this._isAttributesExpanded;
-  }
-
-  get backgroundColor() {
-    return this._backgroundColor;
-  }
-
-  get textColor() {
-    return this._textColor;
-  }
-
-  get accentColor() {
-    return this._accentColor;
-  }
-
-  get showEffectInfo() {
-    return this._showEffectInfo;
-  }
-
-  get showEffectParameters() {
-    return this._showEffectParameters;
-  }
-
-  get showBrightnessControl() {
-    return this._showBrightnessControl;
-  }
-
-  get brightness() {
-    return this._brightness;
-  }
-
-  get allowedEffects() {
-    return this._allowedEffects;
-  }
-
-  get lastEffectImage() {
-    return this._lastEffectImage;
-  }
-
-  setBackgroundColor(color: string) {
-    this._backgroundColor = color;
-  }
-
-  setTextColor(color: string) {
-    this._textColor = color;
-  }
-
-  setIsOn(value: boolean) {
-    this._isOn = value;
-  }
-
-  setAccentColor(color: string) {
-    this._accentColor = color;
-  }
-
-  toggleDropdown() {
-    this._isDropdownOpen = !this._isDropdownOpen;
-    log.debug(
-      'StateManager: Dropdown toggled, new state:',
-      this._isDropdownOpen,
-    );
-  }
-
-  toggleAttributes() {
-    this._isAttributesExpanded = !this._isAttributesExpanded;
-    log.debug('StateManager: Attributes expanded:', this._isAttributesExpanded);
-  }
-
-  toggleLight() {
-    this._isOn = !this._isOn;
-    log.debug('StateManager: Light toggled, new state:', this._isOn);
-  }
-
-  setBrightness(brightness: number) {
-    this._brightness = brightness;
-    log.debug('StateManager: Brightness updated:', this._brightness);
-  }
-
-  setCurrentEffect(effect: string) {
-    this._currentEffect = effect;
-    log.debug('StateManager: Current effect set to:', this._currentEffect);
-  }
-
-  updateState() {
+  async updateState() {
+    log.debug('StateManager: Updating state');
     if (this._hass && this._config) {
       const stateObj = this._hass.states[this._config.entity] as
         | HassEntity
         | undefined;
       if (stateObj) {
+        log.debug('StateManager: State object:', stateObj);
         const newEffect = stateObj.attributes.effect || 'No effect';
         const newIsOn = stateObj.state === 'on';
         const newBrightness = Math.round(
@@ -156,27 +48,68 @@ export class StateManager {
           brightness: newBrightness,
         });
 
-        if (stateObj.attributes.effect_image !== this._lastEffectImage) {
-          this._lastEffectImage = stateObj.attributes.effect_image;
-          this._colorManager.extractColors(stateObj.attributes.effect_image);
-          log.debug('StateManager: New effect image detected');
+        if (stateObj.attributes.effect_image !== this._state.lastEffectImage) {
+          this._state.lastEffectImage = stateObj.attributes.effect_image;
+          const colors = await this._colorManager.extractColors(
+            stateObj.attributes.effect_image,
+          );
+          this._state.backgroundColor = colors.backgroundColor;
+          this._state.textColor = colors.textColor;
+          this._state.accentColor = colors.accentColor;
+          log.debug(
+            'StateManager: New effect image detected and colors extracted',
+          );
         }
 
         if (
-          this._currentEffect !== newEffect ||
-          this._isOn !== newIsOn ||
-          this._brightness !== newBrightness
+          this._state.currentEffect !== newEffect ||
+          this._state.isOn !== newIsOn ||
+          this._state.brightness !== newBrightness
         ) {
-          this._currentEffect = newEffect;
-          this._isOn = newIsOn;
-          this._brightness = newBrightness;
+          this._state.currentEffect = newEffect;
+          this._state.isOn = newIsOn;
+          this._state.brightness = newBrightness;
           log.debug('StateManager: State updated', {
-            effect: this._currentEffect,
-            isOn: this._isOn,
-            brightness: this._brightness,
+            effect: this._state.currentEffect,
+            isOn: this._state.isOn,
+            brightness: this._state.brightness,
           });
         }
       }
     }
+  }
+
+  toggleDropdown() {
+    this._state.isDropdownOpen = !this._state.isDropdownOpen;
+    log.debug(
+      'StateManager: Dropdown toggled, new state:',
+      this._state.isDropdownOpen,
+    );
+  }
+
+  toggleAttributes() {
+    this._state.isAttributesExpanded = !this._state.isAttributesExpanded;
+    log.debug(
+      'StateManager: Attributes expanded:',
+      this._state.isAttributesExpanded,
+    );
+  }
+
+  toggleLight() {
+    this._state.isOn = !this._state.isOn;
+    log.debug('StateManager: Light toggled, new state:', this._state.isOn);
+  }
+
+  setBrightness(brightness: number) {
+    this._state.brightness = brightness;
+    log.debug('StateManager: Brightness updated:', this._state.brightness);
+  }
+
+  setCurrentEffect(effect: string) {
+    this._state.currentEffect = effect;
+    log.debug(
+      'StateManager: Current effect set to:',
+      this._state.currentEffect,
+    );
   }
 }

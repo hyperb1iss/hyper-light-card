@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, fireEvent } from 'custom-card-helpers';
-import { Config } from './hyper-light-card';
+import { Config } from './config';
 
 interface ExtendedHTMLInputElement extends HTMLInputElement {
   configValue?: keyof Config;
