@@ -7,6 +7,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '\\.css$': '<rootDir>/__mocks__/styleMock.js',  // Mock CSS imports
+    '^@/(.*)$': '<rootDir>/src/$1',  // Map @/ to src/ directory
   },
   transformIgnorePatterns: [
     '/node_modules/(?!lit|@lit|lit-html|lit-element)/',
@@ -18,4 +19,7 @@ module.exports = {
       useESM: true,
     },
   },
+  roots: ['<rootDir>/tests', '<rootDir>/src'],
+  testMatch: ['<rootDir>/tests/**/*.test.ts'],
+  moduleDirectories: ['node_modules', 'src'],
 };

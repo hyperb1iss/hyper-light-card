@@ -4,7 +4,7 @@ import {
   ensureContrastLab,
   formatAttributeKey,
   formatAttributeValue,
-} from './utils';
+} from '@/utils';
 describe('getAccessibleTextColors', () => {
   test.each([
     [[255, 0, 0], 'Red background'],
