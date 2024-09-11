@@ -1,4 +1,3 @@
-// src/state.ts
 import { ReactiveController, ReactiveControllerHost } from 'lit';
 
 export class State implements ReactiveController {

@@ -38,8 +38,8 @@ export class StateManager {
         log.debug('StateManager: State object:', stateObj);
         const newEffect = stateObj.attributes.effect || 'No effect';
         const newIsOn = stateObj.state === 'on';
-        const newBrightness = Math.round(
-          ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
+        const newBrightness = this.convertHABrightnessToCard(
+          stateObj.attributes.brightness,
         );
 
         log.debug('StateManager: Potential new state:', {
@@ -95,21 +95,58 @@ export class StateManager {
     );
   }
 
-  toggleLight() {
+  async toggleLight() {
     this._state.isOn = !this._state.isOn;
     log.debug('StateManager: Light toggled, new state:', this._state.isOn);
+
+    if (this._hass && this._config) {
+      await this._hass.callService(
+        'light',
+        this._state.isOn ? 'turn_on' : 'turn_off',
+        {
+          entity_id: this._config.entity,
+        },
+      );
+    }
   }
 
-  setBrightness(brightness: number) {
+  async setBrightness(brightness: number) {
     this._state.brightness = brightness;
     log.debug('StateManager: Brightness updated:', this._state.brightness);
+
+    if (this._hass && this._config) {
+      const haBrightness = this.convertCardBrightnessToHA(brightness);
+      await this._hass.callService('light', 'turn_on', {
+        entity_id: this._config.entity,
+        brightness: haBrightness,
+      });
+      log.debug('StateManager: Brightness updated', {
+        brightness: brightness,
+        haBrightness: haBrightness,
+      });
+    }
   }
 
-  setCurrentEffect(effect: string) {
+  async setCurrentEffect(effect: string) {
     this._state.currentEffect = effect;
     log.debug(
       'StateManager: Current effect set to:',
       this._state.currentEffect,
     );
+
+    if (this._hass && this._config) {
+      await this._hass.callService('light', 'turn_on', {
+        entity_id: this._config.entity,
+        effect: effect,
+      });
+    }
+  }
+
+  convertHABrightnessToCard(haBrightness: number): number {
+    return Math.round(((haBrightness - 3) / 252) * 100);
+  }
+
+  convertCardBrightnessToHA(cardBrightness: number): number {
+    return Math.round((cardBrightness / 100) * 252) + 3;
   }
 }

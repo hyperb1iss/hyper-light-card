@@ -385,17 +385,13 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _toggleLight() {
+  private async _toggleLight() {
     log.debug('HyperLightCard: _toggleLight called');
-    const newState = !this.state.isOn;
-    this.state.isOn = newState;
-    this.hass!.callService('light', newState ? 'turn_on' : 'turn_off', {
-      entity_id: this.config!.entity,
-    });
+    await this.stateManager.toggleLight();
 
     const effectInfo = this.shadowRoot!.querySelector('.effect-info');
     if (effectInfo) {
-      if (newState) {
+      if (this.state.isOn) {
         setTimeout(() => {
           effectInfo.classList.add('visible');
           log.debug('HyperLightCard: Effect info made visible');
@@ -406,7 +402,7 @@ export class HyperLightCard extends LitElement {
       }
     }
 
-    log.debug('HyperLightCard: Light toggled, new state:', newState);
+    log.debug('HyperLightCard: Light toggled, new state:', this.state.isOn);
   }
 
   private _getCurrentEffectIndex(): number {
@@ -476,18 +472,8 @@ export class HyperLightCard extends LitElement {
 
   private async _selectEffect(effect: string) {
     log.debug('HyperLightCard: _selectEffect called', effect);
-    this.stateManager.setCurrentEffect(effect);
+    await this.stateManager.setCurrentEffect(effect);
     this.stateManager.toggleDropdown();
-
-    if (this.state.isOn) {
-      await this.hass!.callService('light', 'turn_on', {
-        entity_id: this.config!.entity,
-        effect: effect,
-      });
-      log.debug('HyperLightCard: Effect applied via service call');
-    } else {
-      log.debug('HyperLightCard: Light is off, effect not applied');
-    }
   }
 
   private _toggleAttributes() {
@@ -517,21 +503,7 @@ export class HyperLightCard extends LitElement {
     log.debug('HyperLightCard: _handleBrightnessChange called');
     const target = e.target as HTMLInputElement;
     const brightness = Number(target.value);
-    this.stateManager.setBrightness(brightness);
-
-    if (this.hass && this.config) {
-      // Convert 1-100 range to 3-255 range for Home Assistant
-      const haBrightness = Math.round((brightness / 100) * 252) + 3;
-
-      await this.hass.callService('light', 'turn_on', {
-        entity_id: this.config.entity,
-        brightness: haBrightness,
-      });
-      log.debug('HyperLightCard: Brightness updated', {
-        brightness: brightness,
-        haBrightness: haBrightness,
-      });
-    }
+    await this.stateManager.setBrightness(brightness);
   }
 
   connectedCallback() {
