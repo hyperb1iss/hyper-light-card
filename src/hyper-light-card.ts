@@ -1,9 +1,7 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import ColorThief from 'colorthief';
 import {
-  getAccessibleTextColors,
   formatAttributeKey,
   formatAttributeValue,
   memoize,
@@ -32,10 +30,7 @@ export class HyperLightCard extends LitElement {
   @property({ type: Object }) hass?: HomeAssistant;
   @property({ type: Object }) config?: Config;
   @state() private stateManager!: StateManager;
-  private _colorThief = new ColorThief();
   private _clickOutsideHandler: (event: Event) => void;
-  private _transitionInProgress = false;
-  private _updateCount = 0;
 
   constructor() {
     super();
@@ -75,89 +70,10 @@ export class HyperLightCard extends LitElement {
 
   firstUpdated() {
     log.debug('HyperLightCard: firstUpdated called');
-    this._debouncedExtractColors();
-  }
-
-  private _extractColors() {
-    log.debug('HyperLightCard: _extractColors called');
-    if (!this.config?.entity || !this.hass) {
-      log.debug('HyperLightCard: No entity configured or hass not available');
-      return;
+    if (this.hass && this.config) {
+      this.stateManager.hass = this.hass;
     }
-    const stateObj = this.hass.states[this.config.entity];
-    if (!stateObj || !stateObj.attributes.effect_image) {
-      log.debug('HyperLightCard: No effect image found');
-      return;
-    }
-
-    log.debug('HyperLightCard: Extracting colors from effect image');
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = stateObj.attributes.effect_image;
-    img.alt = `${stateObj.entity_id} effect image`;
-    img.onload = () => {
-      const palette = this._colorThief.getPalette(img, 3);
-      log.debug('HyperLightCard: Color palette extracted', palette);
-      if (palette && palette.length >= 2) {
-        this._applyColorTransition(palette);
-      } else {
-        console.warn('HyperLightCard: Insufficient colors in palette', palette);
-      }
-    };
   }
-
-  private async _applyColorTransition(palette: number[][]) {
-    log.debug('HyperLightCard: _applyColorTransition called', palette);
-    if (this._transitionInProgress) {
-      log.debug('HyperLightCard: Color transition already in progress');
-      return;
-    }
-    this._transitionInProgress = true;
-
-    const newBackgroundColor = `rgb(${palette[0].join(',')})`;
-    const textColors = getAccessibleTextColors(palette[0]);
-    const newTextColor = `rgb(${textColors.join(',')})`;
-    const newAccentColor = `rgb(${palette[1].join(',')})`;
-
-    log.debug(
-      'HyperLightCard: New colors:',
-      newBackgroundColor,
-      newTextColor,
-      newAccentColor,
-    );
-
-    await new Promise(resolve => {
-      requestAnimationFrame(() => {
-        this.style.setProperty('--background-color', newBackgroundColor);
-        this.style.setProperty('--text-color', newTextColor);
-        this.style.setProperty('--accent-color', newAccentColor);
-        this.style.setProperty('--switch-checked-color', newAccentColor);
-        this.style.setProperty('--switch-checked-button-color', newAccentColor);
-        this.style.setProperty('--switch-checked-track-color', newAccentColor);
-
-        this.stateManager.setBackgroundColor(newBackgroundColor);
-        this.stateManager.setTextColor(newTextColor);
-        this.stateManager.setAccentColor(newAccentColor);
-
-        resolve(null);
-      });
-    });
-
-    this._transitionInProgress = false;
-    this.requestUpdate();
-  }
-
-  private _debouncedUpdate = this._debounce(() => {
-    this._extractColors();
-    this.requestUpdate();
-    log.debug(
-      `HyperLightCard: Debounced update called (${++this._updateCount})`,
-    );
-  }, 250);
-
-  private _debouncedExtractColors = this._debounce(() => {
-    this._extractColors();
-  }, 250);
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
@@ -627,17 +543,6 @@ export class HyperLightCard extends LitElement {
         haBrightness: haBrightness,
       });
     }
-  }
-
-  private _debounce<T extends (...args: unknown[]) => void>(
-    func: T,
-    delay: number,
-  ): (...args: Parameters<T>) => void {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    return (...args: Parameters<T>) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
   }
 
   connectedCallback() {

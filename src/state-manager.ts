@@ -1,7 +1,9 @@
+// src/state-manager.ts
 import { HomeAssistant } from 'custom-card-helpers';
 import { log } from './utils';
 import { HassEntity } from 'home-assistant-js-websocket';
 import { Config } from './hyper-light-card';
+import { ColorManager } from './color-manager';
 
 export class StateManager {
   private _hass?: HomeAssistant;
@@ -19,6 +21,7 @@ export class StateManager {
   private _brightness: number = 100;
   private _allowedEffects?: string[];
   private _lastEffectImage: string | null = null;
+  private _colorManager: ColorManager;
 
   constructor(config: Config) {
     this._config = config;
@@ -26,6 +29,7 @@ export class StateManager {
     this._showEffectParameters = config.show_effect_parameters ?? true;
     this._showBrightnessControl = config.show_brightness_control ?? true;
     this._allowedEffects = config.allowed_effects;
+    this._colorManager = new ColorManager();
     log.debug('StateManager: Initialized with config', config);
   }
 
@@ -154,6 +158,7 @@ export class StateManager {
 
         if (stateObj.attributes.effect_image !== this._lastEffectImage) {
           this._lastEffectImage = stateObj.attributes.effect_image;
+          this._colorManager.extractColors(stateObj.attributes.effect_image);
           log.debug('StateManager: New effect image detected');
         }
 
