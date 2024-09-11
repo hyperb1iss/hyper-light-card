@@ -4,6 +4,7 @@ import { State } from './state';
 import { ColorManager } from './color-manager';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Config } from './config';
+import { convertCardBrightnessToHA } from './utils';
 
 // Mock implementation of ReactiveControllerHost
 class MockReactiveControllerHost {
@@ -38,7 +39,7 @@ describe('StateManager', () => {
             effect_list: ['Effect1', 'Effect2'],
             effect: 'Effect1',
             effect_image: 'http://example.com/effect.png',
-            brightness: stateManager.convertCardBrightnessToHA(50), // This is the brightness value in Home Assistant's scale
+            brightness: convertCardBrightnessToHA(50), // This is the brightness value in Home Assistant's scale
           },
         },
       },

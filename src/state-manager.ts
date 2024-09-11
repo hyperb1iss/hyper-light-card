@@ -1,7 +1,11 @@
 // src/state-manager.ts
 import { State } from './state';
 import { ColorManager } from './color-manager';
-import { log } from './utils';
+import {
+  convertCardBrightnessToHA,
+  convertHABrightnessToCard,
+  log,
+} from './utils';
 import { HomeAssistant } from 'custom-card-helpers';
 import { HassEntity } from 'home-assistant-js-websocket';
 import { Config } from './config';
@@ -38,7 +42,7 @@ export class StateManager {
         log.debug('StateManager: State object:', stateObj);
         const newEffect = stateObj.attributes.effect || 'No effect';
         const newIsOn = stateObj.state === 'on';
-        const newBrightness = this.convertHABrightnessToCard(
+        const newBrightness = convertHABrightnessToCard(
           stateObj.attributes.brightness,
         );
 
@@ -100,6 +104,7 @@ export class StateManager {
     log.debug('StateManager: Light toggled, new state:', this._state.isOn);
 
     if (this._hass && this._config) {
+      log.debug('StateManager: Calling service', this._state.isOn);
       await this._hass.callService(
         'light',
         this._state.isOn ? 'turn_on' : 'turn_off',
@@ -115,7 +120,7 @@ export class StateManager {
     log.debug('StateManager: Brightness updated:', this._state.brightness);
 
     if (this._hass && this._config) {
-      const haBrightness = this.convertCardBrightnessToHA(brightness);
+      const haBrightness = convertCardBrightnessToHA(brightness);
       await this._hass.callService('light', 'turn_on', {
         entity_id: this._config.entity,
         brightness: haBrightness,
@@ -140,13 +145,5 @@ export class StateManager {
         effect: effect,
       });
     }
-  }
-
-  convertHABrightnessToCard(haBrightness: number): number {
-    return Math.round(((haBrightness - 3) / 252) * 100);
-  }
-
-  convertCardBrightnessToHA(cardBrightness: number): number {
-    return Math.round((cardBrightness / 100) * 252) + 3;
   }
 }

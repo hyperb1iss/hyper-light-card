@@ -1,6 +1,9 @@
 import { HyperLightCard } from './hyper-light-card';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Config } from './config';
+import { State } from './state';
+import { ColorManager } from './color-manager';
+import { convertCardBrightnessToHA } from './utils';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;
@@ -20,11 +23,34 @@ describe('HyperLightCard', () => {
           attributes: {
             friendly_name: 'Test Light',
             effect_list: ['Effect1', 'Effect2'],
+            effect: 'Effect1',
+            effect_image: 'http://example.com/effect.png',
+            brightness: 125,
           },
         },
       },
-      callService: jest.fn(),
+      callService: jest.fn().mockImplementation((domain, service, data) => {
+        if (domain === 'light' && service === 'turn_off') {
+          mockHass.states['light.test_light'].state = 'off';
+        } else if (domain === 'light' && service === 'turn_on') {
+          mockHass.states['light.test_light'].state = 'on';
+          if (data.brightness !== undefined) {
+            mockHass.states['light.test_light'].attributes.brightness =
+              data.brightness;
+          }
+          if (data.effect !== undefined) {
+            mockHass.states['light.test_light'].attributes.effect = data.effect;
+          }
+        }
+      }),
     } as unknown as jest.Mocked<HomeAssistant>;
+
+    // Mock the ColorManager's extractColors method
+    jest.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue({
+      backgroundColor: 'rgb(255, 0, 0)',
+      textColor: 'rgb(0, 0, 0)',
+      accentColor: 'rgb(0, 255, 0)',
+    });
 
     // Set up the required config property
     card.setConfig({ entity: 'light.test_light' });
@@ -87,19 +113,6 @@ describe('HyperLightCard', () => {
   });
 
   describe('render', () => {
-    beforeEach(() => {
-      // Spy on the card's internal StateManager methods
-      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
-      jest.spyOn(card['stateManager'], 'setCurrentEffect').mockImplementation();
-      jest.spyOn(card['stateManager'], 'setBrightness').mockImplementation();
-      jest.spyOn(card['stateManager'], 'setAccentColor').mockImplementation();
-
-      card['stateManager'].setIsOn(true);
-      card['stateManager'].setCurrentEffect('Test Effect');
-      card['stateManager'].setBrightness(50);
-      card['stateManager'].setAccentColor('#ff0000');
-    });
-
     it('renders without errors', () => {
       const renderResult = card.render();
       expect(renderResult).toBeDefined();
@@ -109,27 +122,94 @@ describe('HyperLightCard', () => {
   });
 
   describe('_toggleLight', () => {
-    it('calls the correct hass service to turn off the light when it is on', () => {
-      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
-      card['stateManager'].setIsOn(true);
-      card['_toggleLight']();
+    it('calls the correct hass service to turn off the light when it is on', async () => {
+      const state = card['state'] as State;
+      state.isOn = true;
+
+      await card['_toggleLight']();
       expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_off', {
         entity_id: 'light.test_light',
       });
-      expect(card['stateManager'].setIsOn).toHaveBeenCalledWith(false);
+
+      expect(state.isOn).toBe(false);
     });
 
-    it('calls the correct hass service to turn on the light when it is off', () => {
-      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
-      expect(card['stateManager'].isOn).toBe(true);
-      card['stateManager'].toggleLight();
-      expect(card['stateManager'].isOn).toBe(false);
-
-      card['_toggleLight']();
+    it('calls the correct hass service to turn on the light when it is off', async () => {
+      const state = card['state'] as State;
+      state.isOn = false;
+      await card['_toggleLight']();
       expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
         entity_id: 'light.test_light',
       });
-      expect(card['stateManager'].setIsOn).toHaveBeenCalledWith(true);
+      expect(state.isOn).toBe(true);
+    });
+  });
+
+  describe('_handleBrightnessChange', () => {
+    it('updates the brightness state and calls the correct hass service', async () => {
+      const event = new Event('change');
+      Object.defineProperty(event, 'target', {
+        value: { value: '50' },
+        writable: false,
+      });
+
+      const state = card['state'] as State;
+      await card['_handleBrightnessChange'](event);
+      expect(state.brightness).toBe(50);
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
+        entity_id: 'light.test_light',
+        brightness: convertCardBrightnessToHA(50), // 50 in 0-100 scale should be 129 in 0-255 scale
+      });
+    });
+  });
+
+  describe('_selectEffect', () => {
+    it('updates the current effect state and calls the correct hass service', async () => {
+      const state = card['state'] as State;
+      await card['_selectEffect']('Effect2');
+      expect(state.currentEffect).toBe('Effect2');
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
+        entity_id: 'light.test_light',
+        effect: 'Effect2',
+      });
+    });
+  });
+
+  describe('_toggleDropdown', () => {
+    it('toggles the dropdown state', () => {
+      const event = new Event('click');
+      const state = card['state'] as State;
+      card['_toggleDropdown'](event);
+      expect(state.isDropdownOpen).toBe(true);
+
+      card['_toggleDropdown'](event);
+      expect(state.isDropdownOpen).toBe(false);
+    });
+  });
+
+  describe('_toggleAttributes', () => {
+    it('toggles the attributes state', () => {
+      const state = card['state'] as State;
+      card['_toggleAttributes']();
+      expect(state.isAttributesExpanded).toBe(true);
+
+      card['_toggleAttributes']();
+      expect(state.isAttributesExpanded).toBe(false);
+    });
+  });
+
+  describe('_handleClickOutside', () => {
+    it('closes the dropdown when clicking outside', () => {
+      const state = card['state'] as State;
+      state.isDropdownOpen = true;
+      const event = new Event('click');
+      Object.defineProperty(event, 'composedPath', {
+        value: () => [],
+        writable: false,
+      });
+
+      card['_handleClickOutside'](event);
+      expect(state.isDropdownOpen).toBe(false);
     });
   });
 

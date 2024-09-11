@@ -140,6 +140,14 @@ export function memoize<TArgs extends unknown[], TResult>(
   };
 }
 
+export function convertHABrightnessToCard(haBrightness: number): number {
+  return Math.round(((haBrightness - 3) / 252) * 100);
+}
+
+export function convertCardBrightnessToHA(cardBrightness: number): number {
+  return Math.round((cardBrightness / 100) * 252) + 3;
+}
+
 // Logging utility
 const isLoggingEnabled = '__IS_LOGGING_ENABLED__' as unknown as boolean;
 
