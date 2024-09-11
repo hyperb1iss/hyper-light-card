@@ -1,16 +1,18 @@
+// hyper-light-card.test.ts
 import { HyperLightCard, Config } from './hyper-light-card';
 import { HomeAssistant } from 'custom-card-helpers';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;
+  let mockHass: jest.Mocked<HomeAssistant>;
 
   beforeEach(() => {
     // Create an instance of the component and attach it to the DOM
     card = document.createElement('hyper-light-card') as HyperLightCard;
-    document.body.appendChild(card); // Append the card to the document body
+    document.body.appendChild(card);
 
     // Mock the hass object with necessary state
-    card.hass = {
+    mockHass = {
       states: {
         'light.test_light': {
           entity_id: 'light.test_light',
@@ -21,11 +23,14 @@ describe('HyperLightCard', () => {
           },
         },
       },
-      callService: jest.fn(), // Mock the callService function
-    } as unknown as HomeAssistant;
+      callService: jest.fn(),
+    } as unknown as jest.Mocked<HomeAssistant>;
 
     // Set up the required config property
     card.setConfig({ entity: 'light.test_light' });
+
+    // Set the hass object
+    card.hass = mockHass;
 
     // Force an initial render to ensure everything is set up
     card.requestUpdate();
@@ -34,6 +39,7 @@ describe('HyperLightCard', () => {
   afterEach(() => {
     // Clean up after each test
     document.body.removeChild(card);
+    jest.clearAllMocks();
   });
 
   it('initializes without errors', () => {
@@ -82,7 +88,16 @@ describe('HyperLightCard', () => {
 
   describe('render', () => {
     beforeEach(() => {
-      // Additional setup if necessary before each render test
+      // Spy on the card's internal StateManager methods
+      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
+      jest.spyOn(card['stateManager'], 'setCurrentEffect').mockImplementation();
+      jest.spyOn(card['stateManager'], 'setBrightness').mockImplementation();
+      jest.spyOn(card['stateManager'], 'setAccentColor').mockImplementation();
+
+      card['stateManager'].setIsOn(true);
+      card['stateManager'].setCurrentEffect('Test Effect');
+      card['stateManager'].setBrightness(50);
+      card['stateManager'].setAccentColor('#ff0000');
     });
 
     it('renders without errors', () => {
@@ -94,50 +109,27 @@ describe('HyperLightCard', () => {
   });
 
   describe('_toggleLight', () => {
-    beforeEach(() => {
-      card.setConfig({ entity: 'light.test_light' });
-      card['hass'] = {
-        states: {
-          'light.test_light': {
-            entity_id: 'light.test_light',
-            state: 'on', // Initial state in HASS
-            attributes: {
-              friendly_name: 'Test Light',
-              effect_list: ['Effect1', 'Effect2'],
-            },
-          },
-        },
-        callService: jest.fn(),
-      } as unknown as HomeAssistant;
-
-      // Set the initial internal state
-      card['_isOn'] = true; // Light is initially on
-    });
-
     it('calls the correct hass service to turn off the light when it is on', () => {
+      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
+      card['stateManager'].setIsOn(true);
       card['_toggleLight']();
-      expect(card['hass']!.callService).toHaveBeenCalledWith(
-        'light',
-        'turn_off',
-        {
-          entity_id: 'light.test_light',
-        },
-      );
-      expect(card['_isOn']).toBe(false); // Check that internal state is updated
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_off', {
+        entity_id: 'light.test_light',
+      });
+      expect(card['stateManager'].setIsOn).toHaveBeenCalledWith(false);
     });
 
     it('calls the correct hass service to turn on the light when it is off', () => {
-      // Simulate the light being off by updating the internal state
-      card['_isOn'] = false; // Internal state set to off
+      jest.spyOn(card['stateManager'], 'setIsOn').mockImplementation();
+      expect(card['stateManager'].isOn).toBe(true);
+      card['stateManager'].toggleLight();
+      expect(card['stateManager'].isOn).toBe(false);
+
       card['_toggleLight']();
-      expect(card['hass']!.callService).toHaveBeenCalledWith(
-        'light',
-        'turn_on',
-        {
-          entity_id: 'light.test_light',
-        },
-      );
-      expect(card['_isOn']).toBe(true); // Check that internal state is updated
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
+        entity_id: 'light.test_light',
+      });
+      expect(card['stateManager'].setIsOn).toHaveBeenCalledWith(true);
     });
   });
 

@@ -15,6 +15,7 @@ import styles from './hyper-light-card-styles.css';
 import './hyper-light-card-editor';
 import { HomeAssistant } from 'custom-card-helpers';
 import { HassEntity } from 'home-assistant-js-websocket';
+import { StateManager } from './state-manager';
 
 export interface Config {
   entity: string;
@@ -30,23 +31,11 @@ export interface Config {
 export class HyperLightCard extends LitElement {
   @property({ type: Object }) hass?: HomeAssistant;
   @property({ type: Object }) config?: Config;
-  @state() private _isOn = false;
-  @state() private _currentEffect = 'No effect';
-  @state() private _isDropdownOpen = false;
-  @state() private _isAttributesExpanded = false;
-  @state() private _backgroundColor = '';
-  @state() private _textColor = '';
-  @state() private _accentColor = '';
-  @state() private _showEffectInfo = true;
-  @state() private _showEffectParameters = true;
-  @state() private _showBrightnessControl = true;
-  @state() private _brightness: number = 100;
-  @state() private _allowedEffects?: string[];
+  @state() private stateManager!: StateManager;
   private _colorThief = new ColorThief();
   private _clickOutsideHandler: (event: Event) => void;
   private _transitionInProgress = false;
   private _updateCount = 0;
-  private _lastEffectImage: string | null = null;
 
   constructor() {
     super();
@@ -76,10 +65,7 @@ export class HyperLightCard extends LitElement {
       allowed_effects: config.allowed_effects,
       ...config,
     };
-    this._showEffectInfo = this.config.show_effect_info ?? true;
-    this._showEffectParameters = this.config.show_effect_parameters ?? true;
-    this._showBrightnessControl = this.config.show_brightness_control ?? true;
-    this._allowedEffects = this.config.allowed_effects;
+    this.stateManager = new StateManager(this.config);
     log.debug('HyperLightCard: Config set', this.config);
   }
 
@@ -149,9 +135,9 @@ export class HyperLightCard extends LitElement {
         this.style.setProperty('--switch-checked-button-color', newAccentColor);
         this.style.setProperty('--switch-checked-track-color', newAccentColor);
 
-        this._backgroundColor = newBackgroundColor;
-        this._textColor = newTextColor;
-        this._accentColor = newAccentColor;
+        this.stateManager.setBackgroundColor(newBackgroundColor);
+        this.stateManager.setTextColor(newTextColor);
+        this.stateManager.setAccentColor(newAccentColor);
 
         resolve(null);
       });
@@ -183,43 +169,11 @@ export class HyperLightCard extends LitElement {
     );
 
     if (this.hass && this.config) {
-      const stateObj = this.hass.states[this.config.entity];
-      if (stateObj) {
-        const newEffect = stateObj.attributes.effect || 'No effect';
-        const newIsOn = stateObj.state === 'on';
-        const newBrightness = Math.round(
-          ((Number(stateObj.attributes.brightness) - 3) / 252) * 100,
-        );
-
-        log.debug('HyperLightCard: Potential new state:', {
-          effect: newEffect,
-          isOn: newIsOn,
-          brightness: newBrightness,
-        });
-
-        // Always update if there's a new effect image
-        if (stateObj.attributes.effect_image !== this._lastEffectImage) {
-          this._lastEffectImage = stateObj.attributes.effect_image;
-          this._debouncedExtractColors();
-        }
-
-        // Update state and trigger color extraction if anything has changed
-        if (
-          this._currentEffect !== newEffect ||
-          this._isOn !== newIsOn ||
-          this._brightness !== newBrightness
-        ) {
-          log.debug('HyperLightCard: State changed, updating');
-          this._currentEffect = newEffect;
-          this._isOn = newIsOn;
-          this._brightness = newBrightness;
-          this._debouncedExtractColors();
-        }
-      }
+      this.stateManager.hass = this.hass;
     }
 
     // If the dropdown is open, scroll to the current effect
-    if (this._isDropdownOpen) {
+    if (this.stateManager.isDropdownOpen) {
       this._scrollToCurrentEffect();
     }
   }
@@ -241,13 +195,13 @@ export class HyperLightCard extends LitElement {
     }
 
     log.debug('HyperLightCard: Rendering with state', {
-      isOn: this._isOn,
-      currentEffect: this._currentEffect,
-      brightness: this._brightness,
+      isOn: this.stateManager.isOn,
+      currentEffect: this.stateManager.currentEffect,
+      brightness: this.stateManager.brightness,
     });
 
     const sliderStyle = {
-      '--slider-color': this._accentColor,
+      '--slider-color': this.stateManager.accentColor,
     };
 
     return html`
@@ -255,21 +209,27 @@ export class HyperLightCard extends LitElement {
         <div
           class="card"
           style="
-            --background-color: ${this._backgroundColor};
-            --text-color: ${this._textColor};
-            --accent-color: ${this._accentColor};
+            --background-color: ${this.stateManager.backgroundColor};
+            --text-color: ${this.stateManager.textColor};
+            --accent-color: ${this.stateManager.accentColor};
           "
         >
           ${this._renderBackground(stateObj)} ${this._renderHeader(stateObj)}
           ${this._renderEffectDropdown(stateObj)}
-          ${this._showEffectInfo ? this._renderEffectInfo(stateObj) : ''}
+          ${this.stateManager.showEffectInfo
+            ? this._renderEffectInfo(stateObj)
+            : ''}
           <div class="controls-row">
-            ${this._showBrightnessControl
+            ${this.stateManager.showBrightnessControl
               ? this._renderBrightnessSlider(sliderStyle)
               : ''}
-            ${this._showEffectParameters ? this._renderAttributesToggle() : ''}
+            ${this.stateManager.showEffectParameters
+              ? this._renderAttributesToggle()
+              : ''}
           </div>
-          ${this._showEffectParameters ? this._renderAttributes(stateObj) : ''}
+          ${this.stateManager.showEffectParameters
+            ? this._renderAttributes(stateObj)
+            : ''}
         </div>
       </ha-card>
     `;
@@ -298,7 +258,7 @@ export class HyperLightCard extends LitElement {
     log.debug('HyperLightCard: Rendering header', name);
     return html`
       <div class="header" aria-label="${name}">
-        <div class="light-icon ${this._isOn ? 'light-on' : ''}">
+        <div class="light-icon ${this.stateManager.isOn ? 'light-on' : ''}">
           ${this.config!.icon && this.config!.icon.startsWith('mdi:')
             ? html`<ha-icon
                 icon="${this.config!.icon}"
@@ -308,7 +268,7 @@ export class HyperLightCard extends LitElement {
         </div>
         <div class="light-name" title="${name}">${name}</div>
         <ha-switch
-          .checked=${this._isOn}
+          .checked=${this.stateManager.isOn}
           @change=${this._toggleLight}
           aria-label="Toggle light"
         ></ha-switch>
@@ -321,23 +281,23 @@ export class HyperLightCard extends LitElement {
       ? stateObj.attributes.effect_list
       : [];
 
-    if (this._allowedEffects) {
+    if (this.stateManager.allowedEffects) {
       effectList = effectList.filter(effect =>
-        this._allowedEffects!.includes(effect),
+        this.stateManager.allowedEffects!.includes(effect),
       );
     }
 
     log.debug('HyperLightCard: Rendering effect dropdown', effectList);
     return html`
       <div class="effect-select-wrapper">
-        <div class="dropdown ${this._isDropdownOpen ? 'open' : ''}">
+        <div class="dropdown ${this.stateManager.isDropdownOpen ? 'open' : ''}">
           <div
             class="dropdown-header"
             @click=${this._toggleDropdown}
-            aria-label="Current effect: ${this._currentEffect}"
+            aria-label="Current effect: ${this.stateManager.currentEffect}"
             role="button"
           >
-            ${this._currentEffect}
+            ${this.stateManager.currentEffect}
           </div>
           <div class="dropdown-content" role="menu">
             ${this._memoizedEffectList(effectList)}
@@ -363,7 +323,7 @@ export class HyperLightCard extends LitElement {
   );
 
   private _renderEffectInfo(stateObj: HassEntity) {
-    if (!this._showEffectInfo) return html``;
+    if (!this.stateManager.showEffectInfo) return html``;
 
     const description =
       stateObj.attributes.effect_description ||
@@ -383,7 +343,7 @@ export class HyperLightCard extends LitElement {
     });
 
     return html`
-      <div class="effect-info ${this._isOn ? 'visible' : ''}">
+      <div class="effect-info ${this.stateManager.isOn ? 'visible' : ''}">
         <div class="effect-info-text">
           <div class="effect-description">${description}</div>
           <div class="effect-publisher">Published by: ${publisher}</div>
@@ -418,8 +378,8 @@ export class HyperLightCard extends LitElement {
   private _renderBrightnessSlider(sliderStyle: Record<string, string>) {
     const updatedSliderStyle = {
       ...sliderStyle,
-      '--slider-percentage': `${this._brightness}%`,
-      '--slider-color': this._accentColor,
+      '--slider-percentage': `${this.stateManager.brightness}%`,
+      '--slider-color': this.stateManager.accentColor,
     };
 
     log.debug(
@@ -434,14 +394,14 @@ export class HyperLightCard extends LitElement {
         role="slider"
         aria-valuemin="1"
         aria-valuemax="100"
-        aria-valuenow="${this._brightness}"
+        aria-valuenow="${this.stateManager.brightness}"
       >
         <ha-icon icon="mdi:brightness-6" aria-hidden="true"></ha-icon>
         <input
           type="range"
           min="1"
           max="100"
-          .value=${this._brightness.toString()}
+          .value=${this.stateManager.brightness.toString()}
           @change=${this._handleBrightnessChange}
           @input=${this._handleBrightnessChange}
           aria-label="Adjust brightness"
@@ -457,7 +417,7 @@ export class HyperLightCard extends LitElement {
         class="attributes-toggle"
         @click=${this._toggleAttributes}
         role="button"
-        aria-expanded="${this._isAttributesExpanded}"
+        aria-expanded="${this.stateManager.isAttributesExpanded}"
         aria-label="Toggle effect parameters"
       >
         <ha-icon icon="mdi:chevron-down"></ha-icon>
@@ -466,7 +426,7 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderAttributes(stateObj: HassEntity) {
-    if (!this._showEffectParameters) return html``;
+    if (!this.stateManager.showEffectParameters) return html``;
 
     const effectParameters = stateObj.attributes
       .effect_parameters as unknown as
@@ -482,8 +442,10 @@ export class HyperLightCard extends LitElement {
 
     return html`
       <div
-        class="attributes ${this._isAttributesExpanded ? 'expanded' : ''}"
-        aria-hidden="${!this._isAttributesExpanded}"
+        class="attributes ${this.stateManager.isAttributesExpanded
+          ? 'expanded'
+          : ''}"
+        aria-hidden="${!this.stateManager.isAttributesExpanded}"
       >
         <div class="attributes-content">
           ${this._renderAttributesList(effectParameters)}
@@ -520,14 +482,15 @@ export class HyperLightCard extends LitElement {
 
   private _toggleLight() {
     log.debug('HyperLightCard: _toggleLight called');
-    this._isOn = !this._isOn;
-    this.hass!.callService('light', this._isOn ? 'turn_on' : 'turn_off', {
+    const newState = !this.stateManager.isOn;
+    this.stateManager.setIsOn(newState);
+    this.hass!.callService('light', newState ? 'turn_on' : 'turn_off', {
       entity_id: this.config!.entity,
     });
 
     const effectInfo = this.shadowRoot!.querySelector('.effect-info');
     if (effectInfo) {
-      if (this._isOn) {
+      if (newState) {
         setTimeout(() => {
           effectInfo.classList.add('visible');
           log.debug('HyperLightCard: Effect info made visible');
@@ -538,7 +501,7 @@ export class HyperLightCard extends LitElement {
       }
     }
 
-    log.debug('HyperLightCard: Light toggled, new state:', this._isOn);
+    log.debug('HyperLightCard: Light toggled, new state:', newState);
   }
 
   private _getCurrentEffectIndex(): number {
@@ -547,7 +510,7 @@ export class HyperLightCard extends LitElement {
       ? stateObj?.attributes.effect_list
       : [];
 
-    return effectList.indexOf(this._currentEffect);
+    return effectList.indexOf(this.stateManager.currentEffect);
   }
 
   private _scrollToCurrentEffect() {
@@ -556,14 +519,14 @@ export class HyperLightCard extends LitElement {
       '.dropdown-content',
     ) as HTMLElement;
     const currentEffectItem = this.shadowRoot?.querySelector(
-      `.dropdown-item[data-effect="${this._currentEffect}"]`,
+      `.dropdown-item[data-effect="${this.stateManager.currentEffect}"]`,
     ) as HTMLElement;
 
     if (dropdownContent && currentEffectItem) {
       const scrollTop = currentEffectItem.offsetTop - dropdownContent.offsetTop;
       dropdownContent.scrollTop = scrollTop;
       log.debug('HyperLightCard: Scrolled to current effect', {
-        effect: this._currentEffect,
+        effect: this.stateManager.currentEffect,
         scrollTop: scrollTop,
       });
     } else {
@@ -579,7 +542,7 @@ export class HyperLightCard extends LitElement {
 
     items.forEach(item => {
       item.classList.remove('selected');
-      if (item.textContent?.trim() === this._currentEffect) {
+      if (item.textContent?.trim() === this.stateManager.currentEffect) {
         item.classList.add('selected');
       }
     });
@@ -590,13 +553,13 @@ export class HyperLightCard extends LitElement {
   private _toggleDropdown(e: Event) {
     log.debug('HyperLightCard: _toggleDropdown called');
     e.stopPropagation();
-    this._isDropdownOpen = !this._isDropdownOpen;
+    this.stateManager.toggleDropdown();
     log.debug(
       'HyperLightCard: Dropdown toggled, new state:',
-      this._isDropdownOpen,
+      this.stateManager.isDropdownOpen,
     );
 
-    if (this._isDropdownOpen) {
+    if (this.stateManager.isDropdownOpen) {
       // Use requestAnimationFrame to ensure the DOM has updated
       requestAnimationFrame(() => {
         this._scrollToCurrentEffect();
@@ -608,10 +571,10 @@ export class HyperLightCard extends LitElement {
 
   private async _selectEffect(effect: string) {
     log.debug('HyperLightCard: _selectEffect called', effect);
-    this._currentEffect = effect;
-    this._isDropdownOpen = false;
+    this.stateManager.setCurrentEffect(effect);
+    this.stateManager.toggleDropdown();
 
-    if (this._isOn) {
+    if (this.stateManager.isOn) {
       await this.hass!.callService('light', 'turn_on', {
         entity_id: this.config!.entity,
         effect: effect,
@@ -624,10 +587,10 @@ export class HyperLightCard extends LitElement {
 
   private _toggleAttributes() {
     log.debug('HyperLightCard: _toggleAttributes called');
-    this._isAttributesExpanded = !this._isAttributesExpanded;
+    this.stateManager.toggleAttributes();
     log.debug(
       'HyperLightCard: Attributes expanded:',
-      this._isAttributesExpanded,
+      this.stateManager.isAttributesExpanded,
     );
     this.requestUpdate();
   }
@@ -636,10 +599,10 @@ export class HyperLightCard extends LitElement {
     log.debug('HyperLightCard: _handleClickOutside called');
     const path = event.composedPath();
     if (
-      this._isDropdownOpen &&
+      this.stateManager.isDropdownOpen &&
       !path.includes(this.shadowRoot!.querySelector('.dropdown')!)
     ) {
-      this._isDropdownOpen = false;
+      this.stateManager.toggleDropdown();
       log.debug('HyperLightCard: Dropdown closed due to outside click');
       this.requestUpdate();
     }
@@ -649,7 +612,7 @@ export class HyperLightCard extends LitElement {
     log.debug('HyperLightCard: _handleBrightnessChange called');
     const target = e.target as HTMLInputElement;
     const brightness = Number(target.value);
-    this._brightness = brightness;
+    this.stateManager.setBrightness(brightness);
 
     if (this.hass && this.config) {
       // Convert 1-100 range to 3-255 range for Home Assistant
