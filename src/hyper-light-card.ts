@@ -14,21 +14,7 @@ import styles from './hyper-light-card-styles.css';
 // Import the editor component
 import './hyper-light-card-editor';
 import { HomeAssistant } from 'custom-card-helpers';
-
-export interface Hass {
-  states: Record<string, HassEntity>;
-  callService: (
-    domain: string,
-    service: string,
-    serviceData?: Record<string, unknown>,
-  ) => void;
-}
-
-interface HassEntity {
-  state: string;
-  attributes: Record<string, string>;
-  entity_id: string;
-}
+import { HassEntity } from 'home-assistant-js-websocket';
 
 export interface Config {
   entity: string;
@@ -42,7 +28,7 @@ export interface Config {
 }
 
 export class HyperLightCard extends LitElement {
-  @property({ type: Object }) hass?: Hass;
+  @property({ type: Object }) hass?: HomeAssistant;
   @property({ type: Object }) config?: Config;
   @state() private _isOn = false;
   @state() private _currentEffect = 'No effect';

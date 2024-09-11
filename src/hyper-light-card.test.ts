@@ -1,4 +1,5 @@
-import { HyperLightCard, Hass, Config } from './hyper-light-card';
+import { HyperLightCard, Config } from './hyper-light-card';
+import { HomeAssistant } from 'custom-card-helpers';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;
@@ -21,7 +22,7 @@ describe('HyperLightCard', () => {
         },
       },
       callService: jest.fn(), // Mock the callService function
-    } as unknown as Hass;
+    } as unknown as HomeAssistant;
 
     // Set up the required config property
     card.setConfig({ entity: 'light.test_light' });
@@ -107,7 +108,7 @@ describe('HyperLightCard', () => {
           },
         },
         callService: jest.fn(),
-      } as unknown as Hass;
+      } as unknown as HomeAssistant;
 
       // Set the initial internal state
       card['_isOn'] = true; // Light is initially on
