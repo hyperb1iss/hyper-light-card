@@ -1,5 +1,5 @@
 // src/hyper-light-card.ts
-import { LitElement, html, css, unsafeCSS } from 'lit';
+import { LitElement, html, css, unsafeCSS, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
@@ -335,9 +335,12 @@ export class HyperLightCard extends LitElement {
   private _renderAttributes(stateObj: HassEntity) {
     if (!this.state.showEffectParameters) return html``;
 
-    const effectParameters = stateObj.attributes
-      .effect_parameters as unknown as
-      | Record<string, string | number | boolean>
+    // Ensure effectParameters is correctly typed
+    const effectParameters = stateObj.attributes.effect_parameters as
+      | Record<
+          string,
+          { label: string; type: string; value: string | number | boolean }
+        >
       | undefined;
 
     if (!effectParameters || Object.keys(effectParameters).length === 0) {
@@ -360,7 +363,10 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderAttributesList(
-    effectParameters: Record<string, string | number | boolean>,
+    effectParameters: Record<
+      string,
+      string | { label: string; type: string; value: string | number | boolean }
+    >,
   ) {
     if (!effectParameters || Object.keys(effectParameters).length === 0) {
       log.debug('HyperLightCard: No effect parameters to list');
@@ -371,16 +377,25 @@ export class HyperLightCard extends LitElement {
 
     return html`
       <ul class="attribute-list">
-        ${Object.entries(effectParameters).map(
-          ([key, value]) => html`
+        ${Object.entries(effectParameters).map(([key, value]) => {
+          let label: string;
+          let formattedValue: string | TemplateResult;
+
+          if (typeof value === 'string') {
+            label = formatAttributeKey(key);
+            formattedValue = value;
+          } else {
+            label = value.label;
+            formattedValue = formatAttributeValue(value.value, value.type);
+          }
+
+          return html`
             <li class="attribute-item">
-              <span class="attribute-key">${formatAttributeKey(key)}:</span>
-              <span class="attribute-value"
-                >${formatAttributeValue(value)}</span
-              >
+              <span class="attribute-key">${label}:</span>
+              <span class="attribute-value">${formattedValue}</span>
             </li>
-          `,
-        )}
+          `;
+        })}
       </ul>
     `;
   }

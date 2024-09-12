@@ -1,4 +1,5 @@
 import chroma from 'chroma-js';
+import { html, TemplateResult } from 'lit';
 
 /**
  * Ensures that the text color has sufficient contrast against the background color.
@@ -93,17 +94,26 @@ export function formatAttributeKey(key: string): string {
 
 /**
  * Formats an attribute value based on its type.
- * @param {boolean | number | string} value - The attribute value.
- * @returns {string} - The formatted attribute value.
+ * @param {string | number | boolean} value - The attribute value.
+ * @param {string} type - The type of the attribute value.
+ * @returns {string | TemplateResult} - The formatted attribute value.
  */
-export function formatAttributeValue(value: boolean | number | string): string {
-  if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
+export function formatAttributeValue(
+  value: string | number | boolean,
+  type: string,
+): string | TemplateResult {
+  switch (type) {
+    case 'color':
+      return html`<span style="color: ${value};">${value}</span>`;
+    case 'number':
+      return value.toString();
+    case 'boolean':
+      return value ? 'Yes' : 'No';
+    case 'combobox':
+      return value.toString();
+    default:
+      return value.toString();
   }
-  if (typeof value === 'number') {
-    return value.toFixed(2);
-  }
-  return value;
 }
 
 /**

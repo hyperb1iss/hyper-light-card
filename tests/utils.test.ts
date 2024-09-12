@@ -5,6 +5,8 @@ import {
   formatAttributeKey,
   formatAttributeValue,
 } from '@/utils';
+import { render } from 'lit';
+
 describe('getAccessibleTextColors', () => {
   test.each([
     [[255, 0, 0], 'Red background'],
@@ -55,10 +57,23 @@ describe('Formatting Functions', () => {
   });
 
   test('formatAttributeValue formats values correctly', () => {
-    expect(formatAttributeValue(true)).toBe('Yes');
-    expect(formatAttributeValue(false)).toBe('No');
-    expect(formatAttributeValue(3.14159)).toBe('3.14');
-    expect(formatAttributeValue(42)).toBe('42.00');
-    expect(formatAttributeValue('test string')).toBe('test string');
+    expect(formatAttributeValue(true, 'boolean')).toBe('Yes');
+    expect(formatAttributeValue(false, 'boolean')).toBe('No');
+    expect(formatAttributeValue(3.14159, 'number')).toBe('3.14159');
+    expect(formatAttributeValue(42, 'number')).toBe('42');
+    expect(formatAttributeValue('test string', 'string')).toBe('test string');
+
+    // Handle TemplateResult for color type
+    const colorResult = formatAttributeValue('#ff0000', 'color');
+    const div = document.createElement('div');
+    render(colorResult, div);
+    const renderedHTML = div.innerHTML
+      .replace(/<!--.*?-->/g, '')
+      .replace(/<!--\?lit.*?-->/g, '');
+    expect(renderedHTML).toBe('<span style="color: #ff0000;">#ff0000</span>');
+
+    expect(formatAttributeValue('Single Color', 'combobox')).toBe(
+      'Single Color',
+    );
   });
 });
