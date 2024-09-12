@@ -1,4 +1,3 @@
-// src/state-manager.ts
 import { State } from './state';
 import { ColorManager } from './color-manager';
 import {
@@ -15,6 +14,7 @@ export class StateManager {
   private _config: Config;
   private _state: State;
   private _colorManager: ColorManager;
+  private _pendingBrightnessUpdate: Promise<void> | null = null;
 
   constructor(config: Config, state: State) {
     this._config = config;
@@ -115,16 +115,26 @@ export class StateManager {
     }
   }
 
-  async setBrightness(brightness: number) {
+  setBrightness(brightness: number) {
+    // Update the UI state immediately
     this._state.brightness = brightness;
     log.debug('StateManager: Brightness updated:', this._state.brightness);
 
+    // Cancel any previous pending brightness update
+    if (this._pendingBrightnessUpdate) {
+      this._pendingBrightnessUpdate = null;
+    }
+
     if (this._hass && this._config) {
       const haBrightness = convertCardBrightnessToHA(brightness);
-      await this._hass.callService('light', 'turn_on', {
-        entity_id: this._config.entity,
-        brightness: haBrightness,
-      });
+      this._pendingBrightnessUpdate = this._hass.callService(
+        'light',
+        'turn_on',
+        {
+          entity_id: this._config.entity,
+          brightness: haBrightness,
+        },
+      );
       log.debug('StateManager: Brightness updated', {
         brightness: brightness,
         haBrightness: haBrightness,
