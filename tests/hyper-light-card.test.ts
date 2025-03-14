@@ -4,10 +4,12 @@ import { Config } from '@/config';
 import { State } from '@/state';
 import { ColorManager } from '@/color-manager';
 import { convertCardBrightnessToHA } from '@/utils';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { Mocked } from 'vitest';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;
-  let mockHass: jest.Mocked<HomeAssistant>;
+  let mockHass: Mocked<HomeAssistant>;
 
   beforeEach(() => {
     // Create an instance of the component and attach it to the DOM
@@ -29,7 +31,7 @@ describe('HyperLightCard', () => {
           },
         },
       },
-      callService: jest.fn().mockImplementation((domain, service, data) => {
+      callService: vi.fn().mockImplementation((domain, service, data) => {
         if (domain === 'light' && service === 'turn_off') {
           mockHass.states['light.test_light'].state = 'off';
         } else if (domain === 'light' && service === 'turn_on') {
@@ -42,10 +44,10 @@ describe('HyperLightCard', () => {
           }
         }
       }),
-    } as unknown as jest.Mocked<HomeAssistant>;
+    } as unknown as Mocked<HomeAssistant>;
 
     // Mock the ColorManager's extractColors method
-    jest.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue({
+    vi.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue({
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
@@ -64,7 +66,7 @@ describe('HyperLightCard', () => {
   afterEach(() => {
     // Clean up after each test
     document.body.removeChild(card);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('initializes without errors', () => {

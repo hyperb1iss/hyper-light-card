@@ -11,7 +11,7 @@
     "outDir": "./target",
     "sourceMap": true,
     "experimentalDecorators": true,
-    "useDefineForClassFields": true,
+    "useDefineForClassFields": false,
     "resolveJsonModule": true,
     "paths": {
       "@/*": ["src/*"]

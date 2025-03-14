@@ -3,7 +3,8 @@ import { LitElement, html, css, unsafeCSS, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { formatAttributeKey, formatAttributeValue, memoize, log } from './utils';
-import styles from './hyper-light-card-styles.css';
+// Import CSS as string for Lit CSS
+import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
 import { Config } from './config';
@@ -33,7 +34,7 @@ export class HyperLightCard extends LitElement {
 
   static get styles() {
     return css`
-      ${unsafeCSS(styles)}
+      ${unsafeCSS(styleText)}
     `;
   }
 

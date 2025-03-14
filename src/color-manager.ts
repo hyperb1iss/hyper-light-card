@@ -33,10 +33,16 @@ export class ColorManager {
         const palette = this._colorThief.getPalette(img, 3);
         log.debug('ColorManager: Color palette extracted', palette);
         if (palette && palette.length >= 2) {
-          const newBackgroundColor = `rgb(${palette[0].join(',')})`;
-          const textColors = getAccessibleTextColors(palette[0]);
+          log.debug('ColorManager: First palette item:', palette[0]);
+          log.debug('ColorManager: First palette item type:', typeof palette[0]);
+
+          const bgColorArray = Array.isArray(palette[0]) ? palette[0] : [0, 0, 0];
+          const accentColorArray = Array.isArray(palette[1]) ? palette[1] : [0, 0, 0];
+
+          const newBackgroundColor = `rgb(${bgColorArray.join(',')})`;
+          const textColors = getAccessibleTextColors(bgColorArray);
           const newTextColor = `rgb(${textColors.join(',')})`;
-          const newAccentColor = `rgb(${palette[1].join(',')})`;
+          const newAccentColor = `rgb(${accentColorArray.join(',')})`;
 
           log.debug('ColorManager: New colors:', newBackgroundColor, newTextColor, newAccentColor);
 

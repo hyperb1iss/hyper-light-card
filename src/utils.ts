@@ -42,20 +42,42 @@ export function ensureContrastLab(bgColor: chroma.Color, textColor: chroma.Color
  * @returns {number[]} - The RGB values of the accessible text color.
  */
 export function getAccessibleTextColors(rgb: number[]): number[] {
-  const bgColor = chroma(rgb as [number, number, number]);
-  const complementaryColor = chroma.lab(
-    bgColor.lab()[0],
-    bgColor.get('lab.a'),
-    bgColor.get('lab.b')
-  );
+  // Make sure rgb is an array and not a string
+  if (!Array.isArray(rgb)) {
+    console.error('Invalid RGB format (not an array):', rgb);
+    return [255, 255, 255]; // Return white as fallback
+  }
 
-  let textColor =
-    bgColor.lab()[0] > 50
-      ? chroma.lab(0, complementaryColor.lab()[1], complementaryColor.lab()[2])
-      : chroma.lab(100, complementaryColor.lab()[1], complementaryColor.lab()[2]);
-  textColor = ensureContrastLab(bgColor, textColor);
+  try {
+    // Convert RGB to numbers and ensure they're valid
+    const r = Math.min(255, Math.max(0, Number(rgb[0]) || 0));
+    const g = Math.min(255, Math.max(0, Number(rgb[1]) || 0));
+    const b = Math.min(255, Math.max(0, Number(rgb[2]) || 0));
 
-  return textColor.rgb();
+    // Calculate relative luminance according to WCAG 2.0
+    // https://www.w3.org/TR/WCAG20-TECHS/G17.html#G17-tests
+    const toLinear = (c: number): number => {
+      const srgb = c / 255;
+      return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
+    };
+
+    const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+
+    // Choose white or black based on luminance
+    // Use a threshold of 0.179 for WCAG AA compliance (contrast ratio of 4.5:1)
+    if (luminance > 0.179) {
+      // Dark text on light background
+      return [0, 0, 0];
+    } else {
+      // Light text on dark background
+      return [255, 255, 255];
+    }
+  } catch (error) {
+    console.error('Error in getAccessibleTextColors:', error);
+    console.error('Failed RGB input was:', JSON.stringify(rgb));
+    // Return white as fallback
+    return [255, 255, 255];
+  }
 }
 
 /**
@@ -146,27 +168,26 @@ export function convertCardBrightnessToHA(cardBrightness: number): number {
 }
 
 // Logging utility
-const isLoggingEnabled = '__IS_LOGGING_ENABLED__' as unknown as boolean;
+// This will be replaced at build time with a literal true/false by vite's define plugin
+declare const __IS_LOGGING_ENABLED__: boolean;
 
 export const log = {
   debug: (...args: unknown[]): void => {
-    if (isLoggingEnabled) {
+    if (__IS_LOGGING_ENABLED__) {
       console.debug(...args);
     }
   },
   log: (...args: unknown[]): void => {
-    if (isLoggingEnabled) {
+    if (__IS_LOGGING_ENABLED__) {
       console.log(...args);
     }
   },
   warn: (...args: unknown[]): void => {
-    if (isLoggingEnabled) {
+    if (__IS_LOGGING_ENABLED__) {
       console.warn(...args);
     }
   },
   error: (...args: unknown[]): void => {
-    if (isLoggingEnabled) {
-      console.error(...args);
-    }
+    console.error(...args);
   },
 };

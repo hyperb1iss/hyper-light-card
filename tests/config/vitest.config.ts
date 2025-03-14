@@ -1,0 +1,24 @@
+import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./tests/config/vitest.setup.ts'],
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'json', 'html'],
+    },
+    mockReset: true,
+    include: ['tests/**/*.test.ts'],
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, '../../src'),
+      // Map CSS imports to mock
+      '\\.css$': resolve(__dirname, '../../__mocks__/styleMock.js'),
+      colorthief: resolve(__dirname, '../../__mocks__/colorthief.js'),
+    },
+  },
+});

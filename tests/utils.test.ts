@@ -1,3 +1,4 @@
+import { describe, test, expect } from 'vitest';
 import chroma from 'chroma-js';
 import {
   getAccessibleTextColors,
@@ -23,10 +24,7 @@ describe('getAccessibleTextColors', () => {
       throw new Error(`Invalid RGB value returned: ${textColors}`);
     }
 
-    const textContrast = chroma.contrast(
-      chroma(bgRgb as [number, number, number]),
-      chroma(textRgb as [number, number, number])
-    );
+    const textContrast = chroma.contrast(chroma(bgRgb), chroma(textRgb));
 
     expect(textContrast).toBeGreaterThanOrEqual(4.5);
   });
