@@ -21,6 +21,9 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
     show_brightness_control: true,
     background_opacity: 0.7,
     allowed_effects: [],
+    show_layout_select: true,
+    show_preset_select: true,
+    show_effect_controls: true,
   };
   @property() private _helpers: unknown;
   @state() private _effects: string[] = [];
@@ -87,6 +90,7 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
 
     return html`
       <div class="card-config">
+        <h3>Main Light Entity</h3>
         <ha-entity-picker
           .label="${this.hass.localize(
             'ui.panel.lovelace.editor.card.generic.entity'
@@ -113,6 +117,58 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
           @value-changed=${this._valueChanged}
         ></ha-icon-picker>
 
+        <h3>Additional Control Entities</h3>
+        <ha-entity-picker
+          label="Layout Entity (optional)"
+          .hass=${this.hass}
+          .value=${this._config.layout_entity || ''}
+          .configValue=${'layout_entity'}
+          .includeDomains=${['select']}
+          @change=${this._valueChanged}
+          allow-custom-entity
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          label="Preset Entity (optional)"
+          .hass=${this.hass}
+          .value=${this._config.preset_entity || ''}
+          .configValue=${'preset_entity'}
+          .includeDomains=${['select']}
+          @change=${this._valueChanged}
+          allow-custom-entity
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          label="Next Effect Button (optional)"
+          .hass=${this.hass}
+          .value=${this._config.next_effect_entity || ''}
+          .configValue=${'next_effect_entity'}
+          .includeDomains=${['button']}
+          @change=${this._valueChanged}
+          allow-custom-entity
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          label="Previous Effect Button (optional)"
+          .hass=${this.hass}
+          .value=${this._config.previous_effect_entity || ''}
+          .configValue=${'previous_effect_entity'}
+          .includeDomains=${['button']}
+          @change=${this._valueChanged}
+          allow-custom-entity
+        ></ha-entity-picker>
+
+        <ha-entity-picker
+          label="Random Effect Button (optional)"
+          .hass=${this.hass}
+          .value=${this._config.random_effect_entity || ''}
+          .configValue=${'random_effect_entity'}
+          .includeDomains=${['button']}
+          @change=${this._valueChanged}
+          allow-custom-entity
+        ></ha-entity-picker>
+
+        <h3>Display Options</h3>
         <div class="switch-container">
           <ha-switch
             .checked=${this._config.show_effect_info !== false}
@@ -138,6 +194,33 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
             @change=${this._valueChanged}
           ></ha-switch>
           <span>Show Brightness Control</span>
+        </div>
+
+        <div class="switch-container">
+          <ha-switch
+            .checked=${this._config.show_layout_select !== false}
+            .configValue=${'show_layout_select'}
+            @change=${this._valueChanged}
+          ></ha-switch>
+          <span>Show Layout Select</span>
+        </div>
+
+        <div class="switch-container">
+          <ha-switch
+            .checked=${this._config.show_preset_select !== false}
+            .configValue=${'show_preset_select'}
+            @change=${this._valueChanged}
+          ></ha-switch>
+          <span>Show Preset Select</span>
+        </div>
+
+        <div class="switch-container">
+          <ha-switch
+            .checked=${this._config.show_effect_controls !== false}
+            .configValue=${'show_effect_controls'}
+            @change=${this._valueChanged}
+          ></ha-switch>
+          <span>Show Effect Navigation Controls</span>
         </div>
 
         <ha-textfield
@@ -248,6 +331,12 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
     }
     .dropdown-item input {
       margin-right: 8px;
+    }
+    h3 {
+      margin: 8px 0 4px;
+      font-size: 18px;
+      color: var(--primary-text-color);
+      font-weight: 500;
     }
   `;
 }

@@ -16,6 +16,20 @@ export class State implements ReactiveController {
   private _allowedEffects?: string[];
   private _lastEffectImage: string | null = null;
 
+  // New properties for layout and preset
+  private _currentLayout = '';
+  private _availableLayouts: string[] = [];
+  private _isLayoutDropdownOpen = false;
+  private _showLayoutSelect = true;
+
+  private _currentPreset = '';
+  private _availablePresets: string[] = [];
+  private _isPresetDropdownOpen = false;
+  private _showPresetSelect = true;
+
+  // Effect navigation controls
+  private _showEffectControls = true;
+
   constructor(host: ReactiveControllerHost) {
     (this._host = host).addController(this);
   }
@@ -138,6 +152,90 @@ export class State implements ReactiveController {
 
   set lastEffectImage(value: string | null) {
     this._lastEffectImage = value;
+    this._host.requestUpdate();
+  }
+
+  // New getters and setters for layout
+  get currentLayout() {
+    return this._currentLayout;
+  }
+
+  set currentLayout(value: string) {
+    this._currentLayout = value;
+    this._host.requestUpdate();
+  }
+
+  get availableLayouts() {
+    return this._availableLayouts;
+  }
+
+  set availableLayouts(value: string[]) {
+    this._availableLayouts = value;
+    this._host.requestUpdate();
+  }
+
+  get isLayoutDropdownOpen() {
+    return this._isLayoutDropdownOpen;
+  }
+
+  set isLayoutDropdownOpen(value: boolean) {
+    this._isLayoutDropdownOpen = value;
+    this._host.requestUpdate();
+  }
+
+  get showLayoutSelect() {
+    return this._showLayoutSelect;
+  }
+
+  set showLayoutSelect(value: boolean) {
+    this._showLayoutSelect = value;
+    this._host.requestUpdate();
+  }
+
+  // New getters and setters for preset
+  get currentPreset() {
+    return this._currentPreset;
+  }
+
+  set currentPreset(value: string) {
+    this._currentPreset = value;
+    this._host.requestUpdate();
+  }
+
+  get availablePresets() {
+    return this._availablePresets;
+  }
+
+  set availablePresets(value: string[]) {
+    this._availablePresets = value;
+    this._host.requestUpdate();
+  }
+
+  get isPresetDropdownOpen() {
+    return this._isPresetDropdownOpen;
+  }
+
+  set isPresetDropdownOpen(value: boolean) {
+    this._isPresetDropdownOpen = value;
+    this._host.requestUpdate();
+  }
+
+  get showPresetSelect() {
+    return this._showPresetSelect;
+  }
+
+  set showPresetSelect(value: boolean) {
+    this._showPresetSelect = value;
+    this._host.requestUpdate();
+  }
+
+  // Effect controls getter and setter
+  get showEffectControls() {
+    return this._showEffectControls;
+  }
+
+  set showEffectControls(value: boolean) {
+    this._showEffectControls = value;
     this._host.requestUpdate();
   }
 }
