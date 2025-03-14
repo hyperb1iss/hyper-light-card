@@ -1,25 +1,38 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant, fireEvent } from 'custom-card-helpers';
+import { property, state } from 'lit/decorators.js';
+import {
+  HomeAssistant,
+  fireEvent,
+  LovelaceCardEditor,
+  LovelaceCardConfig,
+} from 'custom-card-helpers';
 import { Config } from './config';
 
 interface ExtendedHTMLInputElement extends HTMLInputElement {
   configValue?: keyof Config;
 }
 
-@customElement('hyper-light-card-editor')
-export class HyperLightCardEditor extends LitElement {
+export class HyperLightCardEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass!: HomeAssistant;
-  @property() private _config!: Config;
+  @property() private _config: Config = {
+    entity: '',
+    show_effect_info: true,
+    show_effect_parameters: true,
+    show_brightness_control: true,
+    background_opacity: 0.7,
+    allowed_effects: [],
+  };
   @property() private _helpers: unknown;
   @state() private _effects: string[] = [];
   @state() private _isDropdownOpen = false;
 
-  public setConfig(config: Config): void {
+  public setConfig(config: LovelaceCardConfig): void {
     this._config = {
-      ...config,
-      allowed_effects: config.allowed_effects || [],
+      ...this._config,
+      ...(config as unknown as Config),
+      allowed_effects: (config as unknown as Config).allowed_effects || [],
     };
+    this._fetchEffectList();
   }
 
   private _toggleDropdown() {
@@ -51,15 +64,19 @@ export class HyperLightCardEditor extends LitElement {
   }
 
   protected firstUpdated(): void {
-    this._fetchEffectList();
+    if (this.hass) {
+      this._fetchEffectList();
+    }
   }
 
   private async _fetchEffectList(): Promise<void> {
-    if (this._config.entity) {
-      const stateObj = this.hass.states[this._config.entity];
-      if (stateObj && stateObj.attributes.effect_list) {
-        this._effects = stateObj.attributes.effect_list;
-      }
+    if (!this.hass || !this._config?.entity) {
+      return;
+    }
+
+    const stateObj = this.hass.states[this._config.entity];
+    if (stateObj?.attributes?.effect_list) {
+      this._effects = stateObj.attributes.effect_list;
     }
   }
 

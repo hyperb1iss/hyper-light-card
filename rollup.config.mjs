@@ -5,13 +5,11 @@ import json from '@rollup/plugin-json';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
-import postcss from 'rollup-plugin-postcss';
 import { readFileSync } from 'fs';
+import postcss from 'rollup-plugin-postcss';
 
 // Simple JSON parsing
-const pkg = JSON.parse(
-  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
-);
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 const production = process.env.BUILD === 'production';
 const development = process.env.BUILD === 'development';
@@ -22,6 +20,7 @@ export default {
     file: 'target/hyper-light-card.js',
     format: 'es',
     sourcemap: true,
+    inlineDynamicImports: true,
   },
   plugins: [
     replace({
@@ -34,22 +33,16 @@ export default {
       browser: true,
       preferBuiltins: false,
       extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      mainFields: ['module', 'main'],
     }),
-    commonjs(),
+    commonjs({ include: 'node_modules/**', extensions: ['.js', '.ts'] }),
     json(),
-    postcss({
-      extract: false,
-      inject: true,
-      minimize: production,
-      use: ['sass'],
-    }),
+    postcss({ extract: false, inject: true, minimize: production, use: ['sass'] }),
     typescript({
       tsconfig: './tsconfig.json',
       sourceMap: true,
       inlineSources: !production,
-      compilerOptions: {
-        declaration: false,
-      },
+      compilerOptions: { declaration: false },
     }),
     production && terser(),
   ].filter(Boolean),

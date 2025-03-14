@@ -9,6 +9,12 @@ import { StateManager } from './state-manager';
 import { Config } from './config';
 import type { HomeAssistant } from 'custom-card-helpers/dist/types';
 import { HassEntity } from 'home-assistant-js-websocket';
+import { HyperLightCardEditor } from './hyper-light-card-editor';
+
+// Register the editor component
+if (!customElements.get('hyper-light-card-editor')) {
+  customElements.define('hyper-light-card-editor', HyperLightCardEditor);
+}
 
 export class HyperLightCard extends LitElement {
   @property({ type: Object }) hass?: HomeAssistant;
