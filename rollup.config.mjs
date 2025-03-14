@@ -44,7 +44,12 @@ export default {
       inlineSources: !production,
       compilerOptions: { declaration: false },
     }),
-    production && terser(),
+    production && terser({
+      compress: {
+        pure_funcs: ['log.debug', 'log.log', 'log.warn', 'console.debug'],
+        passes: 2,
+      },
+    }),
   ].filter(Boolean),
   onwarn(warning, warn) {
     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
