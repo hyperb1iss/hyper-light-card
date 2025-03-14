@@ -10,7 +10,8 @@ export class StateManager {
   private _config: Config;
   private _state: State;
   private _colorManager: ColorManager;
-  private _pendingBrightnessUpdate: Promise<void> | null = null;
+  private _brightnessDebounceTimer?: number;
+  private _isDraggingBrightness = false; // Track active dragging
 
   constructor(config: Config, state: State) {
     this._config = config;
@@ -53,14 +54,22 @@ export class StateManager {
           log.debug('StateManager: New effect image detected and colors extracted');
         }
 
+        const shouldUpdateBrightness =
+          !this._isDraggingBrightness && this._state.brightness !== newBrightness;
+
         if (
           this._state.currentEffect !== newEffect ||
           this._state.isOn !== newIsOn ||
-          this._state.brightness !== newBrightness
+          shouldUpdateBrightness
         ) {
           this._state.currentEffect = newEffect;
           this._state.isOn = newIsOn;
-          this._state.brightness = newBrightness;
+
+          // Only update brightness if we're not dragging
+          if (shouldUpdateBrightness) {
+            this._state.brightness = newBrightness;
+          }
+
           log.debug('StateManager: State updated', {
             effect: this._state.currentEffect,
             isOn: this._state.isOn,
@@ -93,27 +102,36 @@ export class StateManager {
     }
   }
 
+  startBrightnessDrag() {
+    this._isDraggingBrightness = true;
+  }
+
+  endBrightnessDrag() {
+    this._isDraggingBrightness = false;
+  }
+
   setBrightness(brightness: number) {
-    // Update the UI state immediately
-    this._state.brightness = brightness;
-    log.debug('StateManager: Brightness updated:', this._state.brightness);
+    // Ensure brightness is a valid number and rounded to an integer
+    const validBrightness = Math.min(100, Math.max(1, Math.round(brightness)));
 
-    // Cancel any previous pending brightness update
-    if (this._pendingBrightnessUpdate) {
-      this._pendingBrightnessUpdate = null;
+    // Update UI state immediately
+    this._state.brightness = validBrightness;
+
+    // Clear any existing timer
+    if (this._brightnessDebounceTimer) {
+      window.clearTimeout(this._brightnessDebounceTimer);
     }
 
-    if (this._hass && this._config) {
-      const haBrightness = convertCardBrightnessToHA(brightness);
-      this._pendingBrightnessUpdate = this._hass.callService('light', 'turn_on', {
-        entity_id: this._config.entity,
-        brightness: haBrightness,
-      });
-      log.debug('StateManager: Brightness updated', {
-        brightness: brightness,
-        haBrightness: haBrightness,
-      });
-    }
+    // Send to HA with minimal debounce
+    this._brightnessDebounceTimer = window.setTimeout(() => {
+      if (this._hass && this._config) {
+        const haBrightness = convertCardBrightnessToHA(validBrightness);
+        this._hass.callService('light', 'turn_on', {
+          entity_id: this._config.entity,
+          brightness: haBrightness,
+        });
+      }
+    }, 10);
   }
 
   async setCurrentEffect(effect: string) {
@@ -125,6 +143,14 @@ export class StateManager {
         entity_id: this._config.entity,
         effect: effect,
       });
+    }
+  }
+
+  // Cleanup any pending timers
+  cleanup() {
+    if (this._brightnessDebounceTimer) {
+      window.clearTimeout(this._brightnessDebounceTimer);
+      this._brightnessDebounceTimer = undefined;
     }
   }
 }

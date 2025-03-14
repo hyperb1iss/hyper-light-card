@@ -279,7 +279,11 @@ export class HyperLightCard extends LitElement {
           max="100"
           .value=${this.state.brightness.toString()}
           @change=${this._handleBrightnessChange}
-          @input=${this._handleBrightnessChange}
+          @input=${this._handleBrightnessInput}
+          @mousedown=${this._handleBrightnessStart}
+          @touchstart=${this._handleBrightnessStart}
+          @mouseup=${this._handleBrightnessEnd}
+          @touchend=${this._handleBrightnessEnd}
           aria-label="Adjust brightness"
         />
       </div>
@@ -465,11 +469,25 @@ export class HyperLightCard extends LitElement {
     }
   }
 
-  private async _handleBrightnessChange(e: Event) {
-    log.debug('HyperLightCard: _handleBrightnessChange called');
+  private _handleBrightnessStart() {
+    this.stateManager.startBrightnessDrag();
+  }
+
+  private _handleBrightnessEnd() {
+    this.stateManager.endBrightnessDrag();
+  }
+
+  private async _handleBrightnessInput(e: Event) {
     const target = e.target as HTMLInputElement;
     const brightness = Number(target.value);
     await this.stateManager.setBrightness(brightness);
+  }
+
+  private async _handleBrightnessChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const brightness = Number(target.value);
+    await this.stateManager.setBrightness(brightness);
+    this.stateManager.endBrightnessDrag();
   }
 
   connectedCallback() {
@@ -481,6 +499,7 @@ export class HyperLightCard extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('click', this._clickOutsideHandler);
+    this.stateManager.cleanup();
     log.debug('HyperLightCard: disconnectedCallback called, click listener removed');
   }
 
