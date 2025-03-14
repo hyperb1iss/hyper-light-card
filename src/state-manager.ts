@@ -248,6 +248,9 @@ export class StateManager {
         effect: effect,
       });
     }
+
+    // Close dropdown after selection
+    this._state.isDropdownOpen = false;
   }
 
   async setCurrentLayout(layout: string) {
