@@ -1,13 +1,17 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import babel from '@rollup/plugin-babel';
 import terser from '@rollup/plugin-terser';
-import postcss from 'rollup-plugin-postcss';
 import json from '@rollup/plugin-json';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
-import typescript from '@rollup/plugin-typescript';
 import replace from '@rollup/plugin-replace';
-import pkg from './package.json' assert { type: 'json' };
+import typescript from '@rollup/plugin-typescript';
+import postcss from 'rollup-plugin-postcss';
+import { readFileSync } from 'fs';
+
+// Simple JSON parsing
+const pkg = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+);
 
 const production = process.env.BUILD === 'production';
 const development = process.env.BUILD === 'development';
@@ -29,33 +33,22 @@ export default {
     resolve({
       browser: true,
       preferBuiltins: false,
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
     }),
     commonjs(),
     json(),
-    typescript(),
-    babel({
-      babelHelpers: 'bundled',
-      exclude: 'node_modules/**',
-      presets: [
-        [
-          '@babel/preset-env',
-          {
-            targets: '> 0.25%, not dead',
-            modules: false,
-          },
-        ],
-      ],
-      extensions: ['.ts', '.js'],
-    }),
     postcss({
       extract: false,
-      inject: false,
+      inject: true,
+      minimize: production,
       use: ['sass'],
-      config: {
-        path: './postcss.config.cjs',
-        ctx: {
-          env: production ? 'production' : 'development',
-        },
+    }),
+    typescript({
+      tsconfig: './tsconfig.json',
+      sourceMap: true,
+      inlineSources: !production,
+      compilerOptions: {
+        declaration: false,
       },
     }),
     production && terser(),

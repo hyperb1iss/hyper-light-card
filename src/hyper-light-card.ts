@@ -12,7 +12,7 @@ import styles from './hyper-light-card-styles.css';
 import { State } from './state';
 import { StateManager } from './state-manager';
 import { Config } from './config';
-import { HomeAssistant } from 'custom-card-helpers';
+import type { HomeAssistant } from 'custom-card-helpers/dist/types';
 import { HassEntity } from 'home-assistant-js-websocket';
 
 export class HyperLightCard extends LitElement {

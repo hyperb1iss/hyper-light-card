@@ -23,7 +23,10 @@ describe('getAccessibleTextColors', () => {
       throw new Error(`Invalid RGB value returned: ${textColors}`);
     }
 
-    const textContrast = chroma.contrast(chroma(bgRgb), chroma(textRgb));
+    const textContrast = chroma.contrast(
+      chroma(bgRgb as [number, number, number]), 
+      chroma(textRgb as [number, number, number])
+    );
 
     expect(textContrast).toBeGreaterThanOrEqual(4.5);
   });

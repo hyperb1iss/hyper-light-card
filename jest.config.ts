@@ -1,25 +1,16 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'jsdom',
   transform: {
-    '^.+\\.ts$': 'ts-jest',
-    '^.+\\.js$': 'babel-jest',
+    '^.+\\.(ts|js)$': '@swc/jest',
   },
   moduleNameMapper: {
-    '\\.css$': '<rootDir>/__mocks__/styleMock.js',  // Mock CSS imports
-    '^@/(.*)$': '<rootDir>/src/$1',  // Map @/ to src/ directory
+    '\\.css$': '<rootDir>/__mocks__/styleMock.js', // Mock CSS imports
+    '^@/(.*)$': '<rootDir>/src/$1', // Map @/ to src/ directory
+    '^colorthief$': '<rootDir>/__mocks__/colorthief.js',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!lit|@lit|lit-html|lit-element)/',
+    '/node_modules/(?!(lit|@lit|lit-html|lit-element|custom-card-helpers)/)',
   ],
-  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-  extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true,
-    },
-  },
-  roots: ['<rootDir>/tests', '<rootDir>/src'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
-  moduleDirectories: ['node_modules', 'src'],
 };

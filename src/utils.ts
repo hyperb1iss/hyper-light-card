@@ -51,7 +51,7 @@ export function ensureContrastLab(
  * @returns {number[]} - The RGB values of the accessible text color.
  */
 export function getAccessibleTextColors(rgb: number[]): number[] {
-  const bgColor = chroma(rgb);
+  const bgColor = chroma(rgb as [number, number, number]);
   const complementaryColor = chroma.lab(
     bgColor.lab()[0],
     bgColor.get('lab.a'),

@@ -127,6 +127,32 @@ hyper-light-card provides an intuitive interface for controlling your SignalRGB 
 
 The card dynamically adapts its color scheme based on the current effect, creating a cohesive and stylish look for your dashboard.
 
+## 👩‍💻 Development
+<a name="development"></a>
+
+This project uses a modern JavaScript toolchain for rapid development:
+
+- **SWC**: Ultra-fast TypeScript/JavaScript compiler (replaces Babel)
+- **LightningCSS**: Optimized CSS processing (replaces PostCSS)
+- **Rollup**: Module bundler with tree-shaking
+- **Jest with SWC**: Fast unit testing
+
+### Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server with hot reload
+npm start
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
+
 ## 🤝 Contributing
 <a name="contributing"></a>
 
