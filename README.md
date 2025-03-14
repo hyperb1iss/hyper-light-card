@@ -130,10 +130,9 @@ The card dynamically adapts its color scheme based on the current effect, creati
 ## 👩‍💻 Development
 <a name="development"></a>
 
-This project uses a modern JavaScript toolchain for rapid development:
+This project uses a modern TypeScript toolchain for rapid development:
 
-- **SWC**: Ultra-fast TypeScript/JavaScript compiler (replaces Babel)
-- **LightningCSS**: Optimized CSS processing (replaces PostCSS)
+- **SWC**: Ultra-fast TypeScript/JavaScript compiler
 - **Rollup**: Module bundler with tree-shaking
 - **Jest with SWC**: Fast unit testing
 
