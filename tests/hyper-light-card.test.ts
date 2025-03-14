@@ -35,8 +35,7 @@ describe('HyperLightCard', () => {
         } else if (domain === 'light' && service === 'turn_on') {
           mockHass.states['light.test_light'].state = 'on';
           if (data.brightness !== undefined) {
-            mockHass.states['light.test_light'].attributes.brightness =
-              data.brightness;
+            mockHass.states['light.test_light'].attributes.brightness = data.brightness;
           }
           if (data.effect !== undefined) {
             mockHass.states['light.test_light'].attributes.effect = data.effect;
@@ -107,7 +106,7 @@ describe('HyperLightCard', () => {
           show_effect_info: true,
           show_effect_parameters: true,
           show_brightness_control: true,
-        }),
+        })
       );
     });
   });

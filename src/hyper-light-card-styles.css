@@ -4,7 +4,8 @@
   --secondary-color: #f0f0f0;
   --background-color: white;
   --text-color: black;
-  --box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12),
+  --box-shadow:
+    0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12),
     0 3px 1px -2px rgba(0, 0, 0, 0.2);
 }
 
@@ -95,8 +96,7 @@ ha-card {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 0
-    rgba(var(--accent-color, var(--primary-color-rgb, 3, 169, 244)), 0);
+  box-shadow: 0 0 0 rgba(var(--accent-color, var(--primary-color-rgb, 3, 169, 244)), 0);
   transition: box-shadow 0.3s ease;
 }
 
@@ -160,10 +160,7 @@ ha-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(
-    --background-color,
-    var(--card-background-color, white)
-  );
+  background-color: var(--background-color, var(--card-background-color, white));
   color: var(--text-color, var(--primary-text-color, black));
   font-size: 1.1em;
   transition:
@@ -172,10 +169,7 @@ ha-card {
 }
 
 .dropdown-header:hover {
-  background-color: var(
-    --accent-color,
-    var(--secondary-background-color, #f0f0f0)
-  );
+  background-color: var(--accent-color, var(--secondary-background-color, #f0f0f0));
   color: var(--background-color, var(--primary-text-color, black));
 }
 
@@ -194,10 +188,7 @@ ha-card {
   top: 100%;
   left: 0;
   right: 0;
-  background-color: var(
-    --background-color,
-    var(--card-background-color, white)
-  );
+  background-color: var(--background-color, var(--card-background-color, white));
   border: 1px solid var(--accent-color, var(--primary-color, #03a9f4));
   border-radius: 0 0 4px 4px;
   max-height: 200px;
@@ -510,10 +501,7 @@ ha-card {
 /* Toggle switch styles */
 ha-switch {
   --switch-checked-color: var(--accent-color, var(--primary-color));
-  --switch-checked-button-color: var(
-    --switch-checked-color,
-    var(--primary-background-color)
-  );
+  --switch-checked-button-color: var(--switch-checked-color, var(--primary-background-color));
   --switch-checked-track-color: var(--switch-checked-color, #000000);
 }
 

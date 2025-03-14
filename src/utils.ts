@@ -7,10 +7,7 @@ import { html, TemplateResult } from 'lit';
  * @param {chroma.Color} textColor - The initial text color.
  * @returns {chroma.Color} - The adjusted text color with sufficient contrast.
  */
-export function ensureContrastLab(
-  bgColor: chroma.Color,
-  textColor: chroma.Color,
-): chroma.Color {
+export function ensureContrastLab(bgColor: chroma.Color, textColor: chroma.Color): chroma.Color {
   let adjustedColor = textColor;
   let contrast = chroma.contrast(bgColor, adjustedColor);
 
@@ -21,16 +18,10 @@ export function ensureContrastLab(
   while (contrast < 4.5 && attempts < maxAttempts) {
     if (bgColor.lab()[0] > 50) {
       // For light backgrounds, decrease lightness
-      adjustedColor = adjustedColor.set(
-        'lab.l',
-        Math.max(0, adjustedColor.lab()[0] - step),
-      );
+      adjustedColor = adjustedColor.set('lab.l', Math.max(0, adjustedColor.lab()[0] - step));
     } else {
       // For dark backgrounds, increase lightness
-      adjustedColor = adjustedColor.set(
-        'lab.l',
-        Math.min(100, adjustedColor.lab()[0] + step),
-      );
+      adjustedColor = adjustedColor.set('lab.l', Math.min(100, adjustedColor.lab()[0] + step));
     }
     contrast = chroma.contrast(bgColor, adjustedColor);
     attempts++;
@@ -55,17 +46,13 @@ export function getAccessibleTextColors(rgb: number[]): number[] {
   const complementaryColor = chroma.lab(
     bgColor.lab()[0],
     bgColor.get('lab.a'),
-    bgColor.get('lab.b'),
+    bgColor.get('lab.b')
   );
 
   let textColor =
     bgColor.lab()[0] > 50
       ? chroma.lab(0, complementaryColor.lab()[1], complementaryColor.lab()[2])
-      : chroma.lab(
-          100,
-          complementaryColor.lab()[1],
-          complementaryColor.lab()[2],
-        );
+      : chroma.lab(100, complementaryColor.lab()[1], complementaryColor.lab()[2]);
   textColor = ensureContrastLab(bgColor, textColor);
 
   return textColor.rgb();
@@ -100,7 +87,7 @@ export function formatAttributeKey(key: string): string {
  */
 export function formatAttributeValue(
   value: string | number | boolean,
-  type: string,
+  type: string
 ): string | TemplateResult {
   switch (type) {
     case 'color':
@@ -124,7 +111,7 @@ export function formatAttributeValue(
  * @returns A new function that caches the results of the original function.
  */
 export function memoize<TArgs extends unknown[], TResult>(
-  fn: (...args: TArgs) => TResult,
+  fn: (...args: TArgs) => TResult
 ): (...args: TArgs) => TResult {
   // Create a cache to store the results of the function calls.
   const cache = new Map<string, TResult>();

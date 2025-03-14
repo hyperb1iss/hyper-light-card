@@ -44,8 +44,7 @@ export class HyperLightCardEditor extends LitElement {
 
     this._config = {
       ...this._config,
-      allowed_effects:
-        newAllowedEffects.length > 0 ? newAllowedEffects : undefined,
+      allowed_effects: newAllowedEffects.length > 0 ? newAllowedEffects : undefined,
     };
 
     fireEvent(this, 'config-changed', { config: this._config });
@@ -73,10 +72,8 @@ export class HyperLightCardEditor extends LitElement {
       <div class="card-config">
         <ha-entity-picker
           .label="${this.hass.localize(
-            'ui.panel.lovelace.editor.card.generic.entity',
-          )} (${this.hass.localize(
-            'ui.panel.lovelace.editor.card.config.required',
-          )})"
+            'ui.panel.lovelace.editor.card.generic.entity'
+          )} (${this.hass.localize('ui.panel.lovelace.editor.card.config.required')})"
           .hass=${this.hass}
           .value=${this._config.entity}
           .configValue=${'entity'}
@@ -142,9 +139,7 @@ export class HyperLightCardEditor extends LitElement {
           <div class="dropdown">
             <div class="dropdown-header" @click=${this._toggleDropdown}>
               ${this._config.allowed_effects?.length
-                ? [...this._config.allowed_effects]
-                    .sort((a, b) => a.localeCompare(b))
-                    .join(', ')
+                ? [...this._config.allowed_effects].sort((a, b) => a.localeCompare(b)).join(', ')
                 : 'Select effects'}
             </div>
             <div class="dropdown-content ${this._isDropdownOpen ? 'open' : ''}">
@@ -155,15 +150,13 @@ export class HyperLightCardEditor extends LitElement {
                     <label class="dropdown-item">
                       <input
                         type="checkbox"
-                        .checked=${(
-                          this._config.allowed_effects || []
-                        ).includes(effect)}
+                        .checked=${(this._config.allowed_effects || []).includes(effect)}
                         .value=${effect}
                         @change=${this._effectCheckboxChanged}
                       />
                       ${effect}
                     </label>
-                  `,
+                  `
                 )}
             </div>
           </div>
@@ -183,8 +176,7 @@ export class HyperLightCardEditor extends LitElement {
       } else {
         this._config = {
           ...this._config,
-          [target.configValue]:
-            target.checked !== undefined ? target.checked : target.value,
+          [target.configValue]: target.checked !== undefined ? target.checked : target.value,
         };
       }
     }

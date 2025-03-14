@@ -1,10 +1,6 @@
 import { State } from './state';
 import { ColorManager } from './color-manager';
-import {
-  convertCardBrightnessToHA,
-  convertHABrightnessToCard,
-  log,
-} from './utils';
+import { convertCardBrightnessToHA, convertHABrightnessToCard, log } from './utils';
 import { HomeAssistant } from 'custom-card-helpers';
 import { HassEntity } from 'home-assistant-js-websocket';
 import { Config } from './config';
@@ -35,16 +31,12 @@ export class StateManager {
   async updateState() {
     log.debug('StateManager: Updating state');
     if (this._hass && this._config) {
-      const stateObj = this._hass.states[this._config.entity] as
-        | HassEntity
-        | undefined;
+      const stateObj = this._hass.states[this._config.entity] as HassEntity | undefined;
       if (stateObj) {
         log.debug('StateManager: State object:', stateObj);
         const newEffect = stateObj.attributes.effect || 'No effect';
         const newIsOn = stateObj.state === 'on';
-        const newBrightness = convertHABrightnessToCard(
-          stateObj.attributes.brightness,
-        );
+        const newBrightness = convertHABrightnessToCard(stateObj.attributes.brightness);
 
         log.debug('StateManager: Potential new state:', {
           effect: newEffect,
@@ -54,15 +46,11 @@ export class StateManager {
 
         if (stateObj.attributes.effect_image !== this._state.lastEffectImage) {
           this._state.lastEffectImage = stateObj.attributes.effect_image;
-          const colors = await this._colorManager.extractColors(
-            stateObj.attributes.effect_image,
-          );
+          const colors = await this._colorManager.extractColors(stateObj.attributes.effect_image);
           this._state.backgroundColor = colors.backgroundColor;
           this._state.textColor = colors.textColor;
           this._state.accentColor = colors.accentColor;
-          log.debug(
-            'StateManager: New effect image detected and colors extracted',
-          );
+          log.debug('StateManager: New effect image detected and colors extracted');
         }
 
         if (
@@ -85,18 +73,12 @@ export class StateManager {
 
   toggleDropdown() {
     this._state.isDropdownOpen = !this._state.isDropdownOpen;
-    log.debug(
-      'StateManager: Dropdown toggled, new state:',
-      this._state.isDropdownOpen,
-    );
+    log.debug('StateManager: Dropdown toggled, new state:', this._state.isDropdownOpen);
   }
 
   toggleAttributes() {
     this._state.isAttributesExpanded = !this._state.isAttributesExpanded;
-    log.debug(
-      'StateManager: Attributes expanded:',
-      this._state.isAttributesExpanded,
-    );
+    log.debug('StateManager: Attributes expanded:', this._state.isAttributesExpanded);
   }
 
   async toggleLight() {
@@ -105,13 +87,9 @@ export class StateManager {
 
     if (this._hass && this._config) {
       log.debug('StateManager: Calling service', this._state.isOn);
-      await this._hass.callService(
-        'light',
-        this._state.isOn ? 'turn_on' : 'turn_off',
-        {
-          entity_id: this._config.entity,
-        },
-      );
+      await this._hass.callService('light', this._state.isOn ? 'turn_on' : 'turn_off', {
+        entity_id: this._config.entity,
+      });
     }
   }
 
@@ -127,14 +105,10 @@ export class StateManager {
 
     if (this._hass && this._config) {
       const haBrightness = convertCardBrightnessToHA(brightness);
-      this._pendingBrightnessUpdate = this._hass.callService(
-        'light',
-        'turn_on',
-        {
-          entity_id: this._config.entity,
-          brightness: haBrightness,
-        },
-      );
+      this._pendingBrightnessUpdate = this._hass.callService('light', 'turn_on', {
+        entity_id: this._config.entity,
+        brightness: haBrightness,
+      });
       log.debug('StateManager: Brightness updated', {
         brightness: brightness,
         haBrightness: haBrightness,
@@ -144,10 +118,7 @@ export class StateManager {
 
   async setCurrentEffect(effect: string) {
     this._state.currentEffect = effect;
-    log.debug(
-      'StateManager: Current effect set to:',
-      this._state.currentEffect,
-    );
+    log.debug('StateManager: Current effect set to:', this._state.currentEffect);
 
     if (this._hass && this._config) {
       await this._hass.callService('light', 'turn_on', {

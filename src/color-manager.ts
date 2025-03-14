@@ -38,12 +38,7 @@ export class ColorManager {
           const newTextColor = `rgb(${textColors.join(',')})`;
           const newAccentColor = `rgb(${palette[1].join(',')})`;
 
-          log.debug(
-            'ColorManager: New colors:',
-            newBackgroundColor,
-            newTextColor,
-            newAccentColor,
-          );
+          log.debug('ColorManager: New colors:', newBackgroundColor, newTextColor, newAccentColor);
 
           resolve({
             backgroundColor: newBackgroundColor,

@@ -24,7 +24,7 @@ describe('getAccessibleTextColors', () => {
     }
 
     const textContrast = chroma.contrast(
-      chroma(bgRgb as [number, number, number]), 
+      chroma(bgRgb as [number, number, number]),
       chroma(textRgb as [number, number, number])
     );
 
@@ -70,13 +70,9 @@ describe('Formatting Functions', () => {
     const colorResult = formatAttributeValue('#ff0000', 'color');
     const div = document.createElement('div');
     render(colorResult, div);
-    const renderedHTML = div.innerHTML
-      .replace(/<!--.*?-->/g, '')
-      .replace(/<!--\?lit.*?-->/g, '');
+    const renderedHTML = div.innerHTML.replace(/<!--.*?-->/g, '').replace(/<!--\?lit.*?-->/g, '');
     expect(renderedHTML).toBe('<span style="color: #ff0000;">#ff0000</span>');
 
-    expect(formatAttributeValue('Single Color', 'combobox')).toBe(
-      'Single Color',
-    );
+    expect(formatAttributeValue('Single Color', 'combobox')).toBe('Single Color');
   });
 });

@@ -24,10 +24,7 @@ describe('StateManager', () => {
     mockHost = new MockReactiveControllerHost();
     mockState = new State(mockHost);
 
-    stateManager = new StateManager(
-      { entity: 'light.test_light' } as Config,
-      mockState,
-    );
+    stateManager = new StateManager({ entity: 'light.test_light' } as Config, mockState);
 
     mockHass = {
       states: {
