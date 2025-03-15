@@ -233,6 +233,34 @@ ha-card {
   color: var(--text-color, white);
 }
 
+/* Disabled dropdown styles */
+.dropdown.disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.dropdown.disabled .dropdown-header {
+  border-color: rgba(var(--accent-color-rgb, 3, 169, 244), 0.4);
+  cursor: not-allowed;
+  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+}
+
+.dropdown.disabled .dropdown-header:hover {
+  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+  color: var(--text-color, var(--primary-text-color, black));
+}
+
+.dropdown-item.disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+}
+
+.dropdown-item.disabled:hover {
+  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+  color: var(--text-color, var(--primary-text-color, black));
+}
+
 /* Effect info section */
 .effect-info {
   background-color: rgba(var(--background-color-rgb, 128, 128, 128), 0.1);

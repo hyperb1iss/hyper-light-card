@@ -696,10 +696,7 @@ export class HyperLightCard extends LitElement {
       this.state.currentLayout = currentLayout;
     }
 
-    if (availableLayouts.length === 0) {
-      return html``;
-    }
-
+    const hasLayouts = availableLayouts.length > 0;
     this.state.availableLayouts = availableLayouts;
 
     log.debug('HyperLightCard: Rendering layout select', {
@@ -707,6 +704,7 @@ export class HyperLightCard extends LitElement {
       availableLayouts,
       dropdownOpen: this.state.isLayoutDropdownOpen,
       isCompact,
+      hasLayouts,
     });
 
     return html`
@@ -714,28 +712,36 @@ export class HyperLightCard extends LitElement {
         <div class="select-section-title">
           <ha-icon icon="mdi:view-grid-outline"></ha-icon> Layout
         </div>
-        <div class="dropdown ${this.state.isLayoutDropdownOpen ? 'open' : ''}">
+        <div
+          class="dropdown ${this.state.isLayoutDropdownOpen ? 'open' : ''} ${!hasLayouts
+            ? 'disabled'
+            : ''}"
+          title="${!hasLayouts ? 'No layouts available for this effect' : ''}"
+        >
           <div
             class="dropdown-header"
-            @click=${this._toggleLayoutDropdown}
+            @click=${hasLayouts ? this._toggleLayoutDropdown : undefined}
             aria-label="Current layout: ${currentLayout}"
             role="button"
+            aria-disabled="${!hasLayouts}"
           >
-            ${currentLayout}
+            ${hasLayouts ? currentLayout : 'No layouts available'}
           </div>
           <div class="dropdown-content" role="menu">
-            ${availableLayouts.map(
-              (layout: string) => html`
-                <div
-                  class="dropdown-item ${layout === currentLayout ? 'selected' : ''}"
-                  @click=${() => this._selectLayout(layout)}
-                  role="menuitem"
-                  tabindex="0"
-                >
-                  ${layout}
-                </div>
-              `
-            )}
+            ${hasLayouts
+              ? availableLayouts.map(
+                  (layout: string) => html`
+                    <div
+                      class="dropdown-item ${layout === currentLayout ? 'selected' : ''}"
+                      @click=${() => this._selectLayout(layout)}
+                      role="menuitem"
+                      tabindex="0"
+                    >
+                      ${layout}
+                    </div>
+                  `
+                )
+              : html`<div class="dropdown-item disabled">No layouts available</div>`}
           </div>
         </div>
       </div>
@@ -760,10 +766,7 @@ export class HyperLightCard extends LitElement {
       this.state.currentPreset = currentPreset;
     }
 
-    if (availablePresets.length === 0) {
-      return html``;
-    }
-
+    const hasPresets = availablePresets.length > 0;
     this.state.availablePresets = availablePresets;
 
     log.debug('HyperLightCard: Rendering preset select', {
@@ -771,33 +774,42 @@ export class HyperLightCard extends LitElement {
       availablePresets,
       dropdownOpen: this.state.isPresetDropdownOpen,
       isCompact,
+      hasPresets,
     });
 
     return html`
       <div class="preset-select-wrapper select-wrapper ${isCompact ? 'compact' : ''}">
         <div class="select-section-title"><ha-icon icon="mdi:palette"></ha-icon> Preset</div>
-        <div class="dropdown ${this.state.isPresetDropdownOpen ? 'open' : ''}">
+        <div
+          class="dropdown ${this.state.isPresetDropdownOpen ? 'open' : ''} ${!hasPresets
+            ? 'disabled'
+            : ''}"
+          title="${!hasPresets ? 'No presets available for this effect' : ''}"
+        >
           <div
             class="dropdown-header"
-            @click=${this._togglePresetDropdown}
+            @click=${hasPresets ? this._togglePresetDropdown : undefined}
             aria-label="Current preset: ${currentPreset}"
             role="button"
+            aria-disabled="${!hasPresets}"
           >
-            ${currentPreset}
+            ${hasPresets ? currentPreset : 'No presets available'}
           </div>
           <div class="dropdown-content" role="menu">
-            ${availablePresets.map(
-              (preset: string) => html`
-                <div
-                  class="dropdown-item ${preset === currentPreset ? 'selected' : ''}"
-                  @click=${() => this._selectPreset(preset)}
-                  role="menuitem"
-                  tabindex="0"
-                >
-                  ${preset}
-                </div>
-              `
-            )}
+            ${hasPresets
+              ? availablePresets.map(
+                  (preset: string) => html`
+                    <div
+                      class="dropdown-item ${preset === currentPreset ? 'selected' : ''}"
+                      @click=${() => this._selectPreset(preset)}
+                      role="menuitem"
+                      tabindex="0"
+                    >
+                      ${preset}
+                    </div>
+                  `
+                )
+              : html`<div class="dropdown-item disabled">No presets available</div>`}
           </div>
         </div>
       </div>
