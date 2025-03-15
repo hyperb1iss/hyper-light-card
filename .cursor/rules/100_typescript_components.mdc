@@ -1,0 +1,32 @@
+---
+description: Core TypeScript components that make up the Hyper Light Card functionality
+globs: /src/*.ts
+alwaysApply: false
+---
+Component Architecture Guidelines:
+
+1. Class Structure:
+
+   - Use decorators: @property, @state appropriately
+   - Follow Lit component lifecycle methods
+   - Keep methods focused and single-purpose
+
+2. State Management:
+
+   - @state.ts: Contains reactive state model
+   - @state-manager.ts: Handles state updates and HA service calls
+   - UI components should not directly modify external systems
+
+3. Code Organization:
+
+   - Keep related functions together
+   - Extract complex logic into utilities
+   - Use TypeScript types for props and parameters
+   - Maintain clean separation between UI and logic
+
+4. Performance Considerations:
+   - Use memoization for expensive operations
+   - Leverage Lit's efficient rendering
+   - Debounce user interactions for brightness
+
+Main UI class @hyper-light-card.ts coordinates components but delegates specific functionality to specialized classes.

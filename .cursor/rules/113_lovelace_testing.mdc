@@ -1,0 +1,48 @@
+---
+description: Testing, debugging and troubleshooting practices for Home Assistant Lovelace components
+globs: /src/*.ts,/tests/**/*,/vite.config.ts
+alwaysApply: false
+---
+Lovelace Testing & Debugging Guide:
+
+1. Development Workflow:
+   - Use Hot Module Replacement with Vite
+   - Create development server script in package.json
+   - Create copy-to-hass.js to deploy to dev environment
+   - Use localStorage.setItem('lovelace-dev-tools', true) to enable dev tools
+   - Enable logging during development, disable in production
+   - Create demo configuration in dev-environment
+
+2. Testing Framework:
+   - Unit tests with Vitest or Jest
+   - Use testing-library for component testing
+   - Mock HomeAssistant interface for isolated tests
+   - Test core functionality without actual HA instance
+   - Verify state management and rendering logic
+   - Test both normal and error states
+
+3. Common Issues & Solutions:
+   - Shadow DOM styling issues: use ::part() and constructStylesheet
+   - Custom element registration: check for conflicts
+   - Event listener leaks: validate disconnectedCallback cleanup
+   - Memory leaks: watch for retained references
+   - Undefined properties: handle loading states correctly
+   - Re-rendering issues: verify property/state changes trigger updates
+
+4. Performance Testing:
+   - Use Chrome DevTools Performance tab
+   - Monitor memory usage during long sessions
+   - Check rendering times with performance.measure()
+   - Identify expensive operations for optimization
+   - Test with both small and large data sets
+   - Profile on lower-powered devices when possible
+
+5. Release Checklist:
+   - Version bump in package.json and CHANGELOG
+   - Run linting and tests
+   - Build in production mode
+   - Test in clean Home Assistant instance
+   - Verify HACS compatibility
+   - Test installation from ZIP archive
+
+Implement structured logging with levels (debug, info, warn, error) to aid troubleshooting.

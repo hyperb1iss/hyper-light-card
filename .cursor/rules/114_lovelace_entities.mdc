@@ -1,0 +1,57 @@
+---
+description: Working with Home Assistant entities, services, and state management in Lovelace cards
+globs: /src/*.ts
+alwaysApply: false
+---
+Home Assistant Entity Integration:
+
+1. Entity State Access:
+   - Primary access: hass.states[entityId]
+   - Check existence before use: hass?.states[entityId]
+   - Entity state: .state property (string)
+   - Entity attributes: .attributes property (object)
+   - Last changed: .last_changed property (ISO timestamp)
+   - Monitor changes via updated() lifecycle method
+   - Extract specific properties: stateObj.attributes.brightness
+
+2. Entity Types & Domains:
+   - light: support brightness, color, effects
+   - switch: simple on/off state
+   - sensor: read-only value with unit_of_measurement
+   - binary_sensor: on/off with device_class
+   - climate: temperature, mode, etc.
+   - media_player: playback controls, sources
+   - button: triggers actions
+   - select: dropdown options via select_option service
+
+3. Service Calls:
+   ```typescript
+   // Turn on a light with brightness
+   hass.callService('light', 'turn_on', {
+     entity_id: 'light.example',
+     brightness: 128,  // 0-255
+     effect: 'rainbow'
+   });
+   
+   // Call a script
+   hass.callService('script', 'toggle', {
+     entity_id: 'script.example'
+   });
+   ```
+
+4. State Change Handling:
+   - Create state comparison helpers
+   - Check both state and attributes for changes
+   - Debounce rapidly changing values (sliders, etc.)
+   - Use deep comparison for complex attributes
+   - Look for specific changes using previous values map
+
+5. Formatting & Localization:
+   - Use hass.localize() for translations
+   - Format date/time with hass.formatDateTime()
+   - Format numbers with hass.formatNumber()
+   - Get translated state names: computeStateDisplay()
+   - Use entity's unit_of_measurement attribute
+   - Consider right-to-left language support
+
+Home Assistant connection events should be handled gracefully.

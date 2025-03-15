@@ -1,0 +1,45 @@
+---
+description: Home Assistant Lovelace custom card development patterns and best practices
+globs: /src/*.ts,/src/*.js,/src/*.css,/*.md,/package.json,/vite.config.ts,/hacs.json
+alwaysApply: false
+---
+Lovelace Component Architecture:
+
+1. Core Structure:
+   - Main Component Class: extends LitElement with @customElement decorator
+   - Editor Component: implements LovelaceCardEditor interface
+   - Config Interface: defines all card properties
+   - Must register with customElements.define() and CUSTOM_CARD_HELPERS
+   - Entry point must export card class and getConfigElement()
+
+2. Home Assistant Integration:
+   - @property({ attribute: false }) public hass!: HomeAssistant;
+   - @property() public config!: YourConfigInterface;
+   - static getStubConfig(hass, entities): method for default config
+   - setConfig(config): validates configuration
+   - getCardSize(): for proper dashboard sizing
+   - Connect to services via hass.callService()
+
+3. Lifecycle & Rendering:
+   - connectedCallback(): add DOM event listeners
+   - disconnectedCallback(): remove listeners
+   - firstUpdated(): perform initial DOM operations
+   - updated(changedProperties): react to property changes
+   - render(): output card's Lit template
+   - createRenderRoot(): shadowDOM customization
+
+4. State Management:
+   - Track hass.states[entity_id] for entity changes
+   - Use @state() for internal reactive properties
+   - Call this.requestUpdate() when needed
+   - Create memoized helpers for expensive operations
+   - Debounce user interactions for performance
+
+5. HACS Distribution:
+   - hacs.json: define card metadata
+   - Bundle as single ESM module
+   - Version in package.json must match releases
+   - README must contain installation & configuration
+   - Consider creating a demo GIF or screenshots
+
+WCAG accessibility (AA compliance) and responsive design are required for quality components.

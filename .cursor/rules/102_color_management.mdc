@@ -1,0 +1,26 @@
+---
+description: Color extraction and contrast management for dynamic UI theming
+globs: /src/color-manager.ts,/src/utils.ts
+alwaysApply: false
+---
+Color Management System:
+
+1. Color Extraction (@color-manager.ts):
+   - Uses ColorThief to extract palettes from effect images
+   - Extracts background, text, and accent colors
+   - Handles image loading and extraction gracefully
+   - Returns consistent RGB color format
+
+2. Color Processing (@utils.ts):
+   - Ensures WCAG AA compliance (4.5:1 contrast)
+   - Functions: getAccessibleTextColors, ensureContrastLab
+   - Uses chroma.js for color manipulation
+   - Handles edge cases and fallbacks
+
+3. Implementation Notes:
+   - Process images asynchronously
+   - Cache results when possible
+   - Provide fallbacks for failed extractions
+   - Support both RGB array and string formats
+
+The color system dynamically adapts the UI based on extracted colors while ensuring readability and accessibility.

@@ -1,0 +1,32 @@
+---
+description: Build tooling, configuration, and deployment for the Hyper Light Card
+globs: /vite.config.ts,/package.json,/hacs.json,/*.md
+alwaysApply: false
+---
+Build & Configuration Guidelines:
+
+1. Vite Configuration (@vite.config.ts):
+   - Configure for single-file bundling
+   - Optimize for production builds
+   - Use environment variables for mode
+   - Implement conditional logging
+   - Set proper ESM output
+
+2. Dependencies (@package.json):
+   - Keep external dependencies minimal
+   - Use specific versions for stability
+   - Group development tools together
+   - Maintain scripts for build/test/release
+
+3. HACS Integration (@hacs.json):
+   - Follow Home Assistant custom card standards
+   - Specify correct filename for loading
+   - Enable README rendering
+
+4. Documentation (@README.md):
+   - Keep installation instructions updated
+   - Document all configuration options
+   - Provide clear examples
+   - Include screenshots of the card
+
+When adding features, ensure they're properly documented in README and reflected in the build process.

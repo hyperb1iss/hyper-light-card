@@ -1,0 +1,31 @@
+---
+description: Hyper Light Card is a custom Lovelace card for Home Assistant to control SignalRGB with dynamic color theming
+globs: /**/*
+alwaysApply: false
+---
+Project Structure & Architecture:
+
+Core Components:
+
+- @src/hyper-light-card.ts: Main component class
+- @src/state.ts: State management model
+- @src/state-manager.ts: Manages state changes and HA interactions
+- @src/color-manager.ts: Handles color extraction from effects
+- @src/utils.ts: Utility functions and helpers
+- @src/config.ts: Configuration interface
+- @src/hyper-light-card-editor.ts: Card configuration UI
+
+Build System:
+
+- @vite.config.ts: Build configuration
+- @package.json: Dependencies and scripts
+
+Architecture Constraints:
+
+1. Follow Lit component patterns
+2. Maintain reactivity via @state/@property
+3. Keep state logic separate from UI
+4. Use ColorThief for palette extraction
+5. Ensure accessibility in color contrast
+
+The card dynamically adapts its UI based on extracted colors from SignalRGB effects, creating a cohesive visual experience.

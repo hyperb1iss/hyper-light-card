@@ -1,0 +1,50 @@
+---
+description: Technical details and internals of Home Assistant Lovelace custom card development
+globs: /src/*.ts,/src/*.js
+alwaysApply: false
+---
+Lovelace Technical Implementation:
+
+1. Type Definitions:
+   - HomeAssistant: core HA interface from custom-card-helpers
+   - LovelaceCardEditor: editor component interface
+   - HassEntity: entity state structure
+   - LovelaceCardConfig: base card configuration
+   - Use Record<string, unknown> for dynamic attributes
+
+2. Card Registration:
+   ```typescript
+   // Register card in HACS
+   window.customCards = window.customCards || [];
+   window.customCards.push({
+     type: "your-card-name",
+     name: "Your Card Name",
+     description: "Description of your card"
+   });
+   
+   // Register editor component
+   customElements.define("your-card-name-editor", YourCardEditor);
+   ```
+
+3. Reactive Update Cycle:
+   - Lit uses an asynchronous update cycle
+   - Property/state changes → requestUpdate() → update() → render()
+   - PropertyValues map tracks previous values in updated()
+   - Use performUpdate() for synchronous updates
+   - Control render timing with updateComplete Promise
+
+4. DOM Event Handling:
+   - Use @query decorator to access elements
+   - Add non-Lit event listeners in connectedCallback
+   - Remove all listeners in disconnectedCallback
+   - Use .bind(this) or arrow functions for callbacks
+   - Prevent memory leaks with proper cleanup
+
+5. Error Handling:
+   - Catch async errors in try/catch blocks
+   - Log errors for troubleshooting
+   - Provide fallback UI for error states
+   - Use optional chaining for deep property access
+   - Validate all external data sources
+
+Home Assistant services should be called with proper domain, service, and serviceData parameters.

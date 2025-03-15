@@ -1,0 +1,33 @@
+---
+description: Styling conventions and guidelines for the Hyper Light Card UI
+globs: /src/*.css
+alwaysApply: false
+---
+CSS Structure & Guidelines:
+
+1. Core Principles:
+
+   - Use CSS variables for theming and dynamic coloring
+   - Maintain accessibility (4.5:1 contrast minimum)
+   - Support both light and dark themes
+   - Keep transitions smooth (0.3-0.5s duration)
+
+2. Organization:
+
+   - Group related styles together
+   - Start with root variables
+   - Follow with component-specific styles
+   - End with responsive rules
+
+3. Naming Conventions:
+
+   - Use kebab-case for class names
+   - Be specific but concise
+   - Prefix utility classes (e.g., bg-, text-)
+
+4. Dynamic Theming:
+   - All colors should come from CSS variables
+   - Support transitions for color changes
+   - Ensure components adapt to extracted colors
+
+The card extracts colors from effect images to create a cohesive visual experience, adapting to each effect's palette.
