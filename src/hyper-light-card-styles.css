@@ -150,6 +150,46 @@ ha-card {
   z-index: 5;
 }
 
+/* Effect row layout */
+.effect-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 5;
+}
+
+.effect-row .effect-select-wrapper {
+  flex: 0 0 65%;
+  margin-bottom: 0;
+}
+
+.effect-row .effect-controls {
+  flex: 0 0 20%;
+  margin: 0;
+  margin-right: 10px;
+  justify-content: flex-end;
+}
+
+.effect-row .effect-button {
+  width: 30px;
+  height: 30px;
+}
+
+.effect-row .effect-button.random {
+  width: 34px;
+  height: 34px;
+}
+
+.effect-row .effect-button ha-icon {
+  --mdc-icon-size: 18px;
+}
+
+.effect-row .effect-button.random ha-icon {
+  --mdc-icon-size: 20px;
+}
+
 .dropdown {
   position: relative;
 }
@@ -768,6 +808,40 @@ ha-switch {
   }
 
   .effect-button ha-icon {
+    --mdc-icon-size: 24px;
+  }
+
+  /* Responsive effect row */
+  .effect-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .effect-row .effect-select-wrapper {
+    flex: 1 0 auto;
+    margin-bottom: 8px;
+  }
+
+  .effect-row .effect-controls {
+    flex: 1 0 auto;
+    justify-content: center;
+  }
+
+  .effect-row .effect-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .effect-row .effect-button.random {
+    width: 40px;
+    height: 40px;
+  }
+
+  .effect-row .effect-button ha-icon {
+    --mdc-icon-size: 22px;
+  }
+
+  .effect-row .effect-button.random ha-icon {
     --mdc-icon-size: 24px;
   }
 }

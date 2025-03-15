@@ -357,9 +357,11 @@ export class HyperLightCard extends LitElement {
           "
         >
           ${this._renderBackground(stateObj)} ${this._renderHeader(stateObj)}
-          ${this._renderEffectDropdown(stateObj)}
+          <div class="effect-row">
+            ${this._renderEffectDropdown(stateObj)}
+            ${this.state.showEffectControls ? this._renderEffectControls() : ''}
+          </div>
           ${this.state.showEffectInfo ? this._renderEffectInfo(stateObj) : ''}
-          ${this._renderEffectControls()}
           <div class="controls-row">
             ${this.state.showBrightnessControl ? this._renderBrightnessSlider(sliderStyle) : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
@@ -476,7 +478,7 @@ export class HyperLightCard extends LitElement {
         ${hasRandomButton
           ? html`
               <button
-                class="effect-button random large"
+                class="effect-button random"
                 @click=${this._randomEffect}
                 aria-label="Random effect"
               >
