@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Release management for hyper-light-card """
+"""Release management for hyper-light-card"""
 
 # ruff: noqa: E501
 # pylint: disable=broad-exception-caught
@@ -203,9 +203,7 @@ def create_banner() -> str:
     centered_logo = center_block(logo, content_width)
 
     banner = [
-        center_text(
-            f"{COLOR_STAR}･ ｡ ☆ ∴｡　　･ﾟ*｡★･ ∴｡　　･ﾟ*｡☆ ･ ｡ ☆ ∴｡", banner_width
-        ),
+        center_text(f"{COLOR_STAR}･ ｡ ☆ ∴｡　　･ﾟ*｡★･ ∴｡　　･ﾟ*｡☆ ･ ｡ ☆ ∴｡", banner_width),
         f"{COLOR_BORDER}╭{'─' * (banner_width - 4)}╮",
     ]
 
@@ -291,9 +289,14 @@ def commit_and_push(version: str) -> None:
     print_step("Committing and pushing changes")
     try:
         subprocess.run(["cp", "-f", TARGET, DIST], check=True)
-        subprocess.run(["git", "add", DIST, HACS_MANIFEST, PACKAGE_JSON], check=True)
+        # Update package-lock.json with new version
+        subprocess.run(["npm", "i", "--package-lock-only"], check=True)
         subprocess.run(
-            ["git", "commit", "-m", f":rocket: Release version {version}"], check=True
+            ["git", "add", DIST, HACS_MANIFEST, PACKAGE_JSON, "package-lock.json"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", f"🌠 Release version {version}"], check=True
         )
         subprocess.run(["git", "push"], check=True)
         subprocess.run(["git", "tag", f"v{version}"], check=True)
