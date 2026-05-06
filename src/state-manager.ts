@@ -13,6 +13,7 @@ export class StateManager {
   private _colorManager: ColorManager;
   private _backend: LightBackend;
   private _brightnessDebounceTimer?: number;
+  private _liveControlDebounce = new Map<string, number>();
   private _isDraggingBrightness = false;
 
   constructor(config: Config | undefined, state: State) {
@@ -126,47 +127,52 @@ export class StateManager {
   toggleDropdown() {
     this._state.isDropdownOpen = !this._state.isDropdownOpen;
     if (this._state.isDropdownOpen) {
-      this._state.isLayoutDropdownOpen = false;
-      this._state.isPresetDropdownOpen = false;
+      this._closeOtherDropdowns('effect');
     }
   }
 
   toggleLayoutDropdown() {
     this._state.isLayoutDropdownOpen = !this._state.isLayoutDropdownOpen;
     if (this._state.isLayoutDropdownOpen) {
-      this._state.isDropdownOpen = false;
-      this._state.isPresetDropdownOpen = false;
+      this._closeOtherDropdowns('layout');
     }
   }
 
   togglePresetDropdown() {
     this._state.isPresetDropdownOpen = !this._state.isPresetDropdownOpen;
     if (this._state.isPresetDropdownOpen) {
-      this._state.isDropdownOpen = false;
-      this._state.isLayoutDropdownOpen = false;
-      this._state.isSceneDropdownOpen = false;
-      this._state.isProfileDropdownOpen = false;
+      this._closeOtherDropdowns('preset');
     }
   }
 
   toggleSceneDropdown() {
     this._state.isSceneDropdownOpen = !this._state.isSceneDropdownOpen;
     if (this._state.isSceneDropdownOpen) {
-      this._state.isDropdownOpen = false;
-      this._state.isLayoutDropdownOpen = false;
-      this._state.isPresetDropdownOpen = false;
-      this._state.isProfileDropdownOpen = false;
+      this._closeOtherDropdowns('scene');
     }
   }
 
   toggleProfileDropdown() {
     this._state.isProfileDropdownOpen = !this._state.isProfileDropdownOpen;
     if (this._state.isProfileDropdownOpen) {
-      this._state.isDropdownOpen = false;
-      this._state.isLayoutDropdownOpen = false;
-      this._state.isPresetDropdownOpen = false;
-      this._state.isSceneDropdownOpen = false;
+      this._closeOtherDropdowns('profile');
     }
+  }
+
+  closeAllDropdowns() {
+    this._state.isDropdownOpen = false;
+    this._state.isLayoutDropdownOpen = false;
+    this._state.isPresetDropdownOpen = false;
+    this._state.isSceneDropdownOpen = false;
+    this._state.isProfileDropdownOpen = false;
+  }
+
+  private _closeOtherDropdowns(keep: 'effect' | 'layout' | 'preset' | 'scene' | 'profile') {
+    if (keep !== 'effect') this._state.isDropdownOpen = false;
+    if (keep !== 'layout') this._state.isLayoutDropdownOpen = false;
+    if (keep !== 'preset') this._state.isPresetDropdownOpen = false;
+    if (keep !== 'scene') this._state.isSceneDropdownOpen = false;
+    if (keep !== 'profile') this._state.isProfileDropdownOpen = false;
   }
 
   async setScene(value: string) {
@@ -183,10 +189,33 @@ export class StateManager {
     this._state.isProfileDropdownOpen = false;
   }
 
-  async setLiveControl(id: string, value: number) {
+  /**
+   * Update a live control value. Coalesces rapid drag input into one
+   * service call per ~50ms window; the final value always lands on
+   * release because setLiveControlImmediate triggers the trailing
+   * commit when a new debounce window opens.
+   */
+  setLiveControl(id: string, value: number) {
+    const existing = this._liveControlDebounce.get(id);
+    if (existing) window.clearTimeout(existing);
+    const handle = window.setTimeout(() => {
+      this._liveControlDebounce.delete(id);
+      const ctx = this._ctx;
+      if (!ctx) return;
+      void this._backend.setLiveControl?.(ctx, id, value);
+    }, 50);
+    this._liveControlDebounce.set(id, handle);
+  }
+
+  setLiveControlImmediate(id: string, value: number) {
+    const existing = this._liveControlDebounce.get(id);
+    if (existing) {
+      window.clearTimeout(existing);
+      this._liveControlDebounce.delete(id);
+    }
     const ctx = this._ctx;
     if (!ctx) return;
-    await this._backend.setLiveControl?.(ctx, id, value);
+    void this._backend.setLiveControl?.(ctx, id, value);
   }
 
   toggleAttributes() {
@@ -269,6 +298,10 @@ export class StateManager {
       window.clearTimeout(this._brightnessDebounceTimer);
       this._brightnessDebounceTimer = undefined;
     }
+    for (const handle of this._liveControlDebounce.values()) {
+      window.clearTimeout(handle);
+    }
+    this._liveControlDebounce.clear();
   }
 }
 

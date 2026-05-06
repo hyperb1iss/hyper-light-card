@@ -826,11 +826,14 @@ export class HyperLightCard extends LitElement {
   }
 
   private _handleLiveControlChange(id: string, value: string) {
-    void this.stateManager.setLiveControl(id, Number(value));
+    // `change` fires on release; commit the final value immediately so we
+    // don't sit on a queued debounce window.
+    this.stateManager.setLiveControlImmediate(id, Number(value));
   }
 
   private _handleLiveControlInput(id: string, value: string) {
-    void this.stateManager.setLiveControl(id, Number(value));
+    // `input` fires per drag tick; debounced via the StateManager.
+    this.stateManager.setLiveControl(id, Number(value));
   }
 
   private async _selectEffect(effect: string) {
@@ -880,24 +883,43 @@ export class HyperLightCard extends LitElement {
 
   private _handleClickOutside(event: Event) {
     const path = event.composedPath();
-    const effectDropdown = this.shadowRoot?.querySelector('.effect-select-wrapper .dropdown');
-    const layoutDropdown = this.shadowRoot?.querySelector('.layout-select-wrapper .dropdown');
-    const presetDropdown = this.shadowRoot?.querySelector('.preset-select-wrapper .dropdown');
-
-    if (this.state.isDropdownOpen && effectDropdown && !path.includes(effectDropdown)) {
-      this.stateManager.toggleDropdown();
-      this.requestUpdate();
+    const dropdowns: Array<[boolean, string, () => void]> = [
+      [
+        this.state.isDropdownOpen,
+        '.effect-select-wrapper .dropdown',
+        () => this.stateManager.toggleDropdown(),
+      ],
+      [
+        this.state.isLayoutDropdownOpen,
+        '.layout-select-wrapper .dropdown',
+        () => this.stateManager.toggleLayoutDropdown(),
+      ],
+      [
+        this.state.isPresetDropdownOpen,
+        '.preset-select-wrapper .dropdown',
+        () => this.stateManager.togglePresetDropdown(),
+      ],
+      [
+        this.state.isSceneDropdownOpen,
+        '.scene-select-wrapper .dropdown',
+        () => this.stateManager.toggleSceneDropdown(),
+      ],
+      [
+        this.state.isProfileDropdownOpen,
+        '.profile-select-wrapper .dropdown',
+        () => this.stateManager.toggleProfileDropdown(),
+      ],
+    ];
+    let changed = false;
+    for (const [isOpen, selector, close] of dropdowns) {
+      if (!isOpen) continue;
+      const node = this.shadowRoot?.querySelector(selector);
+      if (node && !path.includes(node)) {
+        close();
+        changed = true;
+      }
     }
-
-    if (this.state.isLayoutDropdownOpen && layoutDropdown && !path.includes(layoutDropdown)) {
-      this.stateManager.toggleLayoutDropdown();
-      this.requestUpdate();
-    }
-
-    if (this.state.isPresetDropdownOpen && presetDropdown && !path.includes(presetDropdown)) {
-      this.stateManager.togglePresetDropdown();
-      this.requestUpdate();
-    }
+    if (changed) this.requestUpdate();
   }
 
   private _handleBrightnessStart() {
