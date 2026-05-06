@@ -270,10 +270,10 @@ def update_version(new_version: str) -> None:
 
 
 def build() -> None:
-    """Run the build process using npm."""
+    """Run the build process using bun."""
     print_step("Rebuilding")
     try:
-        subprocess.run(["npm", "run", "build"], check=True)
+        subprocess.run(["bun", "run", "build"], check=True)
         print_colored("✅ Build completed successfully", COLOR_BUILD_SUCCESS)
     except subprocess.CalledProcessError as e:
         print_error(f"Build process failed: {str(e)}")
@@ -289,10 +289,10 @@ def commit_and_push(version: str) -> None:
     print_step("Committing and pushing changes")
     try:
         subprocess.run(["cp", "-f", TARGET, DIST], check=True)
-        # Update package-lock.json with new version
-        subprocess.run(["npm", "i", "--package-lock-only"], check=True)
+        # Update bun.lock with the new version
+        subprocess.run(["bun", "install"], check=True)
         subprocess.run(
-            ["git", "add", DIST, HACS_MANIFEST, PACKAGE_JSON, "package-lock.json"],
+            ["git", "add", DIST, HACS_MANIFEST, PACKAGE_JSON, "bun.lock"],
             check=True,
         )
         subprocess.run(
