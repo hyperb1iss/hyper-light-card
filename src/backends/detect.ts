@@ -1,12 +1,12 @@
 import type { HomeAssistant } from 'custom-card-helpers';
 import type { Config } from '../config';
+import { hypercolorBackend } from './hypercolor';
 import { signalRgbBackend } from './signalrgb';
 import type { BackendId, LightBackend } from './types';
 
 const REGISTRY: Record<BackendId, LightBackend> = {
   signalrgb: signalRgbBackend,
-  // hypercolor: lands in Phase 3
-  hypercolor: signalRgbBackend,
+  hypercolor: hypercolorBackend,
 };
 
 /**

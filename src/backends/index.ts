@@ -1,4 +1,5 @@
 export { backendById, detectBackend } from './detect';
+export { hypercolorBackend } from './hypercolor';
 export { signalRgbBackend } from './signalrgb';
 export type {
   AudioModel,

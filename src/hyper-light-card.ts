@@ -663,8 +663,9 @@ export class HyperLightCard extends LitElement {
   }
 
   static getStubConfig(hass: HomeAssistant, entities: string[]): Config {
-    // Try each backend's stub generator; first match wins.
-    for (const id of ['signalrgb', 'hypercolor'] as const) {
+    // Try each backend's stub generator; first match wins. Hypercolor
+    // first so users with both integrations get the richer surface.
+    for (const id of ['hypercolor', 'signalrgb'] as const) {
       const stub = backendById(id).stubConfig?.(hass, entities);
       if (stub) return stub;
     }
