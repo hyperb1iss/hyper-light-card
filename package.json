@@ -19,8 +19,7 @@
     "url": "https://github.com/hyperb1iss/hyper-light-card/issues"
   },
   "homepage": "https://github.com/hyperb1iss/hyper-light-card#readme",
-  "main": "target/hyper-light-card.js",
-  "module": "target/hyper-light-card.js",
+  "private": true,
   "type": "module",
   "scripts": {
     "start": "vite --host",
@@ -63,7 +62,7 @@
     "vitest": "^4.1.5"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=22.12.0",
     "bun": ">=1.3.0"
   },
   "packageManager": "bun@1.3.11"
