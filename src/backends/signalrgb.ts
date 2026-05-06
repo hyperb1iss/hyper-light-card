@@ -125,32 +125,49 @@ export const signalRgbBackend: LightBackend = {
     if (!deviceId) return {};
 
     const entities = Object.keys(ctx.hass.states);
-    const find = (prefix: string) =>
+    // Stay scoped to this device by default; never grab another
+    // SignalRGB device's controls in multi-device installs.
+    const findScoped = (prefix: string) =>
       entities.find(id => id === `${prefix}${deviceId}`) ??
-      entities.find(id => id.startsWith(prefix) && id.includes(deviceId)) ??
-      entities.find(id => id.startsWith(prefix));
+      entities.find(id => id.startsWith(prefix) && id.includes(deviceId));
+
+    let layoutEntity = !ctx.config.layout_entity
+      ? findScoped('select.signalrgb_layout_')
+      : undefined;
+    let presetEntity = !ctx.config.preset_entity
+      ? findScoped('select.signalrgb_preset_')
+      : undefined;
+    let nextEntity = !ctx.config.next_effect_entity
+      ? findScoped('button.signalrgb_next_effect_')
+      : undefined;
+    let prevEntity = !ctx.config.previous_effect_entity
+      ? findScoped('button.signalrgb_previous_effect_')
+      : undefined;
+    let randomEntity = !ctx.config.random_effect_entity
+      ? findScoped('button.signalrgb_random_effect_')
+      : undefined;
+
+    // Only fall back to the first matching entity by prefix when scoped
+    // discovery turned up nothing for any field. Fallback per-field would
+    // mix devices, which is what we want to avoid here.
+    const anyScopedHit = layoutEntity || presetEntity || nextEntity || prevEntity || randomEntity;
+    if (!anyScopedHit) {
+      const findFirst = (prefix: string) => entities.find(id => id.startsWith(prefix));
+      if (!ctx.config.layout_entity) layoutEntity = findFirst('select.signalrgb_layout_');
+      if (!ctx.config.preset_entity) presetEntity = findFirst('select.signalrgb_preset_');
+      if (!ctx.config.next_effect_entity) nextEntity = findFirst('button.signalrgb_next_effect_');
+      if (!ctx.config.previous_effect_entity)
+        prevEntity = findFirst('button.signalrgb_previous_effect_');
+      if (!ctx.config.random_effect_entity)
+        randomEntity = findFirst('button.signalrgb_random_effect_');
+    }
 
     const patch: Partial<Config> = {};
-    if (!ctx.config.layout_entity) {
-      const found = find('select.signalrgb_layout_');
-      if (found) patch.layout_entity = found;
-    }
-    if (!ctx.config.preset_entity) {
-      const found = find('select.signalrgb_preset_');
-      if (found) patch.preset_entity = found;
-    }
-    if (!ctx.config.next_effect_entity) {
-      const found = find('button.signalrgb_next_effect_');
-      if (found) patch.next_effect_entity = found;
-    }
-    if (!ctx.config.previous_effect_entity) {
-      const found = find('button.signalrgb_previous_effect_');
-      if (found) patch.previous_effect_entity = found;
-    }
-    if (!ctx.config.random_effect_entity) {
-      const found = find('button.signalrgb_random_effect_');
-      if (found) patch.random_effect_entity = found;
-    }
+    if (layoutEntity) patch.layout_entity = layoutEntity;
+    if (presetEntity) patch.preset_entity = presetEntity;
+    if (nextEntity) patch.next_effect_entity = nextEntity;
+    if (prevEntity) patch.previous_effect_entity = prevEntity;
+    if (randomEntity) patch.random_effect_entity = randomEntity;
     return patch;
   },
 
