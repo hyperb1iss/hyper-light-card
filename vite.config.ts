@@ -21,14 +21,12 @@ export default defineConfig({
     sourcemap: isProduction, // Only generate sourcemaps in production
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
         preserveModules: false,
         banner: '/* Hyper Light Card v' + pkg.version + ' - Apache 2.0 Licensed */',
       },
       treeshake: {
         moduleSideEffects: false,
         propertyReadSideEffects: false,
-        tryCatchDeoptimization: false
       },
     },
     minify: 'terser',
