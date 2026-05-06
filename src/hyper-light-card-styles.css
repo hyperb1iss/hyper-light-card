@@ -881,3 +881,260 @@ ha-switch {
 .glow {
   animation: glow 2s infinite;
 }
+
+/* === Phase 4: Hypercolor surfaces === */
+
+/* Status chips */
+.status-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+  color: var(--text-color, var(--secondary-text-color));
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.status-chip small {
+  margin-left: 2px;
+  opacity: 0.75;
+}
+
+.status-chip.status-connectivity {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--success-color, #4caf50);
+}
+
+.status-chip.status-connectivity.disconnected {
+  background: var(--error-color, #ff5252);
+}
+
+.status-chip.status-fps {
+  font-variant-numeric: tabular-nums;
+  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.12);
+  color: var(--accent-color, var(--primary-color, #03a9f4));
+}
+
+.status-chip.status-audio {
+  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.12);
+  color: var(--accent-color, var(--primary-color, #03a9f4));
+  --mdc-icon-size: 14px;
+}
+
+/* Audio-reactive pulse on the light icon when a beat fires */
+.card.beat .light-icon {
+  box-shadow: 0 0 18px var(--accent-color, var(--primary-color, #03a9f4));
+  transform: scale(1.05);
+}
+
+.card .light-icon {
+  transition:
+    box-shadow 0.12s ease-out,
+    transform 0.12s ease-out;
+}
+
+/* Live control rail */
+.live-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.live-control {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.live-control-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-color, var(--primary-text-color));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-control-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-control-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--primary-text-color);
+  outline: none;
+  opacity: 0.85;
+  margin: 0;
+  padding: 0;
+}
+
+.live-control-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--slider-color, var(--accent-color));
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color), 0.7);
+}
+
+.live-control-slider input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--slider-color, var(--accent-color));
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color), 0.7);
+}
+
+.live-control-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, var(--accent-color)) 0%,
+    var(--slider-color, var(--accent-color)) var(--slider-percentage, 50%),
+    var(--primary-text-color) var(--slider-percentage, 50%),
+    var(--primary-text-color) 100%
+  );
+}
+
+.live-control-slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, var(--accent-color)) 0%,
+    var(--slider-color, var(--accent-color)) var(--slider-percentage, 50%),
+    var(--primary-text-color) var(--slider-percentage, 50%),
+    var(--primary-text-color) 100%
+  );
+}
+
+.live-control-value {
+  width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  color: var(--text-color, var(--secondary-text-color));
+}
+
+.live-control.disabled {
+  opacity: 0.5;
+}
+
+.live-control.disabled input[type="range"] {
+  cursor: not-allowed;
+}
+
+/* Scene + profile selector wrappers reuse the existing dropdown styles */
+.scene-select-wrapper,
+.profile-select-wrapper {
+  position: relative;
+  z-index: 5;
+}
+
+.scene-select-wrapper .dropdown-header,
+.profile-select-wrapper .dropdown-header {
+  border-width: 1px;
+  padding: 6px 10px;
+  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* Wider grid when more selectors are present */
+.attributes-selectors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+/* Per-device drilldown */
+.per-device {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 3;
+}
+
+.per-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.04);
+}
+
+.per-device-name {
+  font-size: 0.9em;
+  color: var(--text-color, var(--primary-text-color));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.per-device-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.per-device-brightness {
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color, var(--secondary-text-color));
+}
+
+.per-device-identify {
+  background: transparent;
+  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.5);
+  color: var(--accent-color);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  --mdc-icon-size: 14px;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.per-device-identify:hover {
+  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.15);
+  transform: scale(1.05);
+}
+
+@media (max-width: 600px) {
+  .live-control {
+    grid-template-columns: 90px 1fr;
+  }
+}

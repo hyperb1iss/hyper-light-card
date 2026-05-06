@@ -144,7 +144,49 @@ export class StateManager {
     if (this._state.isPresetDropdownOpen) {
       this._state.isDropdownOpen = false;
       this._state.isLayoutDropdownOpen = false;
+      this._state.isSceneDropdownOpen = false;
+      this._state.isProfileDropdownOpen = false;
     }
+  }
+
+  toggleSceneDropdown() {
+    this._state.isSceneDropdownOpen = !this._state.isSceneDropdownOpen;
+    if (this._state.isSceneDropdownOpen) {
+      this._state.isDropdownOpen = false;
+      this._state.isLayoutDropdownOpen = false;
+      this._state.isPresetDropdownOpen = false;
+      this._state.isProfileDropdownOpen = false;
+    }
+  }
+
+  toggleProfileDropdown() {
+    this._state.isProfileDropdownOpen = !this._state.isProfileDropdownOpen;
+    if (this._state.isProfileDropdownOpen) {
+      this._state.isDropdownOpen = false;
+      this._state.isLayoutDropdownOpen = false;
+      this._state.isPresetDropdownOpen = false;
+      this._state.isSceneDropdownOpen = false;
+    }
+  }
+
+  async setScene(value: string) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setScene?.(ctx, value);
+    this._state.isSceneDropdownOpen = false;
+  }
+
+  async setProfile(value: string) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setProfile?.(ctx, value);
+    this._state.isProfileDropdownOpen = false;
+  }
+
+  async setLiveControl(id: string, value: number) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setLiveControl?.(ctx, id, value);
   }
 
   toggleAttributes() {

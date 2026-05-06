@@ -6,10 +6,14 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { backendById } from './backends';
 import type {
+  AudioModel,
   BackendContext,
   CardModel,
+  ConnectivityModel,
+  DeviceModel,
   EffectListModel,
   EffectModel,
+  LiveControlModel,
   NavigationModel,
   SelectModel,
 } from './backends/types';
@@ -144,21 +148,35 @@ export class HyperLightCard extends LitElement {
     const effectList = backend.effectList(ctx, stateObj);
     const layouts = backend.layouts(ctx);
     const presets = backend.presets(ctx);
+    const scenes = backend.scenes?.(ctx) ?? null;
+    const profiles = backend.profiles?.(ctx) ?? null;
     const navigation = backend.navigation(ctx);
+    const liveControls = backend.liveControls?.(ctx) ?? [];
+    const connectivity = backend.connectivity?.(ctx) ?? null;
+    const fps = backend.fps?.(ctx) ?? null;
+    const audio = backend.audio?.(ctx) ?? null;
+    const devices = backend.perDevice?.(ctx) ?? [];
 
     const sliderStyle = { '--slider-color': this.state.accentColor };
+    const showStatusChips = this.config.show_status_chips !== false;
+    const showSceneSelect = this.config.show_scene_select !== false && scenes !== null;
+    const showProfileSelect = this.config.show_profile_select === true && profiles !== null;
+    const showLiveControls = this.config.show_live_controls !== false && liveControls.length > 0;
+    const showPerDevice = this.config.show_per_device === true && devices.length > 0;
+    const beating = audio?.reactiveActive && audio?.beat;
 
     return html`
       <ha-card>
         <div
-          class="card"
+          class="card ${beating ? 'beat' : ''}"
           style="
             --background-color: ${this.state.backgroundColor};
             --text-color: ${this.state.textColor};
             --accent-color: ${this.state.accentColor};
           "
         >
-          ${this._renderBackground(card)} ${this._renderHeader(card)}
+          ${this._renderBackground(card)}
+          ${this._renderHeader(card, showStatusChips ? { connectivity, fps, audio } : null)}
           <div class="effect-row">
             ${this._renderEffectDropdown(effectList)}
             ${this.state.showEffectControls ? this._renderEffectControls(navigation) : ''}
@@ -168,7 +186,17 @@ export class HyperLightCard extends LitElement {
             ${this.state.showBrightnessControl ? this._renderBrightnessSlider(sliderStyle) : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
           </div>
-          ${this.state.showEffectParameters ? this._renderAttributes(effect, layouts, presets) : ''}
+          ${this.state.showEffectParameters
+            ? this._renderAttributes(effect, layouts, presets, {
+                scenes,
+                profiles,
+                liveControls,
+                showSceneSelect,
+                showProfileSelect,
+                showLiveControls,
+              })
+            : ''}
+          ${showPerDevice ? this._renderPerDevice(devices) : ''}
         </div>
       </ha-card>
     `;
@@ -185,20 +213,61 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderHeader(card: CardModel) {
+  private _renderHeader(
+    card: CardModel,
+    status: {
+      connectivity: ConnectivityModel | null;
+      fps: number | null;
+      audio: AudioModel | null;
+    } | null
+  ) {
+    const fallbackIcon = card.icon || 'mdi:led-strip-variant';
     return html`
       <div class="header" aria-label="${card.name}">
         <div class="light-icon ${this.state.isOn ? 'light-on' : ''}">
-          ${card.icon.startsWith('mdi:')
-            ? html`<ha-icon icon="${card.icon}" aria-hidden="true"></ha-icon>`
-            : html`<img src="${card.icon}" alt="${card.name}" />`}
+          ${fallbackIcon.startsWith('mdi:')
+            ? html`<ha-icon icon="${fallbackIcon}" aria-hidden="true"></ha-icon>`
+            : html`<img src="${fallbackIcon}" alt="${card.name}" />`}
         </div>
         <div class="light-name" title="${card.name}">${card.name}</div>
+        ${status ? this._renderStatusChips(status) : ''}
         <ha-switch
           .checked=${this.state.isOn}
           @change=${this._toggleLight}
           aria-label="Toggle light"
         ></ha-switch>
+      </div>
+    `;
+  }
+
+  private _renderStatusChips(status: {
+    connectivity: ConnectivityModel | null;
+    fps: number | null;
+    audio: AudioModel | null;
+  }) {
+    const { connectivity, fps, audio } = status;
+    if (!connectivity && fps === null && !audio) return '';
+    return html`
+      <div class="status-chips" aria-label="Status">
+        ${connectivity
+          ? html`<span
+              class="status-chip status-connectivity ${connectivity.connected
+                ? 'connected'
+                : 'disconnected'}"
+              title="${connectivity.connected ? 'Connected' : 'Disconnected'}"
+              aria-label="${connectivity.connected ? 'Connected' : 'Disconnected'}"
+            ></span>`
+          : ''}
+        ${fps !== null
+          ? html`<span class="status-chip status-fps" title="Render rate">
+              ${Math.round(fps)} <small>fps</small>
+            </span>`
+          : ''}
+        ${audio?.reactiveActive
+          ? html`<span class="status-chip status-audio" title="Audio reactive">
+              <ha-icon icon="mdi:music"></ha-icon>
+            </span>`
+          : ''}
       </div>
     `;
   }
@@ -362,12 +431,31 @@ export class HyperLightCard extends LitElement {
   private _renderAttributes(
     effect: EffectModel,
     layouts: SelectModel | null,
-    presets: SelectModel | null
+    presets: SelectModel | null,
+    extras: {
+      scenes: SelectModel | null;
+      profiles: SelectModel | null;
+      liveControls: LiveControlModel[];
+      showSceneSelect: boolean;
+      showProfileSelect: boolean;
+      showLiveControls: boolean;
+    }
   ) {
     const hasParameters = Object.keys(effect.parameters).length > 0;
     const hasLayouts = layouts && layouts.options.length > 0 && this.state.showLayoutSelect;
     const hasPresets = presets && presets.options.length > 0 && this.state.showPresetSelect;
-    if (!hasParameters && !hasLayouts && !hasPresets) {
+    const hasScenes = extras.scenes && extras.scenes.options.length > 0 && extras.showSceneSelect;
+    const hasProfiles =
+      extras.profiles && extras.profiles.options.length > 0 && extras.showProfileSelect;
+    const hasLiveControls = extras.showLiveControls && extras.liveControls.length > 0;
+    if (
+      !hasParameters &&
+      !hasLayouts &&
+      !hasPresets &&
+      !hasScenes &&
+      !hasProfiles &&
+      !hasLiveControls
+    ) {
       return html``;
     }
 
@@ -379,9 +467,158 @@ export class HyperLightCard extends LitElement {
         <div class="attributes-content">
           <div class="attributes-selectors">
             ${this._renderLayoutSelect(layouts, true)} ${this._renderPresetSelect(presets, true)}
+            ${hasScenes ? this._renderSceneSelect(extras.scenes!) : ''}
+            ${hasProfiles ? this._renderProfileSelect(extras.profiles!) : ''}
           </div>
-          ${this._renderAttributesList(effect.parameters)}
+          ${hasLiveControls
+            ? this._renderLiveControls(extras.liveControls)
+            : this._renderAttributesList(effect.parameters)}
         </div>
+      </div>
+    `;
+  }
+
+  private _renderLiveControls(controls: LiveControlModel[]) {
+    return html`
+      <div class="live-controls" aria-label="Live effect controls">
+        ${controls.map(control => this._renderLiveControl(control))}
+      </div>
+    `;
+  }
+
+  private _renderLiveControl(control: LiveControlModel) {
+    const range = control.max - control.min || 1;
+    const fillPct = ((control.value - control.min) / range) * 100;
+    const sliderStyle = {
+      '--slider-percentage': `${Math.max(0, Math.min(100, fillPct))}%`,
+      '--slider-color': this.state.accentColor,
+    };
+    return html`
+      <div class="live-control ${control.available ? '' : 'disabled'}">
+        <div class="live-control-label">${control.label}</div>
+        <div class="live-control-slider" style=${styleMap(sliderStyle)}>
+          <input
+            type="range"
+            min="${control.min}"
+            max="${control.max}"
+            step="${control.step}"
+            .value=${control.value.toString()}
+            ?disabled=${!control.available}
+            @change=${(e: Event) =>
+              this._handleLiveControlChange(control.id, (e.target as HTMLInputElement).value)}
+            @input=${(e: Event) =>
+              this._handleLiveControlInput(control.id, (e.target as HTMLInputElement).value)}
+            aria-label="${control.label}"
+          />
+          <div class="live-control-value">${formatLiveControlValue(control)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderSceneSelect(scenes: SelectModel) {
+    const hasScenes = scenes.options.length > 0;
+    return html`
+      <div class="scene-select-wrapper select-wrapper compact">
+        <div class="select-section-title"><ha-icon icon="mdi:movie-open"></ha-icon> Scene</div>
+        <div
+          class="dropdown ${this.state.isSceneDropdownOpen ? 'open' : ''} ${!hasScenes
+            ? 'disabled'
+            : ''}"
+        >
+          <div
+            class="dropdown-header"
+            @click=${hasScenes ? this._toggleSceneDropdown : undefined}
+            role="button"
+            aria-disabled="${!hasScenes}"
+            aria-label="Current scene: ${scenes.current}"
+          >
+            ${hasScenes ? scenes.current || 'No active scene' : 'No scenes available'}
+          </div>
+          <div class="dropdown-content" role="menu">
+            ${hasScenes
+              ? scenes.options.map(
+                  scene => html`
+                    <div
+                      class="dropdown-item ${scene === scenes.current ? 'selected' : ''}"
+                      @click=${() => this._selectScene(scene)}
+                      role="menuitem"
+                      tabindex="0"
+                    >
+                      ${scene}
+                    </div>
+                  `
+                )
+              : html`<div class="dropdown-item disabled">No scenes available</div>`}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderProfileSelect(profiles: SelectModel) {
+    const hasProfiles = profiles.options.length > 0;
+    return html`
+      <div class="profile-select-wrapper select-wrapper compact">
+        <div class="select-section-title"><ha-icon icon="mdi:account-cog"></ha-icon> Profile</div>
+        <div
+          class="dropdown ${this.state.isProfileDropdownOpen ? 'open' : ''} ${!hasProfiles
+            ? 'disabled'
+            : ''}"
+        >
+          <div
+            class="dropdown-header"
+            @click=${hasProfiles ? this._toggleProfileDropdown : undefined}
+            role="button"
+            aria-disabled="${!hasProfiles}"
+          >
+            ${hasProfiles ? profiles.current || 'No active profile' : 'No profiles available'}
+          </div>
+          <div class="dropdown-content" role="menu">
+            ${hasProfiles
+              ? profiles.options.map(
+                  profile => html`
+                    <div
+                      class="dropdown-item ${profile === profiles.current ? 'selected' : ''}"
+                      @click=${() => this._selectProfile(profile)}
+                      role="menuitem"
+                      tabindex="0"
+                    >
+                      ${profile}
+                    </div>
+                  `
+                )
+              : html`<div class="dropdown-item disabled">No profiles available</div>`}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderPerDevice(devices: DeviceModel[]) {
+    return html`
+      <div class="per-device" aria-label="Per-device controls">
+        ${devices.map(
+          device => html`
+            <div class="per-device-row">
+              <div class="per-device-name" title="${device.name}">${device.name}</div>
+              <div class="per-device-actions">
+                ${device.brightness !== null
+                  ? html`<span class="per-device-brightness">${device.brightness}%</span>`
+                  : ''}
+                ${device.identifyEntity
+                  ? html`<button
+                      class="per-device-identify"
+                      @click=${() => this._identifyDevice(device.identifyEntity!)}
+                      aria-label="Identify ${device.name}"
+                    >
+                      <ha-icon icon="mdi:eye"></ha-icon>
+                    </button>`
+                  : ''}
+              </div>
+            </div>
+          `
+        )}
       </div>
     `;
   }
@@ -563,6 +800,39 @@ export class HyperLightCard extends LitElement {
     this.stateManager.togglePresetDropdown();
   }
 
+  private _toggleSceneDropdown = (e: Event) => {
+    e.stopPropagation();
+    this.stateManager.toggleSceneDropdown();
+  };
+
+  private _toggleProfileDropdown = (e: Event) => {
+    e.stopPropagation();
+    this.stateManager.toggleProfileDropdown();
+  };
+
+  private async _selectScene(scene: string) {
+    await this.stateManager.setScene(scene);
+    this.requestUpdate();
+  }
+
+  private async _selectProfile(profile: string) {
+    await this.stateManager.setProfile(profile);
+    this.requestUpdate();
+  }
+
+  private async _identifyDevice(entityId: string) {
+    if (!this.hass) return;
+    await this.hass.callService('button', 'press', { entity_id: entityId });
+  }
+
+  private _handleLiveControlChange(id: string, value: string) {
+    void this.stateManager.setLiveControl(id, Number(value));
+  }
+
+  private _handleLiveControlInput(id: string, value: string) {
+    void this.stateManager.setLiveControl(id, Number(value));
+  }
+
   private async _selectEffect(effect: string) {
     await this.stateManager.setCurrentEffect(effect);
     this._refreshAfterEffectChange();
@@ -664,6 +934,18 @@ export class HyperLightCard extends LitElement {
     return document.createElement('hyper-light-card-editor');
   }
 
+  static getGridOptions(): {
+    rows?: number | 'auto';
+    columns?: number | 'full';
+    min_rows?: number;
+    min_columns?: number;
+  } {
+    // Sections-view sizing. The card is wide and tall enough to want at
+    // least half-row width on the standard 12-column grid; min_rows of 3
+    // covers the collapsed case (header, effect row, brightness).
+    return { rows: 'auto', columns: 12, min_rows: 3, min_columns: 6 };
+  }
+
   static getStubConfig(hass: HomeAssistant, entities: string[]): Config {
     // Try each backend's stub generator; first match wins. Hypercolor
     // first so users with both integrations get the richer surface.
@@ -686,6 +968,12 @@ export class HyperLightCard extends LitElement {
       allowed_effects: [],
     };
   }
+}
+
+function formatLiveControlValue(control: LiveControlModel): string {
+  if (control.step >= 1) return `${Math.round(control.value)}`;
+  // Two decimals when the step is fractional.
+  return control.value.toFixed(2);
 }
 
 customElements.define('hyper-light-card', HyperLightCard);
