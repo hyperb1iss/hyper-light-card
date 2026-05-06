@@ -1,12 +1,12 @@
-import { describe, test, expect } from 'vitest';
 import chroma from 'chroma-js';
+import { render } from 'lit';
+import { describe, expect, test } from 'vitest';
 import {
-  getAccessibleTextColors,
   ensureContrastLab,
   formatAttributeKey,
   formatAttributeValue,
+  getAccessibleTextColors,
 } from '@/utils';
-import { render } from 'lit';
 
 describe('getAccessibleTextColors', () => {
   test.each([
@@ -62,7 +62,7 @@ describe('Formatting Functions', () => {
   test('formatAttributeValue formats values correctly', () => {
     expect(formatAttributeValue(true, 'boolean')).toBe('Yes');
     expect(formatAttributeValue(false, 'boolean')).toBe('No');
-    expect(formatAttributeValue(3.14159, 'number')).toBe('3.14159');
+    expect(formatAttributeValue(99.5, 'number')).toBe('99.5');
     expect(formatAttributeValue(42, 'number')).toBe('42');
     expect(formatAttributeValue('test string', 'string')).toBe('test string');
 

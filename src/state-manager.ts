@@ -1,9 +1,9 @@
-import { State } from './state';
+import type { HomeAssistant } from 'custom-card-helpers';
+import type { HassEntity } from 'home-assistant-js-websocket';
 import { ColorManager } from './color-manager';
+import type { Config } from './config';
+import type { State } from './state';
 import { convertCardBrightnessToHA, convertHABrightnessToCard, log } from './utils';
-import { HomeAssistant } from 'custom-card-helpers';
-import { HassEntity } from 'home-assistant-js-websocket';
-import { Config } from './config';
 
 export class StateManager {
   private _hass?: HomeAssistant;

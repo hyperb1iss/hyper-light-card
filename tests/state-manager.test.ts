@@ -1,12 +1,13 @@
 // src/state-manager.test.ts
-import { StateManager } from '@/state-manager';
-import { State } from '@/state';
-import { ColorManager } from '@/color-manager';
-import { HomeAssistant } from 'custom-card-helpers';
-import { Config } from '@/config';
-import { convertCardBrightnessToHA } from '@/utils';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+import type { HomeAssistant } from 'custom-card-helpers';
 import type { Mocked } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ColorManager } from '@/color-manager';
+import type { Config } from '@/config';
+import { State } from '@/state';
+import { StateManager } from '@/state-manager';
+import { convertCardBrightnessToHA } from '@/utils';
 
 // Mock implementation of ReactiveControllerHost
 class MockReactiveControllerHost {

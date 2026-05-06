@@ -45,7 +45,7 @@ ha-card {
 
 /* Card border */
 .card::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -216,7 +216,7 @@ ha-card {
 }
 
 .dropdown-header::after {
-  content: '▼';
+  content: "▼";
   font-size: 0.8em;
   transition: transform 0.3s ease;
 }
@@ -388,7 +388,7 @@ ha-card {
   color: var(--text-color);
 }
 
-.brightness-slider input[type='range'] {
+.brightness-slider input[type="range"] {
   -webkit-appearance: none;
   appearance: none; /* Add the standard 'appearance' property */
   width: 100%;
@@ -402,7 +402,7 @@ ha-card {
   padding: 0;
 }
 
-.brightness-slider input[type='range']::-webkit-slider-thumb {
+.brightness-slider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 18px;
@@ -415,7 +415,7 @@ ha-card {
   margin-top: -5px;
 }
 
-.brightness-slider input[type='range']::-moz-range-thumb {
+.brightness-slider input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border: none;
@@ -426,7 +426,7 @@ ha-card {
   box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color), 0.8);
 }
 
-.brightness-slider input[type='range']::-webkit-slider-runnable-track {
+.brightness-slider input[type="range"]::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 4px;
   background: linear-gradient(
@@ -438,7 +438,7 @@ ha-card {
   );
 }
 
-.brightness-slider input[type='range']::-moz-range-track {
+.brightness-slider input[type="range"]::-moz-range-track {
   height: 8px;
   border-radius: 4px;
   background: linear-gradient(
@@ -450,14 +450,14 @@ ha-card {
   );
 }
 
-.brightness-slider input[type='range']:hover::-webkit-slider-thumb,
-.brightness-slider input[type='range']:active::-webkit-slider-thumb {
+.brightness-slider input[type="range"]:hover::-webkit-slider-thumb,
+.brightness-slider input[type="range"]:active::-webkit-slider-thumb {
   box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
   transform: scale(1.2);
 }
 
-.brightness-slider input[type='range']:hover::-moz-range-thumb,
-.brightness-slider input[type='range']:active::-moz-range-thumb {
+.brightness-slider input[type="range"]:hover::-moz-range-thumb,
+.brightness-slider input[type="range"]:active::-moz-range-thumb {
   box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
   transform: scale(1.2);
 }
@@ -643,7 +643,7 @@ ha-card {
 }
 
 .effect-button::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;

@@ -1,4 +1,4 @@
-import { ReactiveController, ReactiveControllerHost } from 'lit';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 export class State implements ReactiveController {
   private _host: ReactiveControllerHost;
@@ -31,7 +31,8 @@ export class State implements ReactiveController {
   private _showEffectControls = true;
 
   constructor(host: ReactiveControllerHost) {
-    (this._host = host).addController(this);
+    this._host = host;
+    host.addController(this);
   }
 
   hostConnected() {

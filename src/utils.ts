@@ -1,5 +1,5 @@
 import chroma from 'chroma-js';
-import { html, TemplateResult } from 'lit';
+import { html, type TemplateResult } from 'lit';
 
 /**
  * Ensures that the text color has sufficient contrast against the background color.
@@ -58,7 +58,7 @@ export function getAccessibleTextColors(rgb: number[]): number[] {
     // https://www.w3.org/TR/WCAG20-TECHS/G17.html#G17-tests
     const toLinear = (c: number): number => {
       const srgb = c / 255;
-      return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
+      return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
     };
 
     const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
@@ -139,7 +139,7 @@ export function memoize<TArgs extends unknown[], TResult>(
   const cache = new Map<string, TResult>();
 
   // Return a new function that wraps the original function.
-  return function (...args: TArgs): TResult {
+  return (...args: TArgs): TResult => {
     // Create a key based on the arguments provided.
     const key = JSON.stringify(args);
 

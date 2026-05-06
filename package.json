@@ -24,14 +24,16 @@
   "type": "module",
   "scripts": {
     "start": "vite --host",
-    "build": "NODE_ENV=production vite build && npx terser target/hyper-light-card.js -o target/hyper-light-card.js --compress drop_console=false,pure_funcs=['console.debug','console.warn'] --mangle --format \"comments=false,preamble='/* Hyper Light Card v${npm_package_version} - Apache 2.0 Licensed */'\"",
+    "build": "NODE_ENV=production vite build && bun x terser target/hyper-light-card.js -o target/hyper-light-card.js --compress drop_console=false,pure_funcs=['console.debug','console.warn'] --mangle --format \"comments=false,preamble='/* Hyper Light Card v${npm_package_version} - Apache 2.0 Licensed */'\"",
     "build:dev": "NODE_ENV=development vite build",
     "build:hacs": "NODE_ENV=production vite build",
-    "dev": "npm run build:dev && npm run copy:hass",
+    "dev": "bun run build:dev && bun run copy:hass",
     "copy:hass": "node scripts/copy-to-hass.js",
-    "lint": "eslint src tests",
-    "lint:fix": "eslint src tests --fix",
-    "format": "prettier --write 'src/**/*.{ts,js,css,json}' 'tests/**/*.{ts,js}'",
+    "lint": "biome check src tests",
+    "lint:fix": "biome check --write src tests",
+    "format": "prettier --write 'src/**/*.{ts,js}' 'tests/**/*.{ts,js}' && biome format --write 'src/**/*.{json,css}' '*.json'",
+    "format:check": "prettier --check 'src/**/*.{ts,js}' 'tests/**/*.{ts,js}' && biome format 'src/**/*.{json,css}' '*.json'",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --config tests/config/vitest.config.ts",
     "test:watch": "vitest --config tests/config/vitest.config.ts",
     "test:coverage": "vitest run --coverage --config tests/config/vitest.config.ts",
@@ -44,45 +46,21 @@
     "lit": "^3.3.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
+    "@biomejs/biome": "^2.4.14",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/chroma-js": "^3.1.1",
     "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.26.1",
-    "@typescript-eslint/parser": "^8.26.1",
     "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "^10.4.21",
     "cssnano": "^7.0.6",
-    "eslint": "^9.22.0",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-lit": "^1.15.0",
-    "eslint-plugin-prettier": "^5.2.3",
     "jsdom": "^26.0.0",
-    "lint-staged": "^15.5.0",
-    "prettier": "^3.5.3",
-    "sass": "^1.85.1",
-    "terser": "^5.39.0",
+    "prettier": "^3.8.3",
+    "sass": "^1.99.0",
+    "terser": "^5.46.2",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vitest": "^4.1.5"
-  },
-  "lint-staged": {
-    "*.{js,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{css,scss,json,md}": [
-      "prettier --write"
-    ]
-  },
-  "prettier": {
-    "singleQuote": true,
-    "arrowParens": "avoid",
-    "trailingComma": "es5",
-    "printWidth": 100,
-    "tabWidth": 2
   },
   "engines": {
     "node": ">=22.0.0",

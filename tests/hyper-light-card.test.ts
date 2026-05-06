@@ -1,11 +1,11 @@
-import { HyperLightCard } from '@/hyper-light-card';
-import { HomeAssistant } from 'custom-card-helpers';
-import { Config } from '@/config';
-import { State } from '@/state';
-import { ColorManager } from '@/color-manager';
-import { convertCardBrightnessToHA } from '@/utils';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { HomeAssistant } from 'custom-card-helpers';
 import type { Mocked } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ColorManager } from '@/color-manager';
+import type { Config } from '@/config';
+import { HyperLightCard } from '@/hyper-light-card';
+import type { State } from '@/state';
+import { convertCardBrightnessToHA } from '@/utils';
 
 describe('HyperLightCard', () => {
   let card: HyperLightCard;

@@ -1,0 +1,18 @@
+# Build output
+target/
+dist/
+node_modules/
+
+# Lockfiles
+bun.lock
+package-lock.json
+
+# Generated artifacts
+coverage/
+
+# JSON and CSS are formatted by biome, not prettier
+*.json
+*.jsonc
+*.css
+*.scss
+*.md

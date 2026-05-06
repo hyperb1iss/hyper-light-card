@@ -1,16 +1,17 @@
 // src/hyper-light-card.ts
-import { LitElement, html, css, unsafeCSS, TemplateResult } from 'lit';
+
+import type { HomeAssistant } from 'custom-card-helpers/dist/types';
+import type { HassEntity } from 'home-assistant-js-websocket';
+import { css, html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { formatAttributeKey, formatAttributeValue, memoize, log } from './utils';
+import type { Config } from './config';
+import { HyperLightCardEditor } from './hyper-light-card-editor';
 // Import CSS as string for Lit CSS
 import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
-import { Config } from './config';
-import type { HomeAssistant } from 'custom-card-helpers/dist/types';
-import { HassEntity } from 'home-assistant-js-websocket';
-import { HyperLightCardEditor } from './hyper-light-card-editor';
+import { formatAttributeKey, formatAttributeValue, log, memoize } from './utils';
 
 // Register the editor component
 if (!customElements.get('hyper-light-card-editor')) {
@@ -36,7 +37,7 @@ export class HyperLightCard extends LitElement {
 
     // Extract device ID from main entity
     const mainEntity = this.config.entity;
-    if (!mainEntity || !mainEntity.startsWith('light.signalrgb_')) {
+    if (!mainEntity?.startsWith('light.signalrgb_')) {
       return; // Not a SignalRGB entity or no entity set
     }
 
@@ -392,7 +393,7 @@ export class HyperLightCard extends LitElement {
     return html`
       <div class="header" aria-label="${name}">
         <div class="light-icon ${this.state.isOn ? 'light-on' : ''}">
-          ${this.config!.icon && this.config!.icon.startsWith('mdi:')
+          ${this.config!.icon?.startsWith('mdi:')
             ? html`<ha-icon icon="${this.config!.icon}" aria-hidden="true"></ha-icon>`
             : html`<img src="${this.config!.icon}" alt="${name}" />`}
         </div>
@@ -838,15 +839,6 @@ export class HyperLightCard extends LitElement {
     log.debug('HyperLightCard: Light toggled, new state:', this.state.isOn);
   }
 
-  private _getCurrentEffectIndex(): number {
-    const stateObj = this.hass?.states[this.config?.entity ?? ''];
-    const effectList: string[] = Array.isArray(stateObj?.attributes.effect_list)
-      ? stateObj?.attributes.effect_list
-      : [];
-
-    return effectList.indexOf(this.state.currentEffect);
-  }
-
   private _scrollToCurrentEffect() {
     log.debug('HyperLightCard: _scrollToCurrentEffect called');
     // Use requestAnimationFrame to ensure DOM is updated before scrolling
@@ -1045,7 +1037,7 @@ export class HyperLightCard extends LitElement {
     return document.createElement('hyper-light-card-editor');
   }
 
-  static getStubConfig(hass: HomeAssistant, entities: string[]): Config {
+  static getStubConfig(_hass: HomeAssistant, entities: string[]): Config {
     const signalRGBEntities = entities.filter(entityId => entityId.match(/^light\.signalrgb_/));
     const layoutEntities = entities.filter(entityId =>
       entityId.match(/^select\.signalrgb_layout_/)

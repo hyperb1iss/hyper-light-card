@@ -1,12 +1,12 @@
-import { LitElement, html, css } from 'lit';
-import { property, state } from 'lit/decorators.js';
 import {
-  HomeAssistant,
   fireEvent,
-  LovelaceCardEditor,
-  LovelaceCardConfig,
+  type HomeAssistant,
+  type LovelaceCardConfig,
+  type LovelaceCardEditor,
 } from 'custom-card-helpers';
-import { Config } from './config';
+import { css, html, LitElement } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import type { Config } from './config';
 
 interface ExtendedHTMLInputElement extends HTMLInputElement {
   configValue?: keyof Config;
@@ -25,7 +25,6 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
     show_preset_select: true,
     show_effect_controls: true,
   };
-  @property() private _helpers: unknown;
   @state() private _effects: string[] = [];
   @state() private _isDropdownOpen = false;
 
