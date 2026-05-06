@@ -1,20 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2023",
     "module": "ES2022",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
-    "baseUrl": ".",
     "outDir": "./target",
     "sourceMap": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src"]
   },

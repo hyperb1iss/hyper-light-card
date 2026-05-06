@@ -10,7 +10,7 @@ _Authored 2026-05-05. Living document; update as decisions land._
 
 - **Backend abstraction.** Render code stops reading raw HA attributes; consumes view models from a `LightBackend`. SignalRGB and Hypercolor are siblings, not subclasses.
 - **Effect imagery is unified.** Hypercolor will expose `effect_image` on the master light (work tracked upstream in `hypercolor-hass`). Color extraction pipeline survives unchanged.
-- **Toolchain target.** Biome 2.4 for linting and non-TS formatting (JSON, CSS); Prettier 3.x kept for TS/JS formatting because it auto-formats Lit's `` html`` `` template literals and Biome 2.4 still doesn't. ESLint is dropped. Vite 7, Vitest 4 with browser mode, Lit 3.3.1, TS 5.9, custom-card-helpers v2, standard TC39 decorators.
+- **Toolchain target.** Biome 2.4 for linting and non-TS formatting (JSON, CSS); Prettier 3.x kept for TS/JS formatting because it auto-formats Lit's `` html`` `` template literals and Biome 2.4 still doesn't. ESLint is dropped. Vite 8 (Rolldown), Vitest 4, Lit 3.3.2, TS 6.0, custom-card-helpers v2, bun for package management. Legacy `experimentalDecorators` stays until Rolldown gains `accessor`-keyword downleveling; the rest of TS 6 is fine.
 - **HA UI tokens.** Compose with `ha-card`, `ha-control-slider`, `ha-control-switch`, `ha-control-button-group`, `ha-form` for editor. Bind to HA CSS custom properties; never hardcode.
 - **Sections view.** Implement `getGridOptions()`. Mandatory in 2026.
 
@@ -54,7 +54,7 @@ _Authored 2026-05-05. Living document; update as decisions land._
 - `package.json` — script overhaul: `lint` → `biome check`, `format` → `prettier --write 'src/**/*.{ts,js}' && biome format --write 'src/**/*.{json,css}'`. Drop `prepare`'s build hook, drop `lint-staged`. Engine bump to `>=22`. Pin Node 22 LTS. Move existing `prettier` config block into `.prettierrc.json` so it stays out of `package.json`.
 - `biome.json` (new) — Biome 2.4 config: indent 2, line width 100, single quotes, trailing comma es5, arrow parens avoid, recommended rules. Formatter scope: `**/*.{json,css}` only; explicitly disable formatter for `.ts`/`.js` so it doesn't conflict with Prettier. Override: disable `noExplicitAny` for `*.d.ts` until properly typed.
 - `.prettierrc.json` (new) — extracted from `package.json`'s embedded config; scope via `.prettierignore` to TS/JS only.
-- `tsconfig.json` — flip `experimentalDecorators: false`, add `useDefineForClassFields: true`, bump `target` to `ES2023`. Verify Lit `@property`/`@state` decorators still bind under standard semantics (they do as of 3.3).
+- `tsconfig.json` — bump `target` to `ES2023`, drop deprecated `baseUrl` (TS 6 deprecated it), make `paths` relative. Standard TC39 decorator flip is **deferred** to a follow-up: Rolldown 8 (Vite 8's bundler) does not yet downlevel the `accessor` keyword, so keeping `experimentalDecorators: true` is the path that ships. Revisit once Rolldown supports it or we adopt a TS-first transform path.
 - `vite.config.ts` — drop unused, simplify; keep terser config since it's load-bearing for HACS distribution.
 - `eslint.config.mjs` — delete.
 - `.github/workflows/*` — Node 22, run `biome check` and `prettier --check 'src/**/*.{ts,js}'` in CI, parallelize lint/typecheck/test/build.
