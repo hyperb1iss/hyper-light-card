@@ -8,7 +8,8 @@
     "home-assistant",
     "lovelace",
     "custom-card",
-    "signalrgb"
+    "signalrgb",
+    "hypercolor"
   ],
   "repository": {
     "type": "git",
@@ -34,41 +35,38 @@
     "test": "vitest run --config tests/config/vitest.config.ts",
     "test:watch": "vitest --config tests/config/vitest.config.ts",
     "test:coverage": "vitest run --coverage --config tests/config/vitest.config.ts",
-    "prepare": "npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "chroma-js": "3.1.2",
-    "colorthief": "2.6.0",
-    "custom-card-helpers": "^1.9.0",
-    "lit": "3.2.1"
+    "chroma-js": "^3.2.0",
+    "colorthief": "^2.6.0",
+    "custom-card-helpers": "^2.0.0",
+    "lit": "^3.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
-    "@testing-library/jest-dom": "^6.1.4",
-    "@typescript-eslint/eslint-plugin": "8.26.1",
-    "@typescript-eslint/parser": "8.26.1",
-    "@types/chroma-js": "2.4.5",
-    "@types/node": "22.13.10",
-    "@types/testing-library__jest-dom": "^5.14.9",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "10.4.21",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/chroma-js": "^3.1.1",
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
+    "@vitest/coverage-istanbul": "^3.0.8",
+    "autoprefixer": "^10.4.21",
     "cssnano": "^7.0.6",
-    "eslint": "9.22.0",
-    "eslint-config-prettier": "10.1.1",
-    "eslint-plugin-import": "2.31.0",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-lit": "^1.15.0",
-    "eslint-plugin-prettier": "5.2.3",
-    "jsdom": "26.0.0",
-    "lint-staged": "15.5.0",
-    "prettier": "3.5.3",
-    "sass": "1.85.1",
-    "terser": "5.39.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "jsdom": "^26.0.0",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3",
+    "sass": "^1.85.1",
+    "terser": "^5.39.0",
+    "tslib": "^2.8.1",
     "typescript": "^5.8.2",
-    "vite": "6.2.2",
-    "vitest": "3.0.8",
-    "@vitest/coverage-istanbul": "3.0.8",
-    "tslib": "^2.8.1"
+    "vite": "^6.2.2",
+    "vitest": "^3.0.8"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
@@ -79,14 +77,6 @@
       "prettier --write"
     ]
   },
-  "eslintConfig": {
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended",
-      "plugin:lit/recommended",
-      "plugin:prettier/recommended"
-    ]
-  },
   "prettier": {
     "singleQuote": true,
     "arrowParens": "avoid",
@@ -95,6 +85,6 @@
     "tabWidth": 2
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   }
 }

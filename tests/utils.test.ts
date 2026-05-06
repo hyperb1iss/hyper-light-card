@@ -24,7 +24,9 @@ describe('getAccessibleTextColors', () => {
       throw new Error(`Invalid RGB value returned: ${textColors}`);
     }
 
-    const textContrast = chroma.contrast(chroma(bgRgb), chroma(textRgb));
+    const bgTuple = bgRgb as [number, number, number];
+    const textTuple = textRgb as [number, number, number];
+    const textContrast = chroma.contrast(chroma(bgTuple), chroma(textTuple));
 
     expect(textContrast).toBeGreaterThanOrEqual(4.5);
   });
