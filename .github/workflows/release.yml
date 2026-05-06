@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Explicit version (e.g., 1.2.3) - leave empty to use bump type'
+        required: false
+        default: ''
+      bump:
+        description: 'Version bump type (if version not specified)'
+        required: false
+        type: choice
+        default: 'patch'
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: 'Dry run (build & test only, skip publish)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version
+        id: version
+        run: |
+          CURRENT_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [[ -n "$CURRENT_TAG" ]]; then
+            CURRENT="${CURRENT_TAG#v}"
+          else
+            CURRENT=$(node -p "require('./package.json').version")
+          fi
+          echo "Current version: $CURRENT (from tag: ${CURRENT_TAG:-none})"
+
+          if [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+            MINOR=$(echo "$CURRENT" | cut -d. -f2)
+            PATCH=$(echo "$CURRENT" | cut -d. -f3)
+            case "${{ inputs.bump }}" in
+              major) VERSION="$((MAJOR + 1)).0.0" ;;
+              minor) VERSION="${MAJOR}.$((MINOR + 1)).0" ;;
+              patch) VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+            esac
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected: X.Y.Z)"
+            exit 1
+          fi
+
+          if git tag -l "v$VERSION" | grep -q "v$VERSION"; then
+            echo "::error::Tag v$VERSION already exists"
+            exit 1
+          fi
+
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing: $CURRENT -> $VERSION"
+
+      - name: Update package.json version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ steps.version.outputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "Updated package.json to ${{ steps.version.outputs.version }}"
+
+      - name: Install dependencies (refresh lockfile)
+        run: bun install
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Format check
+        run: bun run format:check
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Tests
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Generate release notes
+        if: ${{ !inputs.dry_run }}
+        uses: hyperb1iss/git-iris@v2
+        with:
+          command: release-notes
+          from: v${{ steps.version.outputs.current }}
+          to: HEAD
+          version-name: v${{ steps.version.outputs.version }}
+          provider: anthropic
+          model: claude-opus-4-6
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          output-file: RELEASE_NOTES.md
+
+      - name: Upload release notes artifact
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: RELEASE_NOTES.md
+          retention-days: 1
+
+      - name: Commit version bump
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add package.json bun.lock
+          git commit -m "release: v${{ steps.version.outputs.version }}"
+
+      - name: Create and push tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Trigger cicd pipeline
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run cicd.yml \
+            --ref "v${{ steps.version.outputs.version }}" \
+            -f release_run_id=${{ github.run_id }}
+
+      - name: Summary
+        run: |
+          echo "## Release ${{ inputs.dry_run && '[DRY RUN] ' || '' }}v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "Build and tests passed. Run again without dry-run to publish." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Version bumped: ${{ steps.version.outputs.current }} -> ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "Tag pushed: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "CI/CD pipeline triggered. The build artifact will land in the GitHub Release once cicd.yml completes." >> $GITHUB_STEP_SUMMARY
+          fi
