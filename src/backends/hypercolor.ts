@@ -57,8 +57,7 @@ export const hypercolorBackend: LightBackend = {
     return {
       name: typeof attrs.effect === 'string' ? attrs.effect : 'No effect',
       description: typeof attrs.effect_description === 'string' ? attrs.effect_description : '',
-      publisher:
-        typeof attrs.effect_publisher === 'string' ? attrs.effect_publisher : 'Hypercolor',
+      publisher: typeof attrs.effect_publisher === 'string' ? attrs.effect_publisher : 'Hypercolor',
       usesAudio: Boolean(attrs.effect_audio_reactive ?? attrs.effect_uses_audio),
       usesInput: false,
       usesVideo: false,
@@ -149,7 +148,9 @@ export const hypercolorBackend: LightBackend = {
   audio(ctx) {
     const extra = addenda(ctx.config);
     if (!extra.audio_beat_entity && !extra.audio_energy_entity) return null;
-    const beatState = extra.audio_beat_entity ? ctx.hass.states[extra.audio_beat_entity] : undefined;
+    const beatState = extra.audio_beat_entity
+      ? ctx.hass.states[extra.audio_beat_entity]
+      : undefined;
     const energyState = extra.audio_energy_entity
       ? ctx.hass.states[extra.audio_energy_entity]
       : undefined;
@@ -309,8 +310,13 @@ export const hypercolorBackend: LightBackend = {
     const childLights = entities.filter(
       id => id.startsWith('light.hypercolor_') && id !== mainEntity
     );
+    // Hypercolor exposes identify buttons as `button.hypercolor_identify_<device>`
+    // for hub-managed children, plus the conventional `<device>_identify`
+    // pattern HA generates from `_attr_name = "Identify"` on a child entity.
     const identifyButtons = entities.filter(
-      id => id.startsWith('button.hypercolor_') && id.endsWith('_identify')
+      id =>
+        id.startsWith('button.hypercolor_identify_') ||
+        (id.startsWith('button.') && id.endsWith('_identify'))
     );
     if (childLights.length > 0) extra.per_device_lights = childLights;
     if (identifyButtons.length > 0) extra.per_device_identify_buttons = identifyButtons;
@@ -322,7 +328,9 @@ export const hypercolorBackend: LightBackend = {
   },
 
   stubConfig(_hass, entities) {
-    const masters = entities.filter(id => id === 'light.hypercolor' || id.startsWith('light.hypercolor_'));
+    const masters = entities.filter(
+      id => id === 'light.hypercolor' || id.startsWith('light.hypercolor_')
+    );
     const master = masters.find(id => id === 'light.hypercolor') ?? masters[0];
     if (!master) return null;
     return {

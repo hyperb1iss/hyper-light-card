@@ -106,13 +106,14 @@ describe('HyperLightCard', () => {
       expect(card['config']).toEqual(
         expect.objectContaining({
           entity: 'light.test_light',
-          icon: 'https://brands.home-assistant.io/_/signalrgb/icon.png',
           background_opacity: 0.7,
           show_effect_info: true,
           show_effect_parameters: true,
           show_brightness_control: true,
         })
       );
+      // Icon is left unset by setConfig; backends supply their own default.
+      expect(card['config']?.icon).toBeUndefined();
     });
   });
 

@@ -58,7 +58,9 @@ export class HyperLightCard extends LitElement {
 
     this.config = {
       name: config.name,
-      icon: config.icon || 'https://brands.home-assistant.io/_/signalrgb/icon.png',
+      // Icon defaults are backend-specific; describeCard fills in the
+      // right one when the user has not supplied an explicit override.
+      icon: config.icon,
       background_opacity: config.background_opacity || 0.7,
       show_effect_info: config.show_effect_info !== false,
       show_effect_parameters: config.show_effect_parameters !== false,
