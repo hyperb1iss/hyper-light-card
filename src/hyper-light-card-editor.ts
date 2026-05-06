@@ -33,7 +33,28 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
   };
 
   public setConfig(config: LovelaceCardConfig): void {
-    this._config = { ...this._config, ...(config as unknown as Config) };
+    // Normalize: every visibility flag the card treats as enabled-by-default
+    // gets an explicit `true` here so ha-form's boolean controls reflect the
+    // actual render behavior. Without this the form shows toggles as off
+    // for fields the user never set, and saving would persist the wrong
+    // disabled value.
+    const incoming = config as unknown as Config;
+    const defaults = {
+      show_effect_info: true,
+      show_effect_parameters: true,
+      show_brightness_control: true,
+      show_layout_select: true,
+      show_preset_select: true,
+      show_effect_controls: true,
+      show_scene_select: true,
+      show_profile_select: false,
+      show_live_controls: true,
+      show_status_chips: true,
+      show_per_device: false,
+      background_opacity: 0.7,
+      allowed_effects: [] as string[],
+    };
+    this._config = { ...defaults, ...incoming };
   }
 
   protected render() {
@@ -209,8 +230,7 @@ function computeLabel(schema: FormSchemaEntry): string {
 
 const HELPERS: Record<string, string> = {
   backend: 'Override backend detection. Leave on the auto value unless something is off.',
-  show_per_device:
-    'Adds an expandable list of child lights below the main card. Off by default.',
+  show_per_device: 'Adds an expandable list of child lights below the main card. Off by default.',
   allowed_effects: 'Limit the effect dropdown. Empty means all available effects.',
 };
 
