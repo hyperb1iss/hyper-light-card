@@ -1,19 +1,26 @@
 // src/hyper-light-card.ts
 
 import type { HomeAssistant } from 'custom-card-helpers/dist/types';
-import type { HassEntity } from 'home-assistant-js-websocket';
 import { css, html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { backendById } from './backends';
+import type {
+  BackendContext,
+  CardModel,
+  EffectListModel,
+  EffectModel,
+  NavigationModel,
+  SelectModel,
+} from './backends/types';
 import type { Config } from './config';
 import { HyperLightCardEditor } from './hyper-light-card-editor';
 // Import CSS as string for Lit CSS
 import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
-import { formatAttributeKey, formatAttributeValue, log, memoize } from './utils';
+import { formatAttributeKey, formatAttributeValue, memoize } from './utils';
 
-// Register the editor component
 if (!customElements.get('hyper-light-card-editor')) {
   customElements.define('hyper-light-card-editor', HyperLightCardEditor);
 }
@@ -29,152 +36,11 @@ export class HyperLightCard extends LitElement {
   private _hasScrolledToPreset = false;
   private _autoDiscovered = false;
 
-  // Auto-discover related SignalRGB entities if they're not configured
-  private autoDiscoverEntities() {
-    if (!this.hass || !this.config || this._autoDiscovered) return;
-
-    log.debug('HyperLightCard: Running auto-discovery for related entities');
-
-    // Extract device ID from main entity
-    const mainEntity = this.config.entity;
-    if (!mainEntity?.startsWith('light.signalrgb_')) {
-      return; // Not a SignalRGB entity or no entity set
-    }
-
-    // Get all entities in hass
-    const entities = Object.keys(this.hass.states);
-
-    // First try exact device ID matching
-    const deviceIdMatch = mainEntity.match(/^light\.signalrgb_(.+)$/);
-    const deviceId = deviceIdMatch ? deviceIdMatch[1] : '';
-
-    if (!deviceId) {
-      log.debug('HyperLightCard: Could not extract device ID from entity', mainEntity);
-      return;
-    }
-
-    log.debug('HyperLightCard: Auto-discovering entities for device ID', deviceId);
-
-    // Try to find entities with the exact device ID first
-    const exactMatches = {
-      layout: entities.find(id => id === `select.signalrgb_layout_${deviceId}`),
-      preset: entities.find(id => id === `select.signalrgb_preset_${deviceId}`),
-      nextEffect: entities.find(id => id === `button.signalrgb_next_effect_${deviceId}`),
-      prevEffect: entities.find(id => id === `button.signalrgb_previous_effect_${deviceId}`),
-      randomEffect: entities.find(id => id === `button.signalrgb_random_effect_${deviceId}`),
-    };
-
-    // If exact matches don't work, try pattern matching
-    const patternMatches = {
-      layout: !exactMatches.layout
-        ? entities.find(id => id.startsWith('select.signalrgb_layout_') && id.includes(deviceId))
-        : null,
-      preset: !exactMatches.preset
-        ? entities.find(id => id.startsWith('select.signalrgb_preset_') && id.includes(deviceId))
-        : null,
-      nextEffect: !exactMatches.nextEffect
-        ? entities.find(
-            id => id.startsWith('button.signalrgb_next_effect_') && id.includes(deviceId)
-          )
-        : null,
-      prevEffect: !exactMatches.prevEffect
-        ? entities.find(
-            id => id.startsWith('button.signalrgb_previous_effect_') && id.includes(deviceId)
-          )
-        : null,
-      randomEffect: !exactMatches.randomEffect
-        ? entities.find(
-            id => id.startsWith('button.signalrgb_random_effect_') && id.includes(deviceId)
-          )
-        : null,
-    };
-
-    // Combine results, preferring exact matches
-    const foundEntities = {
-      layout: exactMatches.layout || patternMatches.layout,
-      preset: exactMatches.preset || patternMatches.preset,
-      nextEffect: exactMatches.nextEffect || patternMatches.nextEffect,
-      prevEffect: exactMatches.prevEffect || patternMatches.prevEffect,
-      randomEffect: exactMatches.randomEffect || patternMatches.randomEffect,
-    };
-
-    // If we couldn't find anything with the device ID, try finding any SignalRGB entities
-    // This is a fallback for cases where naming patterns differ
-    if (
-      !foundEntities.layout &&
-      !foundEntities.preset &&
-      !foundEntities.nextEffect &&
-      !foundEntities.prevEffect &&
-      !foundEntities.randomEffect
-    ) {
-      log.debug('HyperLightCard: No matches found with device ID, trying generic patterns');
-
-      // Find any SignalRGB entities
-      foundEntities.layout = entities.find(id => id.startsWith('select.signalrgb_layout_'));
-      foundEntities.preset = entities.find(id => id.startsWith('select.signalrgb_preset_'));
-      foundEntities.nextEffect = entities.find(id =>
-        id.startsWith('button.signalrgb_next_effect_')
-      );
-      foundEntities.prevEffect = entities.find(id =>
-        id.startsWith('button.signalrgb_previous_effect_')
-      );
-      foundEntities.randomEffect = entities.find(id =>
-        id.startsWith('button.signalrgb_random_effect_')
-      );
-    }
-
-    // Update config with found entities if they're not already set
-    let configUpdated = false;
-
-    if (!this.config.layout_entity && foundEntities.layout) {
-      this.config.layout_entity = foundEntities.layout;
-      configUpdated = true;
-      log.debug('HyperLightCard: Auto-discovered layout entity', foundEntities.layout);
-    }
-
-    if (!this.config.preset_entity && foundEntities.preset) {
-      this.config.preset_entity = foundEntities.preset;
-      configUpdated = true;
-      log.debug('HyperLightCard: Auto-discovered preset entity', foundEntities.preset);
-    }
-
-    if (!this.config.next_effect_entity && foundEntities.nextEffect) {
-      this.config.next_effect_entity = foundEntities.nextEffect;
-      configUpdated = true;
-      log.debug('HyperLightCard: Auto-discovered next effect entity', foundEntities.nextEffect);
-    }
-
-    if (!this.config.previous_effect_entity && foundEntities.prevEffect) {
-      this.config.previous_effect_entity = foundEntities.prevEffect;
-      configUpdated = true;
-      log.debug('HyperLightCard: Auto-discovered previous effect entity', foundEntities.prevEffect);
-    }
-
-    if (!this.config.random_effect_entity && foundEntities.randomEffect) {
-      this.config.random_effect_entity = foundEntities.randomEffect;
-      configUpdated = true;
-      log.debug('HyperLightCard: Auto-discovered random effect entity', foundEntities.randomEffect);
-    }
-
-    // If config was updated, update the state manager with the new config
-    if (configUpdated) {
-      log.debug('HyperLightCard: Updated config with auto-discovered entities', this.config);
-      this.stateManager = new StateManager(this.config, this.state);
-      this.stateManager.hass = this.hass;
-      this.stateManager.updateState();
-      this.requestUpdate();
-    }
-
-    // Mark as auto-discovered so we don't keep doing this
-    this._autoDiscovered = true;
-  }
-
   constructor() {
     super();
     this.state = new State(this);
     this.stateManager = new StateManager(this.config!, this.state);
     this._clickOutsideHandler = this._handleClickOutside.bind(this);
-    log.debug('HyperLightCard: Constructor called');
   }
 
   static get styles() {
@@ -184,12 +50,10 @@ export class HyperLightCard extends LitElement {
   }
 
   setConfig(config: Config) {
-    log.debug('HyperLightCard: setConfig called', config);
     if (!config.entity) {
       throw new Error('You need to define an entity');
     }
 
-    // Reset auto-discovery flag when config changes
     this._autoDiscovered = false;
 
     this.config = {
@@ -211,7 +75,6 @@ export class HyperLightCard extends LitElement {
       ...config,
     };
     this.stateManager = new StateManager(this.config, this.state);
-    log.debug('HyperLightCard: Config set', this.config);
   }
 
   getCardSize(): number {
@@ -219,48 +82,40 @@ export class HyperLightCard extends LitElement {
   }
 
   firstUpdated() {
-    log.debug('HyperLightCard: firstUpdated called');
     if (this.hass && this.config) {
       this.stateManager.hass = this.hass;
     }
     this.stateManager.updateState();
-    this.autoDiscoverEntities();
+    this._runAutoDiscovery();
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
 
-    log.debug('HyperLightCard: updated called', changedProperties);
-
-    // Only update state from hass if hass has changed
     if (changedProperties.has('hass') && this.hass && this.config) {
-      log.debug('HyperLightCard: current hass state:', this.hass.states[this.config.entity]);
       this.stateManager.hass = this.hass;
-
-      // Try auto-discovery again if we get new hass data
       if (!this._autoDiscovered) {
-        this.autoDiscoverEntities();
+        this._runAutoDiscovery();
       }
     }
 
-    // Only scroll if a dropdown is open and we haven't scrolled yet
     if (this.state.isDropdownOpen && !this._hasScrolledToEffect) {
       this._hasScrolledToEffect = true;
-      this._scrollToCurrentEffect();
+      this._scrollDropdownToSelected('.effect-select-wrapper');
     } else if (!this.state.isDropdownOpen) {
       this._hasScrolledToEffect = false;
     }
 
     if (this.state.isLayoutDropdownOpen && !this._hasScrolledToLayout) {
       this._hasScrolledToLayout = true;
-      this._scrollToCurrentLayout();
+      this._scrollDropdownToSelected('.layout-select-wrapper');
     } else if (!this.state.isLayoutDropdownOpen) {
       this._hasScrolledToLayout = false;
     }
 
     if (this.state.isPresetDropdownOpen && !this._hasScrolledToPreset) {
       this._hasScrolledToPreset = true;
-      this._scrollToCurrentPreset();
+      this._scrollDropdownToSelected('.preset-select-wrapper');
     } else if (!this.state.isPresetDropdownOpen) {
       this._hasScrolledToPreset = false;
     }
@@ -268,13 +123,11 @@ export class HyperLightCard extends LitElement {
 
   render() {
     if (!this.hass || !this.config || !this.hass.states) {
-      log.debug('HyperLightCard: hass or config not available');
       return html``;
     }
 
     const stateObj = this.hass.states[this.config.entity];
     if (!stateObj) {
-      log.debug('HyperLightCard: Entity not found', this.config.entity);
       return html`
         <ha-card>
           <div class="card">Entity not found: ${this.config.entity}</div>
@@ -282,68 +135,14 @@ export class HyperLightCard extends LitElement {
       `;
     }
 
-    // Diagnostic information for debugging entity connections
-    const hasLayoutEntity = Boolean(
-      this.config.layout_entity && this.hass.states[this.config.layout_entity]
-    );
-    const hasPresetEntity = Boolean(
-      this.config.preset_entity && this.hass.states[this.config.preset_entity]
-    );
-    const hasNextEffectEntity = Boolean(
-      this.config.next_effect_entity && this.hass.states[this.config.next_effect_entity]
-    );
-    const hasPreviousEffectEntity = Boolean(
-      this.config.previous_effect_entity && this.hass.states[this.config.previous_effect_entity]
-    );
-    const hasRandomEffectEntity = Boolean(
-      this.config.random_effect_entity && this.hass.states[this.config.random_effect_entity]
-    );
-
-    const layoutOptions = hasLayoutEntity
-      ? this.hass.states[this.config.layout_entity!].attributes.options || []
-      : [];
-
-    const presetOptions = hasPresetEntity
-      ? this.hass.states[this.config.preset_entity!].attributes.options || []
-      : [];
-
-    log.debug('HyperLightCard: Entity connections', {
-      layout: {
-        entity: this.config.layout_entity,
-        found: hasLayoutEntity,
-        options: layoutOptions,
-        optionsCount: layoutOptions.length,
-        showLayoutSelect: this.state.showLayoutSelect,
-      },
-      preset: {
-        entity: this.config.preset_entity,
-        found: hasPresetEntity,
-        options: presetOptions,
-        optionsCount: presetOptions.length,
-        showPresetSelect: this.state.showPresetSelect,
-      },
-      effectButtons: {
-        next: {
-          entity: this.config.next_effect_entity,
-          found: hasNextEffectEntity,
-        },
-        previous: {
-          entity: this.config.previous_effect_entity,
-          found: hasPreviousEffectEntity,
-        },
-        random: {
-          entity: this.config.random_effect_entity,
-          found: hasRandomEffectEntity,
-        },
-        showEffectControls: this.state.showEffectControls,
-      },
-    });
-
-    log.debug('HyperLightCard: Rendering with state', {
-      isOn: this.state.isOn,
-      currentEffect: this.state.currentEffect,
-      brightness: this.state.brightness,
-    });
+    const ctx: BackendContext = { hass: this.hass, config: this.config };
+    const backend = this.stateManager.backend;
+    const card = backend.describeCard(ctx);
+    const effect = backend.describeEffect(ctx, stateObj);
+    const effectList = backend.effectList(ctx, stateObj);
+    const layouts = backend.layouts(ctx);
+    const presets = backend.presets(ctx);
+    const navigation = backend.navigation(ctx);
 
     const sliderStyle = { '--slider-color': this.state.accentColor };
 
@@ -357,27 +156,24 @@ export class HyperLightCard extends LitElement {
             --accent-color: ${this.state.accentColor};
           "
         >
-          ${this._renderBackground(stateObj)} ${this._renderHeader(stateObj)}
+          ${this._renderBackground(card)} ${this._renderHeader(card)}
           <div class="effect-row">
-            ${this._renderEffectDropdown(stateObj)}
-            ${this.state.showEffectControls ? this._renderEffectControls() : ''}
+            ${this._renderEffectDropdown(effectList)}
+            ${this.state.showEffectControls ? this._renderEffectControls(navigation) : ''}
           </div>
-          ${this.state.showEffectInfo ? this._renderEffectInfo(stateObj) : ''}
+          ${this.state.showEffectInfo ? this._renderEffectInfo(effect) : ''}
           <div class="controls-row">
             ${this.state.showBrightnessControl ? this._renderBrightnessSlider(sliderStyle) : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
           </div>
-          ${this.state.showEffectParameters ? this._renderAttributes(stateObj) : ''}
+          ${this.state.showEffectParameters ? this._renderAttributes(effect, layouts, presets) : ''}
         </div>
       </ha-card>
     `;
   }
 
-  private _renderBackground(stateObj: HassEntity) {
-    const backgroundImage = stateObj.attributes.effect_image
-      ? `url(${stateObj.attributes.effect_image})`
-      : 'none';
-    log.debug('HyperLightCard: Rendering background', backgroundImage);
+  private _renderBackground(card: CardModel) {
+    const backgroundImage = card.paletteSource ? `url(${card.paletteSource})` : 'none';
     return html`
       <div
         class="card-background"
@@ -387,17 +183,15 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderHeader(stateObj: HassEntity) {
-    const name = this.config!.name || stateObj.attributes.friendly_name || stateObj.entity_id;
-    log.debug('HyperLightCard: Rendering header', name);
+  private _renderHeader(card: CardModel) {
     return html`
-      <div class="header" aria-label="${name}">
+      <div class="header" aria-label="${card.name}">
         <div class="light-icon ${this.state.isOn ? 'light-on' : ''}">
-          ${this.config!.icon?.startsWith('mdi:')
-            ? html`<ha-icon icon="${this.config!.icon}" aria-hidden="true"></ha-icon>`
-            : html`<img src="${this.config!.icon}" alt="${name}" />`}
+          ${card.icon.startsWith('mdi:')
+            ? html`<ha-icon icon="${card.icon}" aria-hidden="true"></ha-icon>`
+            : html`<img src="${card.icon}" alt="${card.name}" />`}
         </div>
-        <div class="light-name" title="${name}">${name}</div>
+        <div class="light-name" title="${card.name}">${card.name}</div>
         <ha-switch
           .checked=${this.state.isOn}
           @change=${this._toggleLight}
@@ -407,16 +201,7 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderEffectDropdown(stateObj: HassEntity) {
-    let effectList: string[] = Array.isArray(stateObj.attributes.effect_list)
-      ? stateObj.attributes.effect_list
-      : [];
-
-    if (this.state.allowedEffects) {
-      effectList = effectList.filter(effect => this.state.allowedEffects!.includes(effect));
-    }
-
-    log.debug('HyperLightCard: Rendering effect dropdown', effectList);
+  private _renderEffectDropdown(effectList: EffectListModel) {
     return html`
       <div class="effect-select-wrapper">
         <div class="dropdown ${this.state.isDropdownOpen ? 'open' : ''}">
@@ -428,44 +213,22 @@ export class HyperLightCard extends LitElement {
           >
             ${this.state.currentEffect}
           </div>
-          <div class="dropdown-content" role="menu">${this._memoizedEffectList(effectList)}</div>
+          <div class="dropdown-content" role="menu">
+            ${this._memoizedEffectList(effectList.allowed)}
+          </div>
         </div>
       </div>
     `;
   }
 
-  private _renderEffectControls() {
-    if (!this.state.showEffectControls) {
-      log.debug('HyperLightCard: Not rendering effect controls - disabled in state');
+  private _renderEffectControls(navigation: NavigationModel) {
+    if (!navigation.hasNext && !navigation.hasPrevious && !navigation.hasRandom) {
       return html``;
     }
-
-    const hasNextButton = Boolean(
-      this.config?.next_effect_entity && this.hass?.states[this.config.next_effect_entity]
-    );
-
-    const hasPrevButton = Boolean(
-      this.config?.previous_effect_entity && this.hass?.states[this.config.previous_effect_entity]
-    );
-
-    const hasRandomButton = Boolean(
-      this.config?.random_effect_entity && this.hass?.states[this.config.random_effect_entity]
-    );
-
-    if (!hasNextButton && !hasPrevButton && !hasRandomButton) {
-      log.debug('HyperLightCard: Not rendering effect controls - no entities available');
-      return html``;
-    }
-
-    log.debug('HyperLightCard: Rendering effect controls', {
-      hasNextButton,
-      hasPrevButton,
-      hasRandomButton,
-    });
 
     return html`
       <div class="effect-controls fade-in">
-        ${hasPrevButton
+        ${navigation.hasPrevious
           ? html`
               <button
                 class="effect-button"
@@ -476,7 +239,7 @@ export class HyperLightCard extends LitElement {
               </button>
             `
           : ''}
-        ${hasRandomButton
+        ${navigation.hasRandom
           ? html`
               <button
                 class="effect-button random"
@@ -487,7 +250,7 @@ export class HyperLightCard extends LitElement {
               </button>
             `
           : ''}
-        ${hasNextButton
+        ${navigation.hasNext
           ? html`
               <button class="effect-button" @click=${this._nextEffect} aria-label="Next effect">
                 <ha-icon icon="mdi:chevron-right"></ha-icon>
@@ -513,22 +276,9 @@ export class HyperLightCard extends LitElement {
     )
   );
 
-  private _renderEffectInfo(stateObj: HassEntity) {
-    if (!this.state.showEffectInfo) return html``;
-
-    const description = stateObj.attributes.effect_description || 'No effect description available';
-    const publisher = stateObj.attributes.effect_publisher || 'Unknown publisher';
-    const usesAudio = stateObj.attributes.effect_uses_audio || false;
-    const usesInput = stateObj.attributes.effect_uses_input || false;
-    const usesVideo = stateObj.attributes.effect_uses_video || false;
-
-    log.debug('HyperLightCard: Rendering effect info', {
-      description,
-      publisher,
-      usesAudio,
-      usesInput,
-      usesVideo,
-    });
+  private _renderEffectInfo(effect: EffectModel) {
+    const description = effect.description || 'No effect description available';
+    const publisher = effect.publisher || 'Unknown publisher';
 
     return html`
       <div class="effect-info ${this.state.isOn ? 'visible' : ''}">
@@ -537,21 +287,21 @@ export class HyperLightCard extends LitElement {
           <div class="effect-publisher">Published by: ${publisher}</div>
         </div>
         <div class="effect-features" aria-label="Effect features">
-          ${usesAudio
+          ${effect.usesAudio
             ? html`<ha-icon
                 icon="mdi:volume-high"
                 title="Uses Audio"
                 aria-label="Uses Audio"
               ></ha-icon>`
             : ''}
-          ${usesInput
+          ${effect.usesInput
             ? html`<ha-icon
                 icon="mdi:gamepad-variant"
                 title="Uses Input"
                 aria-label="Uses Input"
               ></ha-icon>`
             : ''}
-          ${usesVideo
+          ${effect.usesVideo
             ? html`<ha-icon icon="mdi:video" title="Uses Video" aria-label="Uses Video"></ha-icon>`
             : ''}
         </div>
@@ -565,8 +315,6 @@ export class HyperLightCard extends LitElement {
       '--slider-percentage': `${this.state.brightness}%`,
       '--slider-color': this.state.accentColor,
     };
-
-    log.debug('HyperLightCard: Rendering brightness slider', updatedSliderStyle);
 
     return html`
       <div
@@ -596,7 +344,6 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderAttributesToggle() {
-    log.debug('HyperLightCard: Rendering attributes toggle');
     return html`
       <div
         class="attributes-toggle"
@@ -610,20 +357,17 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderAttributes(stateObj: HassEntity) {
-    if (!this.state.showEffectParameters) return html``;
-
-    // Ensure effectParameters is correctly typed
-    const effectParameters = stateObj.attributes.effect_parameters as
-      | Record<string, { label: string; type: string; value: string | number | boolean }>
-      | undefined;
-
-    if (!effectParameters || Object.keys(effectParameters).length === 0) {
-      log.debug('HyperLightCard: No effect parameters to render');
+  private _renderAttributes(
+    effect: EffectModel,
+    layouts: SelectModel | null,
+    presets: SelectModel | null
+  ) {
+    const hasParameters = Object.keys(effect.parameters).length > 0;
+    const hasLayouts = layouts && layouts.options.length > 0 && this.state.showLayoutSelect;
+    const hasPresets = presets && presets.options.length > 0 && this.state.showPresetSelect;
+    if (!hasParameters && !hasLayouts && !hasPresets) {
       return html``;
     }
-
-    log.debug('HyperLightCard: Rendering attributes', effectParameters);
 
     return html`
       <div
@@ -631,30 +375,19 @@ export class HyperLightCard extends LitElement {
         aria-hidden="${!this.state.isAttributesExpanded}"
       >
         <div class="attributes-content">
-          <!-- Layout and Preset Selectors inside expanded attributes -->
           <div class="attributes-selectors">
-            ${this._renderLayoutSelect(true)} ${this._renderPresetSelect(true)}
+            ${this._renderLayoutSelect(layouts, true)} ${this._renderPresetSelect(presets, true)}
           </div>
-
-          <!-- Effect Parameters -->
-          ${this._renderAttributesList(effectParameters)}
+          ${this._renderAttributesList(effect.parameters)}
         </div>
       </div>
     `;
   }
 
-  private _renderAttributesList(
-    effectParameters: Record<
-      string,
-      string | { label: string; type: string; value: string | number | boolean }
-    >
-  ) {
+  private _renderAttributesList(effectParameters: EffectModel['parameters']) {
     if (!effectParameters || Object.keys(effectParameters).length === 0) {
-      log.debug('HyperLightCard: No effect parameters to list');
       return html`<p>No effect parameters available.</p>`;
     }
-
-    log.debug('HyperLightCard: Rendering attributes list', effectParameters);
 
     return html`
       <ul class="attribute-list">
@@ -681,34 +414,11 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderLayoutSelect(isCompact: boolean = false) {
-    if (
-      !this.config?.layout_entity ||
-      !this.state.showLayoutSelect ||
-      !this.hass?.states[this.config.layout_entity]
-    ) {
-      return html``;
-    }
+  private _renderLayoutSelect(layouts: SelectModel | null, isCompact = false) {
+    if (!layouts || !this.state.showLayoutSelect) return html``;
 
-    const layoutEntity = this.hass.states[this.config.layout_entity];
-    const currentLayout = layoutEntity.state || '';
-    const availableLayouts = layoutEntity.attributes.options || [];
-
-    // Update state with current layout
-    if (this.state.currentLayout !== currentLayout) {
-      this.state.currentLayout = currentLayout;
-    }
-
-    const hasLayouts = availableLayouts.length > 0;
-    this.state.availableLayouts = availableLayouts;
-
-    log.debug('HyperLightCard: Rendering layout select', {
-      currentLayout,
-      availableLayouts,
-      dropdownOpen: this.state.isLayoutDropdownOpen,
-      isCompact,
-      hasLayouts,
-    });
+    const hasLayouts = layouts.options.length > 0;
+    const currentLayout = layouts.current;
 
     return html`
       <div class="layout-select-wrapper select-wrapper ${isCompact ? 'compact' : ''}">
@@ -732,8 +442,8 @@ export class HyperLightCard extends LitElement {
           </div>
           <div class="dropdown-content" role="menu">
             ${hasLayouts
-              ? availableLayouts.map(
-                  (layout: string) => html`
+              ? layouts.options.map(
+                  layout => html`
                     <div
                       class="dropdown-item ${layout === currentLayout ? 'selected' : ''}"
                       @click=${() => this._selectLayout(layout)}
@@ -751,34 +461,11 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderPresetSelect(isCompact: boolean = false) {
-    if (
-      !this.config?.preset_entity ||
-      !this.state.showPresetSelect ||
-      !this.hass?.states[this.config.preset_entity]
-    ) {
-      return html``;
-    }
+  private _renderPresetSelect(presets: SelectModel | null, isCompact = false) {
+    if (!presets || !this.state.showPresetSelect) return html``;
 
-    const presetEntity = this.hass.states[this.config.preset_entity];
-    const currentPreset = presetEntity.state || '';
-    const availablePresets = presetEntity.attributes.options || [];
-
-    // Update state with current preset
-    if (this.state.currentPreset !== currentPreset) {
-      this.state.currentPreset = currentPreset;
-    }
-
-    const hasPresets = availablePresets.length > 0;
-    this.state.availablePresets = availablePresets;
-
-    log.debug('HyperLightCard: Rendering preset select', {
-      currentPreset,
-      availablePresets,
-      dropdownOpen: this.state.isPresetDropdownOpen,
-      isCompact,
-      hasPresets,
-    });
+    const hasPresets = presets.options.length > 0;
+    const currentPreset = presets.current;
 
     return html`
       <div class="preset-select-wrapper select-wrapper ${isCompact ? 'compact' : ''}">
@@ -800,8 +487,8 @@ export class HyperLightCard extends LitElement {
           </div>
           <div class="dropdown-content" role="menu">
             ${hasPresets
-              ? availablePresets.map(
-                  (preset: string) => html`
+              ? presets.options.map(
+                  preset => html`
                     <div
                       class="dropdown-item ${preset === currentPreset ? 'selected' : ''}"
                       @click=${() => this._selectPreset(preset)}
@@ -819,169 +506,111 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private async _toggleLight() {
-    log.debug('HyperLightCard: _toggleLight called');
-    await this.stateManager.toggleLight();
+  private _runAutoDiscovery() {
+    if (!this.hass || !this.config || this._autoDiscovered) return;
+    const ctx: BackendContext = { hass: this.hass, config: this.config };
+    const patch = this.stateManager.backend.autoDiscover?.(ctx);
+    if (patch && Object.keys(patch).length > 0) {
+      this.config = { ...this.config, ...patch };
+      this.stateManager = new StateManager(this.config, this.state);
+      this.stateManager.hass = this.hass;
+      this.stateManager.updateState();
+      this.requestUpdate();
+    }
+    this._autoDiscovered = true;
+  }
 
-    const effectInfo = this.shadowRoot!.querySelector('.effect-info');
+  private _scrollDropdownToSelected(wrapperSelector: string) {
+    requestAnimationFrame(() => {
+      const dropdownContent = this.shadowRoot?.querySelector(
+        `${wrapperSelector} .dropdown-content`
+      ) as HTMLElement | null;
+      const selectedItem = this.shadowRoot?.querySelector(
+        `${wrapperSelector} .dropdown-item.selected`
+      ) as HTMLElement | null;
+      if (dropdownContent && selectedItem) {
+        dropdownContent.scrollTop = selectedItem.offsetTop - dropdownContent.offsetTop;
+      }
+    });
+  }
+
+  private async _toggleLight() {
+    await this.stateManager.toggleLight();
+    const effectInfo = this.shadowRoot?.querySelector('.effect-info');
     if (effectInfo) {
       if (this.state.isOn) {
-        setTimeout(() => {
-          effectInfo.classList.add('visible');
-          log.debug('HyperLightCard: Effect info made visible');
-        }, 50);
+        setTimeout(() => effectInfo.classList.add('visible'), 50);
       } else {
         effectInfo.classList.remove('visible');
-        log.debug('HyperLightCard: Effect info hidden');
       }
     }
-
-    log.debug('HyperLightCard: Light toggled, new state:', this.state.isOn);
-  }
-
-  private _scrollToCurrentEffect() {
-    log.debug('HyperLightCard: _scrollToCurrentEffect called');
-    // Use requestAnimationFrame to ensure DOM is updated before scrolling
-    requestAnimationFrame(() => {
-      const dropdownContent = this.shadowRoot?.querySelector(
-        '.effect-select-wrapper .dropdown-content'
-      ) as HTMLElement;
-      const currentEffectItem = this.shadowRoot?.querySelector(
-        `.effect-select-wrapper .dropdown-item.selected`
-      ) as HTMLElement;
-
-      if (dropdownContent && currentEffectItem) {
-        dropdownContent.scrollTop = currentEffectItem.offsetTop - dropdownContent.offsetTop;
-        log.debug('HyperLightCard: Scrolled to current effect');
-      }
-    });
-  }
-
-  private _scrollToCurrentLayout() {
-    log.debug('HyperLightCard: _scrollToCurrentLayout called');
-    requestAnimationFrame(() => {
-      const dropdownContent = this.shadowRoot?.querySelector(
-        '.layout-select-wrapper .dropdown-content'
-      ) as HTMLElement;
-      const currentLayoutItem = this.shadowRoot?.querySelector(
-        `.layout-select-wrapper .dropdown-item.selected`
-      ) as HTMLElement;
-
-      if (dropdownContent && currentLayoutItem) {
-        dropdownContent.scrollTop = currentLayoutItem.offsetTop - dropdownContent.offsetTop;
-        log.debug('HyperLightCard: Scrolled to current layout');
-      }
-    });
-  }
-
-  private _scrollToCurrentPreset() {
-    log.debug('HyperLightCard: _scrollToCurrentPreset called');
-    requestAnimationFrame(() => {
-      const dropdownContent = this.shadowRoot?.querySelector(
-        '.preset-select-wrapper .dropdown-content'
-      ) as HTMLElement;
-      const currentPresetItem = this.shadowRoot?.querySelector(
-        `.preset-select-wrapper .dropdown-item.selected`
-      ) as HTMLElement;
-
-      if (dropdownContent && currentPresetItem) {
-        dropdownContent.scrollTop = currentPresetItem.offsetTop - dropdownContent.offsetTop;
-        log.debug('HyperLightCard: Scrolled to current preset');
-      }
-    });
   }
 
   private _toggleDropdown(e: Event) {
-    log.debug('HyperLightCard: _toggleDropdown called');
     e.stopPropagation();
     this.stateManager.toggleDropdown();
-    log.debug('HyperLightCard: Dropdown toggled, new state:', this.state.isDropdownOpen);
   }
 
   private _toggleLayoutDropdown(e: Event) {
-    log.debug('HyperLightCard: _toggleLayoutDropdown called');
     e.stopPropagation();
     this.stateManager.toggleLayoutDropdown();
   }
 
   private _togglePresetDropdown(e: Event) {
-    log.debug('HyperLightCard: _togglePresetDropdown called');
     e.stopPropagation();
     this.stateManager.togglePresetDropdown();
   }
 
   private async _selectEffect(effect: string) {
-    log.debug('HyperLightCard: _selectEffect called', effect);
     await this.stateManager.setCurrentEffect(effect);
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
   private async _selectLayout(layout: string) {
-    log.debug('HyperLightCard: _selectLayout called', layout);
     await this.stateManager.setCurrentLayout(layout);
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
   private async _selectPreset(preset: string) {
-    log.debug('HyperLightCard: _selectPreset called', preset);
     await this.stateManager.setCurrentPreset(preset);
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
   private async _nextEffect() {
-    log.debug('HyperLightCard: _nextEffect called');
     await this.stateManager.nextEffect();
-    // Ensure the effect info gets updated
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
   private async _previousEffect() {
-    log.debug('HyperLightCard: _previousEffect called');
     await this.stateManager.previousEffect();
-    // Ensure the effect info gets updated
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
   private async _randomEffect() {
-    log.debug('HyperLightCard: _randomEffect called');
     await this.stateManager.randomEffect();
-    // Ensure the effect info gets updated
-    this._refreshCardAfterEffectChange();
+    this._refreshAfterEffectChange();
   }
 
-  // Helper method to ensure the card refreshes properly after an effect change
-  private _refreshCardAfterEffectChange() {
-    // Force a re-render to update the effect info
+  private _refreshAfterEffectChange() {
     setTimeout(() => {
       this.requestUpdate();
-
-      // Make sure effect info is visible if the light is on
       if (this.state.isOn) {
-        const effectInfo = this.shadowRoot!.querySelector('.effect-info');
-        if (effectInfo) {
-          effectInfo.classList.add('visible');
-        }
+        const effectInfo = this.shadowRoot?.querySelector('.effect-info');
+        effectInfo?.classList.add('visible');
       }
-
-      log.debug('HyperLightCard: Refreshed card after effect change');
-    }, 350); // Slightly more than the state update timeout to ensure state is updated first
+    }, 350);
   }
 
   private _toggleAttributes() {
-    log.debug('HyperLightCard: _toggleAttributes called');
     this.stateManager.toggleAttributes();
-    log.debug('HyperLightCard: Attributes expanded:', this.state.isAttributesExpanded);
     this.requestUpdate();
   }
 
   private _handleClickOutside(event: Event) {
-    log.debug('HyperLightCard: _handleClickOutside called');
     const path = event.composedPath();
-
-    // Check dropdowns and close if clicked outside
-    const effectDropdown = this.shadowRoot!.querySelector('.effect-select-wrapper .dropdown');
-    const layoutDropdown = this.shadowRoot!.querySelector('.layout-select-wrapper .dropdown');
-    const presetDropdown = this.shadowRoot!.querySelector('.preset-select-wrapper .dropdown');
+    const effectDropdown = this.shadowRoot?.querySelector('.effect-select-wrapper .dropdown');
+    const layoutDropdown = this.shadowRoot?.querySelector('.layout-select-wrapper .dropdown');
+    const presetDropdown = this.shadowRoot?.querySelector('.preset-select-wrapper .dropdown');
 
     if (this.state.isDropdownOpen && effectDropdown && !path.includes(effectDropdown)) {
       this.stateManager.toggleDropdown();
@@ -1009,62 +638,40 @@ export class HyperLightCard extends LitElement {
 
   private async _handleBrightnessInput(e: Event) {
     const target = e.target as HTMLInputElement;
-    const brightness = Number(target.value);
-    await this.stateManager.setBrightness(brightness);
+    this.stateManager.setBrightness(Number(target.value));
   }
 
   private async _handleBrightnessChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    const brightness = Number(target.value);
-    await this.stateManager.setBrightness(brightness);
+    this.stateManager.setBrightness(Number(target.value));
     this.stateManager.endBrightnessDrag();
   }
 
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener('click', this._clickOutsideHandler);
-    log.debug('HyperLightCard: connectedCallback called, click listener added');
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('click', this._clickOutsideHandler);
     this.stateManager.cleanup();
-    log.debug('HyperLightCard: disconnectedCallback called, click listener removed');
   }
 
   static getConfigElement() {
     return document.createElement('hyper-light-card-editor');
   }
 
-  static getStubConfig(_hass: HomeAssistant, entities: string[]): Config {
-    const signalRGBEntities = entities.filter(entityId => entityId.match(/^light\.signalrgb_/));
-    const layoutEntities = entities.filter(entityId =>
-      entityId.match(/^select\.signalrgb_layout_/)
-    );
-    const presetEntities = entities.filter(entityId =>
-      entityId.match(/^select\.signalrgb_preset_/)
-    );
-    const nextEffectEntities = entities.filter(entityId =>
-      entityId.match(/^button\.signalrgb_next_effect_/)
-    );
-    const prevEffectEntities = entities.filter(entityId =>
-      entityId.match(/^button\.signalrgb_previous_effect_/)
-    );
-    const randomEffectEntities = entities.filter(entityId =>
-      entityId.match(/^button\.signalrgb_random_effect_/)
-    );
-
-    const defaultEntity = signalRGBEntities.length > 0 ? signalRGBEntities[0] : '';
-    const defaultLayoutEntity = layoutEntities.length > 0 ? layoutEntities[0] : '';
-    const defaultPresetEntity = presetEntities.length > 0 ? presetEntities[0] : '';
-    const defaultNextEffectEntity = nextEffectEntities.length > 0 ? nextEffectEntities[0] : '';
-    const defaultPrevEffectEntity = prevEffectEntities.length > 0 ? prevEffectEntities[0] : '';
-    const defaultRandomEffectEntity =
-      randomEffectEntities.length > 0 ? randomEffectEntities[0] : '';
-
+  static getStubConfig(hass: HomeAssistant, entities: string[]): Config {
+    // Try each backend's stub generator; first match wins.
+    for (const id of ['signalrgb', 'hypercolor'] as const) {
+      const stub = backendById(id).stubConfig?.(hass, entities);
+      if (stub) return stub;
+    }
+    // No supported entity found; return a minimal config tied to the first light.
+    const fallback = entities.find(id => id.startsWith('light.')) ?? '';
     return {
-      entity: defaultEntity,
+      entity: fallback,
       name: '',
       show_effect_info: true,
       show_effect_parameters: true,
@@ -1074,11 +681,6 @@ export class HyperLightCard extends LitElement {
       show_effect_controls: true,
       background_opacity: 0.7,
       allowed_effects: [],
-      layout_entity: defaultLayoutEntity,
-      preset_entity: defaultPresetEntity,
-      next_effect_entity: defaultNextEffectEntity,
-      previous_effect_entity: defaultPrevEffectEntity,
-      random_effect_entity: defaultRandomEffectEntity,
     };
   }
 }
@@ -1089,7 +691,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'hyper-light-card',
   name: 'Hyper Light Card',
-  description: 'A custom card for controlling SignalRGB.',
+  description: 'A custom card for SignalRGB and Hypercolor.',
   preview: true,
   documentationURL: 'https://github.com/hyperb1iss/hyper-light-card',
 });
