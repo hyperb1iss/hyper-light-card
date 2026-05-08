@@ -147,6 +147,19 @@ describe('StateManager', () => {
       stateManager.setBrightness(75);
       expect(mockState.brightness).toBe(75);
     });
+
+    it('cancels queued brightness updates during cleanup', () => {
+      vi.useFakeTimers();
+      try {
+        stateManager.setBrightness(75);
+        stateManager.cleanup();
+        vi.runAllTimers();
+
+        expect(mockHass.callService).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('setCurrentEffect', () => {

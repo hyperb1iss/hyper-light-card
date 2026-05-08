@@ -139,6 +139,38 @@ describe('HyperLightCard', () => {
       expect(div.innerHTML).toContain('aria-label="Stop effect"');
       expect(div.innerHTML).toContain('mdi:stop');
     });
+
+    it('presses the Hypercolor stop entity from the stop control', async () => {
+      (mockHass.states as Record<string, unknown>)['light.hypercolor'] = {
+        entity_id: 'light.hypercolor',
+        state: 'on',
+        attributes: {
+          friendly_name: 'Hypercolor',
+          effect: 'Aurora',
+          effect_list: ['Aurora'],
+        },
+      };
+      (mockHass.states as Record<string, unknown>)['button.hypercolor_stop_effect'] = {
+        entity_id: 'button.hypercolor_stop_effect',
+        state: 'unknown',
+        attributes: {},
+      };
+      card.setConfig({
+        entity: 'light.hypercolor',
+        backend: 'hypercolor',
+        hypercolor: {
+          stop_effect_entity: 'button.hypercolor_stop_effect',
+        },
+      });
+      card.hass = mockHass;
+      card['stateManager'].hass = mockHass;
+
+      await card['_stopEffect']();
+
+      expect(mockHass.callService).toHaveBeenCalledWith('button', 'press', {
+        entity_id: 'button.hypercolor_stop_effect',
+      });
+    });
   });
 
   describe('_toggleLight', () => {
