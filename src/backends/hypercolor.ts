@@ -117,7 +117,7 @@ export const hypercolorBackend: LightBackend = {
       return [
         {
           id,
-          label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          label: liveControlLabel(id),
           min: Number(stateObj.attributes.min ?? 0),
           max: Number(stateObj.attributes.max ?? 100),
           step: Number(stateObj.attributes.step ?? 1),
@@ -360,6 +360,11 @@ export const hypercolorBackend: LightBackend = {
 function addenda(config: Config): HypercolorAddenda {
   return ((config as Config & { hypercolor?: HypercolorAddenda }).hypercolor ??
     {}) as HypercolorAddenda;
+}
+
+function liveControlLabel(id: LiveControlId): string {
+  if (id === 'brightness') return 'Effect Brightness';
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function readSelectModel(hass: HomeAssistant, entityId?: string): SelectModel | null {

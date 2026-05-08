@@ -123,3 +123,32 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.layout_entity).toBeUndefined();
   });
 });
+
+describe('hypercolorBackend.liveControls', () => {
+  it('labels effect brightness distinctly from the card brightness slider', () => {
+    const hass = hassWith(['light.hypercolor', 'number.hypercolor_brightness']);
+    (hass.states as Record<string, unknown>)['number.hypercolor_brightness'] = {
+      entity_id: 'number.hypercolor_brightness',
+      state: '42',
+      attributes: { min: 0, max: 100, step: 1 },
+    };
+
+    const controls = hypercolorBackend.liveControls?.({
+      hass,
+      config: {
+        entity: 'light.hypercolor',
+        hypercolor: {
+          live_control_entities: {
+            brightness: 'number.hypercolor_brightness',
+          },
+        },
+      } as Config & { hypercolor: DiscoveredAddenda },
+    });
+
+    expect(controls?.[0]).toMatchObject({
+      id: 'brightness',
+      label: 'Effect Brightness',
+      value: 42,
+    });
+  });
+});

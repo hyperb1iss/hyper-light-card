@@ -293,7 +293,12 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderEffectControls(navigation: NavigationModel) {
-    if (!navigation.hasNext && !navigation.hasPrevious && !navigation.hasRandom) {
+    if (
+      !navigation.hasNext &&
+      !navigation.hasPrevious &&
+      !navigation.hasRandom &&
+      !navigation.hasStop
+    ) {
       return html``;
     }
 
@@ -325,6 +330,17 @@ export class HyperLightCard extends LitElement {
           ? html`
               <button class="effect-button" @click=${this._nextEffect} aria-label="Next effect">
                 <ha-icon icon="mdi:chevron-right"></ha-icon>
+              </button>
+            `
+          : ''}
+        ${navigation.hasStop
+          ? html`
+              <button
+                class="effect-button stop"
+                @click=${this._stopEffect}
+                aria-label="Stop effect"
+              >
+                <ha-icon icon="mdi:stop"></ha-icon>
               </button>
             `
           : ''}
@@ -863,6 +879,11 @@ export class HyperLightCard extends LitElement {
 
   private async _randomEffect() {
     await this.stateManager.randomEffect();
+    this._refreshAfterEffectChange();
+  }
+
+  private async _stopEffect() {
+    await this.stateManager.stopEffect();
     this._refreshAfterEffectChange();
   }
 

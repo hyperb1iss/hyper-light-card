@@ -1,4 +1,5 @@
 import type { HomeAssistant } from 'custom-card-helpers';
+import { render } from 'lit';
 import type { Mocked } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ColorManager } from '@/color-manager';
@@ -123,7 +124,21 @@ describe('HyperLightCard', () => {
       expect(renderResult).toBeDefined();
     });
 
-    // Add more specific tests for render output if needed
+    it('renders a stop button when the backend exposes stop navigation', () => {
+      const div = document.createElement('div');
+      render(
+        card['_renderEffectControls']({
+          hasNext: false,
+          hasPrevious: false,
+          hasRandom: false,
+          hasStop: true,
+        }),
+        div
+      );
+
+      expect(div.innerHTML).toContain('aria-label="Stop effect"');
+      expect(div.innerHTML).toContain('mdi:stop');
+    });
   });
 
   describe('_toggleLight', () => {

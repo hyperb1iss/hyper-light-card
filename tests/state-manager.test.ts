@@ -88,6 +88,25 @@ describe('StateManager', () => {
       expect(mockState.currentEffect).toBe('Effect1');
       expect(mockState.brightness).toBe(50); // This is the expected brightness value in the card's scale
     });
+
+    it('syncs visibility flags from config', async () => {
+      stateManager = new StateManager(
+        {
+          entity: 'light.test_light',
+          show_effect_info: false,
+          show_effect_parameters: false,
+          show_brightness_control: false,
+        } as Config,
+        mockState
+      );
+      stateManager.hass = mockHass;
+
+      await stateManager.updateState();
+
+      expect(mockState.showEffectInfo).toBe(false);
+      expect(mockState.showEffectParameters).toBe(false);
+      expect(mockState.showBrightnessControl).toBe(false);
+    });
   });
 
   describe('toggleDropdown', () => {

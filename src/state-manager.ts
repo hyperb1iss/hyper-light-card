@@ -113,11 +113,17 @@ export class StateManager {
 
     const cfg = ctx.config;
     const visibilityChanged =
+      this._state.showEffectInfo !== (cfg.show_effect_info !== false) ||
+      this._state.showEffectParameters !== (cfg.show_effect_parameters !== false) ||
+      this._state.showBrightnessControl !== (cfg.show_brightness_control !== false) ||
       this._state.showLayoutSelect !== (cfg.show_layout_select !== false) ||
       this._state.showPresetSelect !== (cfg.show_preset_select !== false) ||
       this._state.showEffectControls !== (cfg.show_effect_controls !== false);
 
     if (visibilityChanged) {
+      this._state.showEffectInfo = cfg.show_effect_info !== false;
+      this._state.showEffectParameters = cfg.show_effect_parameters !== false;
+      this._state.showBrightnessControl = cfg.show_brightness_control !== false;
       this._state.showLayoutSelect = cfg.show_layout_select !== false;
       this._state.showPresetSelect = cfg.show_preset_select !== false;
       this._state.showEffectControls = cfg.show_effect_controls !== false;
@@ -284,6 +290,10 @@ export class StateManager {
 
   async randomEffect() {
     await this._press('random');
+  }
+
+  async stopEffect() {
+    await this._press('stop');
   }
 
   private async _press(action: 'next' | 'previous' | 'random' | 'stop') {
