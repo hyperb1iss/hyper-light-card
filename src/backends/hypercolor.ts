@@ -307,9 +307,12 @@ export const hypercolorBackend: LightBackend = {
     }
     if (Object.keys(liveControls).length > 0) extra.live_control_entities = liveControls;
 
-    const childLights = entities.filter(
-      id => id.startsWith('light.hypercolor_') && id !== mainEntity
-    );
+    // Scope per-device discovery to the cards's own group. A non-root card
+    // like `light.hypercolor_living_room` must not pick up children from
+    // unrelated groups (e.g. `light.hypercolor_kitchen_*`); only the root
+    // `light.hypercolor` card sees every Hypercolor light in the install.
+    const childPrefix = mainEntity === 'light.hypercolor' ? 'light.hypercolor_' : `${mainEntity}_`;
+    const childLights = entities.filter(id => id.startsWith(childPrefix) && id !== mainEntity);
     // Hypercolor exposes identify buttons as `button.hypercolor_identify_<device>`
     // for hub-managed children, plus the conventional `<device>_identify`
     // pattern HA generates from `_attr_name = "Identify"` on a child entity.
