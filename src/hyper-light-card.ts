@@ -80,6 +80,7 @@ export class HyperLightCard extends LitElement {
       random_effect_entity: config.random_effect_entity,
       ...config,
     };
+    this.stateManager.cleanup();
     this.stateManager = new StateManager(this.config, this.state);
   }
 
@@ -767,6 +768,7 @@ export class HyperLightCard extends LitElement {
     const patch = this.stateManager.backend.autoDiscover?.(ctx);
     if (patch && Object.keys(patch).length > 0) {
       this.config = { ...this.config, ...patch };
+      this.stateManager.cleanup();
       this.stateManager = new StateManager(this.config, this.state);
       this.stateManager.hass = this.hass;
       this.stateManager.updateState();

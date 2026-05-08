@@ -1,3 +1,19 @@
+export type HypercolorLiveControlId = 'brightness' | 'speed' | 'hue_shift' | 'intensity';
+
+export interface HypercolorConfigAddenda {
+  scene_entity?: string;
+  profile_entity?: string;
+  stop_effect_entity?: string;
+  fps_entity?: string;
+  connected_entity?: string;
+  audio_beat_entity?: string;
+  audio_reactive_active_entity?: string;
+  audio_energy_entity?: string;
+  live_control_entities?: Partial<Record<HypercolorLiveControlId, string>>;
+  per_device_lights?: string[];
+  per_device_identify_buttons?: string[];
+}
+
 export interface Config {
   entity: string;
   name?: string;
@@ -27,4 +43,5 @@ export interface Config {
   show_live_controls?: boolean;
   show_status_chips?: boolean;
   show_per_device?: boolean;
+  hypercolor?: HypercolorConfigAddenda;
 }

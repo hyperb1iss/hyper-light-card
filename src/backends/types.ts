@@ -1,6 +1,7 @@
 import type { HomeAssistant } from 'custom-card-helpers';
-import type { HassEntity } from 'home-assistant-js-websocket';
 import type { Config } from '../config';
+
+type HassEntity = HomeAssistant['states'][string];
 
 /**
  * Identifier for a concrete backend. Used for detection cache keys, config

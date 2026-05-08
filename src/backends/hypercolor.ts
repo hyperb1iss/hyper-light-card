@@ -1,5 +1,5 @@
 import type { HomeAssistant } from 'custom-card-helpers';
-import type { Config } from '../config';
+import type { Config, HypercolorConfigAddenda, HypercolorLiveControlId } from '../config';
 import { convertCardBrightnessToHA, convertHABrightnessToCard } from '../utils';
 import type {
   AudioModel,
@@ -15,23 +15,12 @@ import type {
 } from './types';
 
 const DEFAULT_ICON = 'mdi:led-strip-variant';
-const LIVE_CONTROL_IDS = ['brightness', 'speed', 'hue_shift', 'intensity'] as const;
-
-type LiveControlId = (typeof LIVE_CONTROL_IDS)[number];
-
-interface HypercolorAddenda {
-  scene_entity?: string;
-  profile_entity?: string;
-  stop_effect_entity?: string;
-  fps_entity?: string;
-  connected_entity?: string;
-  audio_beat_entity?: string;
-  audio_reactive_active_entity?: string;
-  audio_energy_entity?: string;
-  live_control_entities?: Partial<Record<LiveControlId, string>>;
-  per_device_lights?: string[];
-  per_device_identify_buttons?: string[];
-}
+const LIVE_CONTROL_IDS = [
+  'brightness',
+  'speed',
+  'hue_shift',
+  'intensity',
+] as const satisfies readonly HypercolorLiveControlId[];
 
 export const hypercolorBackend: LightBackend = {
   id: 'hypercolor',
@@ -175,8 +164,7 @@ export const hypercolorBackend: LightBackend = {
       const haBrightness = stateObj.attributes.brightness;
       // Find an identify button under the same device_id slug pattern.
       const slug = entityId.replace(/^light\./, '');
-      const identifyEntity =
-        identifyButtons.find(id => id.includes(slug.replace(/^hypercolor_/, ''))) ?? null;
+      const identifyEntity = identifyEntityFor(slug, identifyButtons);
       return [
         {
           id: stateObj.entity_id,
@@ -239,7 +227,7 @@ export const hypercolorBackend: LightBackend = {
   },
 
   async setLiveControl(ctx, id, value) {
-    const entityId = addenda(ctx.config).live_control_entities?.[id as LiveControlId];
+    const entityId = addenda(ctx.config).live_control_entities?.[id as HypercolorLiveControlId];
     if (!entityId) return;
     await ctx.hass.callService('number', 'set_value', { entity_id: entityId, value });
   },
@@ -259,7 +247,7 @@ export const hypercolorBackend: LightBackend = {
     const findOne = (prefix: string) =>
       entities.find(id => id === prefix) ?? entities.find(id => id.startsWith(prefix));
 
-    const patch: Partial<Config> & { hypercolor?: HypercolorAddenda } = {};
+    const patch: Partial<Config> = {};
 
     if (!ctx.config.layout_entity) {
       const found = findOne('select.hypercolor_layout');
@@ -282,7 +270,7 @@ export const hypercolorBackend: LightBackend = {
       if (found) patch.random_effect_entity = found;
     }
 
-    const extra: HypercolorAddenda = {};
+    const extra: HypercolorConfigAddenda = {};
     const scene = findOne('select.hypercolor_scene');
     if (scene) extra.scene_entity = scene;
     const profile = findOne('select.hypercolor_profile');
@@ -300,7 +288,7 @@ export const hypercolorBackend: LightBackend = {
     const energy = findOne('sensor.hypercolor_audio_energy');
     if (energy) extra.audio_energy_entity = energy;
 
-    const liveControls: Partial<Record<LiveControlId, string>> = {};
+    const liveControls: Partial<Record<HypercolorLiveControlId, string>> = {};
     for (const id of LIVE_CONTROL_IDS) {
       const found = findOne(`number.hypercolor_${id}`);
       if (found) liveControls[id] = found;
@@ -327,7 +315,7 @@ export const hypercolorBackend: LightBackend = {
     if (Object.keys(extra).length > 0) {
       patch.hypercolor = extra;
     }
-    return patch as Partial<Config>;
+    return patch;
   },
 
   stubConfig(_hass, entities) {
@@ -357,14 +345,24 @@ export const hypercolorBackend: LightBackend = {
   },
 };
 
-function addenda(config: Config): HypercolorAddenda {
-  return ((config as Config & { hypercolor?: HypercolorAddenda }).hypercolor ??
-    {}) as HypercolorAddenda;
+function addenda(config: Config): HypercolorConfigAddenda {
+  return config.hypercolor ?? {};
 }
 
-function liveControlLabel(id: LiveControlId): string {
+function liveControlLabel(id: HypercolorLiveControlId): string {
   if (id === 'brightness') return 'Effect Brightness';
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function identifyEntityFor(slug: string, identifyButtons: string[]): string | null {
+  const shortSlug = slug.replace(/^hypercolor_/, '');
+  const candidates = new Set([
+    `button.${slug}_identify`,
+    `button.${shortSlug}_identify`,
+    `button.hypercolor_identify_${slug}`,
+    `button.hypercolor_identify_${shortSlug}`,
+  ]);
+  return identifyButtons.find(id => candidates.has(id)) ?? null;
 }
 
 function readSelectModel(hass: HomeAssistant, entityId?: string): SelectModel | null {
@@ -386,7 +384,7 @@ function hasEntity(hass: HomeAssistant, entityId?: string): boolean {
 
 function navigationEntity(
   config: Config,
-  extra: HypercolorAddenda,
+  extra: HypercolorConfigAddenda,
   action: 'next' | 'previous' | 'random' | 'stop'
 ): string | undefined {
   switch (action) {

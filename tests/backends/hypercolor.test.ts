@@ -1,23 +1,9 @@
 import type { HomeAssistant } from 'custom-card-helpers';
 import { describe, expect, it } from 'vitest';
 import { hypercolorBackend } from '@/backends/hypercolor';
-import type { Config } from '@/config';
+import type { Config, HypercolorConfigAddenda } from '@/config';
 
-interface DiscoveredAddenda {
-  scene_entity?: string;
-  profile_entity?: string;
-  stop_effect_entity?: string;
-  fps_entity?: string;
-  connected_entity?: string;
-  audio_beat_entity?: string;
-  audio_reactive_active_entity?: string;
-  audio_energy_entity?: string;
-  live_control_entities?: Record<string, string>;
-  per_device_lights?: string[];
-  per_device_identify_buttons?: string[];
-}
-
-type DiscoveredPatch = Partial<Config> & { hypercolor?: DiscoveredAddenda };
+type DiscoveredPatch = Partial<Config>;
 
 function hassWith(entityIds: string[]): HomeAssistant {
   const states: Record<string, unknown> = {};
@@ -105,6 +91,35 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.hypercolor?.per_device_lights).toBeUndefined();
   });
 
+  it('matches identify buttons by exact child slug', () => {
+    const hass = hassWith([
+      'light.hypercolor_living_room',
+      'light.hypercolor_living_room_door',
+      'button.hypercolor_identify_living_room_door',
+      'button.hypercolor_identify_living_room',
+    ]);
+    hass.states['light.hypercolor_living_room'].state = 'on';
+    hass.states['light.hypercolor_living_room'].attributes = {
+      friendly_name: 'Living Room',
+    };
+
+    const devices = hypercolorBackend.perDevice?.({
+      hass,
+      config: {
+        entity: 'light.hypercolor',
+        hypercolor: {
+          per_device_lights: ['light.hypercolor_living_room'],
+          per_device_identify_buttons: [
+            'button.hypercolor_identify_living_room_door',
+            'button.hypercolor_identify_living_room',
+          ],
+        },
+      },
+    });
+
+    expect(devices?.[0]?.identifyEntity).toBe('button.hypercolor_identify_living_room');
+  });
+
   it('does not overwrite explicitly configured entities', () => {
     const ctx = {
       hass: hassWith([
@@ -142,7 +157,7 @@ describe('hypercolorBackend.liveControls', () => {
             brightness: 'number.hypercolor_brightness',
           },
         },
-      } as Config & { hypercolor: DiscoveredAddenda },
+      } satisfies Config & { hypercolor: HypercolorConfigAddenda },
     });
 
     expect(controls?.[0]).toMatchObject({
