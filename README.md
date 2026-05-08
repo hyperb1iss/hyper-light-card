@@ -6,7 +6,7 @@
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 
-_A dazzling custom card for controlling SignalRGB through Home Assistant_
+_A dazzling custom card for controlling SignalRGB and Hypercolor lights through Home Assistant_
 
 [Installation](#installation) • [Configuration](#configuration) • [Usage](#usage) • [Contributing](#contributing) • [License](#license)
 
@@ -14,18 +14,20 @@ _A dazzling custom card for controlling SignalRGB through Home Assistant_
 
 ## 🎮 Features
 
-- 💅 Sleek, modern design that adapts to your SignalRGB effects
-- 🎨 Dynamic color palette extraction from your running effects
-- 🌈 Automatic UI theming based on the current effect colors
-- 📱 Responsive layout for both desktop and mobile
-- 🔀 Easy effect switching with an intelligent dropdown menu
-- 📊 Layout and preset selection support
+- 💅 Sleek, modern design that adapts to your effect's color palette
+- 🎨 Dynamic color extraction with automatic UI theming
+- 🔌 Auto-detects whether your light is a SignalRGB or Hypercolor entity
+- 📱 Responsive layout for desktop and mobile, with native HA section sizing
+- 🔀 Effect switching with an intelligent dropdown menu
+- 📊 Layout and preset selection for SignalRGB
+- 🎬 Scenes and profiles for Hypercolor, with live runtime controls
+- 🛰️ Status chips for FPS, audio reactivity, and connectivity (Hypercolor)
+- 🧩 Per-device drilldown for grouped Hypercolor installs
 - ⏭️ Effect navigation controls (next, previous, random)
-- 💡 Intuitive on/off toggle with animated feedback
+- 💡 Animated power toggle with color-aware feedback
 - 🔆 Smooth brightness control slider
-- ℹ️ Detailed effect information display
-- 🔧 Comprehensive customization options
-- 🎛️ Effect parameter display
+- ℹ️ Detailed effect information and parameters
+- 🔧 Visual editor with backend-aware schema (powered by `ha-form`)
 
 ## 🌈 Screenshots
 
@@ -49,8 +51,9 @@ _A dazzling custom card for controlling SignalRGB through Home Assistant_
 ### Prerequisites
 
 - Home Assistant 2024.2.0 or newer
-- [SignalRGB Home Assistant Integration](https://github.com/hyperb1iss/signalrgb-homeassistant) (Required)
-- Latest SignalRGB Beta version (Required for full functionality)
+- One of the following light integrations:
+  - [SignalRGB Home Assistant Integration](https://github.com/hyperb1iss/signalrgb-homeassistant) (latest SignalRGB beta recommended for full functionality)
+  - [Hypercolor Home Assistant Integration](https://github.com/hyperb1iss/hypercolor-hass)
 
 ### HACS Installation (Recommended)
 
@@ -88,9 +91,11 @@ Add the card to your dashboard:
 1. Edit your dashboard
 2. Click "+ Add Card"
 3. Search for "Hyper Light Card" in Custom Cards
-4. Choose your SignalRGB entity and configure options in the visual editor
+4. Choose your light entity and configure options in the visual editor
 
-Or add it manually to your Lovelace configuration:
+The visual editor adapts to whichever backend the card detects. Override detection with the `backend` option if you ever need to.
+
+### SignalRGB example
 
 ```yaml
 type: custom:hyper-light-card
@@ -115,70 +120,122 @@ allowed_effects:
   - 'Rave Visualizer'
 ```
 
+### Hypercolor example
+
+```yaml
+type: custom:hyper-light-card
+entity: light.hypercolor_living_room
+name: 'Living Room'
+show_status_chips: true
+show_live_controls: true
+show_scene_select: true
+show_profile_select: true
+show_per_device: false
+background_opacity: 0.7
+```
+
+When the entity belongs to a Hypercolor integration, scenes, profiles, live controls, and per-device children are wired up automatically — no extra entity references required.
+
 ### Configuration Options
 
-| Option                    | Type     | Default                   | Description                                                                     |
-| ------------------------- | -------- | ------------------------- | ------------------------------------------------------------------------------- |
-| `entity`                  | string   | **Required**              | The entity_id of your SignalRGB light                                           |
-| `name`                    | string   | `friendly_name` of entity | Card title                                                                      |
-| `icon`                    | string   | `mdi:led-strip-variant`   | Icon to display                                                                 |
-| `show_effect_info`        | boolean  | `true`                    | Show effect description and publisher                                           |
-| `show_effect_parameters`  | boolean  | `true`                    | Display effect parameters                                                       |
-| `show_brightness_control` | boolean  | `true`                    | Display brightness slider                                                       |
-| `background_opacity`      | number   | `0.7`                     | Opacity of the effect image background (0-1)                                    |
-| `layout_entity`           | string   | `undefined`               | ID of a select entity for controlling layouts                                   |
-| `preset_entity`           | string   | `undefined`               | ID of a select entity for controlling presets                                   |
-| `next_effect_entity`      | string   | `undefined`               | ID of a button entity to switch to next effect                                  |
-| `previous_effect_entity`  | string   | `undefined`               | ID of a button entity to switch to previous effect                              |
-| `random_effect_entity`    | string   | `undefined`               | ID of a button entity to pick a random effect                                   |
-| `show_layout_select`      | boolean  | `true`                    | Show layout selection dropdown (if layout_entity defined)                       |
-| `show_preset_select`      | boolean  | `true`                    | Show preset selection dropdown (if preset_entity defined)                       |
-| `show_effect_controls`    | boolean  | `true`                    | Show effect navigation controls                                                 |
-| `allowed_effects`         | string[] | `undefined`               | List of effects to show in the dropdown. If not set, all effects will be shown. |
+#### Shared
+
+| Option                    | Type                       | Default                   | Description                                                                |
+| ------------------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
+| `entity`                  | string                     | **Required**              | The entity_id of your SignalRGB or Hypercolor light                        |
+| `backend`                 | `signalrgb` \| `hypercolor` | _auto-detected_           | Override backend detection. Leave unset unless detection picks the wrong one. |
+| `name`                    | string                     | `friendly_name` of entity | Card title                                                                 |
+| `icon`                    | string                     | backend default           | Icon to display (`mdi:led-strip-variant` for SignalRGB, `mdi:lightbulb-multiple` for Hypercolor) |
+| `background_opacity`      | number                     | `0.7`                     | Opacity of the effect image background (0-1)                               |
+| `show_effect_info`        | boolean                    | `true`                    | Show effect description and publisher                                      |
+| `show_effect_parameters`  | boolean                    | `true`                    | Display effect parameters                                                  |
+| `show_brightness_control` | boolean                    | `true`                    | Display brightness slider                                                  |
+| `show_effect_controls`    | boolean                    | `true`                    | Show effect navigation (next, previous, random)                            |
+| `show_layout_select`      | boolean                    | `true`                    | Show layout dropdown when a layout source is available                     |
+| `show_preset_select`      | boolean                    | `true`                    | Show preset dropdown when a preset source is available                     |
+| `allowed_effects`         | string[]                   | _all effects_             | Limit the effect dropdown. Empty means all available effects.              |
+
+#### SignalRGB
+
+| Option                   | Type   | Default     | Description                                        |
+| ------------------------ | ------ | ----------- | -------------------------------------------------- |
+| `layout_entity`          | string | _auto_      | Override the SignalRGB layout `select` entity      |
+| `preset_entity`          | string | _auto_      | Override the SignalRGB preset `select` entity      |
+| `next_effect_entity`     | string | _auto_      | Override the next-effect `button` entity           |
+| `previous_effect_entity` | string | _auto_      | Override the previous-effect `button` entity       |
+| `random_effect_entity`   | string | _auto_      | Override the random-effect `button` entity         |
+
+These default to the device-scoped helpers exposed by the SignalRGB integration, so they're rarely needed.
+
+#### Hypercolor
+
+| Option                | Type    | Default | Description                                              |
+| --------------------- | ------- | ------- | -------------------------------------------------------- |
+| `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
+| `show_profile_select` | boolean | `false` | Show the profile selector dropdown                       |
+| `show_live_controls`  | boolean | `true`  | Show live control sliders (intensity, speed, etc.)       |
+| `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
+| `show_per_device`     | boolean | `false` | Show an expandable list of child lights below the card   |
 
 ## 🚀 Usage
 
 <a name="usage"></a>
 
-hyper-light-card provides an intuitive interface for controlling your SignalRGB setup:
+hyper-light-card adapts to whichever backend it detects:
 
-- **Power Toggle**: Click the light icon to turn your SignalRGB setup on or off.
+- **Power Toggle**: Click the light icon to turn the light on or off.
 - **Effect Selection**: Use the dropdown to choose from available effects.
-- **Layout & Preset Selection**: Select layouts and presets from their respective dropdowns.
-- **Effect Navigation**: Use the next, previous, and random buttons to quickly cycle through effects.
-- **Brightness Control**: Adjust the brightness using the slider.
-- **Effect Info**: View the current effect's description and publisher.
-- **Effect Parameters**: See detailed parameters for the current effect.
+- **Layout & Preset / Scene & Profile**: SignalRGB exposes layouts and presets; Hypercolor exposes scenes and (optionally) profiles.
+- **Effect Navigation**: Cycle through effects with next, previous, and random buttons.
+- **Brightness Control**: Adjust brightness with the slider.
+- **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus — input is debounced and committed on release.
+- **Status Chips**: Hypercolor surfaces FPS, audio reactivity, and connectivity at a glance.
+- **Per-Device Drilldown**: Expand grouped Hypercolor installs to see and toggle each child light.
+- **Effect Info & Parameters**: Description, publisher, and current parameter values for the running effect.
 
-The card dynamically adapts its color scheme based on the current effect, creating a cohesive and stylish look for your dashboard. The ColorThief integration automatically extracts colors from your effect images to theme the UI elements.
+The card pulls its accent palette from the running effect image, giving each effect its own coherent look. Color contrast is verified with `chroma-js` so foreground text stays readable against any extracted background.
 
 ## 👩‍💻 Development
 
 <a name="development"></a>
 
-This project uses a modern TypeScript toolchain for development:
+This project uses a modern toolchain:
 
-- **TypeScript**: Type-safe JavaScript
-- **Lit**: Lightweight reactive web components
-- **Vite**: Modern build tool with fast HMR
-- **ColorThief**: For color palette extraction
-- **Chroma.js**: For color manipulation and contrast verification
+- **[Bun](https://bun.com/)** as package manager and script runner
+- **[Vite 8](https://vite.dev/) (Rolldown)** for production builds
+- **[Vitest 4](https://vitest.dev/)** with V8 coverage for tests
+- **[Biome 2](https://biomejs.dev/)** for linting plus JSON/CSS formatting
+- **[Prettier 3](https://prettier.io/)** scoped to TS/JS (Lit `html` template formatting)
+- **TypeScript 6** with strict mode and Lit's experimental decorators
+- **[Lit 3](https://lit.dev/)** for reactive web components
+- **ColorThief** for palette extraction, **Chroma.js** for contrast verification
 
 ### Getting Started
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
-# Start development server with hot reload
-npm start
+# Build + copy to your Home Assistant www folder
+bun run dev
 
-# Run tests
-npm test
+# Run the test suite
+bun run test
 
-# Build for production
-npm run build
+# Lint, format, and typecheck
+bun run lint
+bun run format:check
+bun run typecheck
+
+# Production build
+bun run build
 ```
+
+`bun run dev` reads `config.js` for your Home Assistant config path and copies the built bundle into `<hass>/www/hyper-light-card/`. Refresh your dashboard to pick up changes.
+
+### Releases
+
+Tagging `vX.Y.Z` on `main` triggers the GitHub Actions workflow, which builds, runs the gates, and attaches the bundle to a GitHub release via [shared-workflows](https://github.com/hyperb1iss/shared-workflows). HACS picks it up automatically.
 
 ## 🤝 Contributing
 
@@ -203,6 +260,7 @@ Distributed under the Apache License 2.0. See `LICENSE` for more information.
 ## 💖 Acknowledgements
 
 - [SignalRGB](https://www.signalrgb.com/) for their amazing RGB control software
+- [Hypercolor](https://github.com/hyperb1iss/hypercolor-hass) for the multi-light orchestration backend
 - [Home Assistant](https://www.home-assistant.io/) for the incredible smart home platform
 - [ColorThief](https://lokeshdhakar.com/projects/color-thief/) for color extraction capabilities
 - [Lit](https://lit.dev/) for the powerful web components framework
