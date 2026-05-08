@@ -134,7 +134,32 @@ show_per_device: false
 background_opacity: 0.7
 ```
 
-When the entity belongs to a Hypercolor integration, scenes, profiles, live controls, and per-device children are wired up automatically — no extra entity references required.
+When the entity belongs to a Hypercolor integration, scenes, profiles, live controls, and per-device
+children are wired up automatically for standard entity names. Non-standard Hypercolor helper entity
+IDs can be supplied in YAML under `hypercolor`:
+
+```yaml
+type: custom:hyper-light-card
+entity: light.hypercolor_living_room
+backend: hypercolor
+hypercolor:
+  scene_entity: select.hypercolor_scene
+  profile_entity: select.hypercolor_profile
+  stop_effect_entity: button.hypercolor_stop_effect
+  fps_entity: sensor.hypercolor_fps
+  connected_entity: binary_sensor.hypercolor_connected
+  audio_beat_entity: binary_sensor.hypercolor_audio_beat
+  audio_reactive_active_entity: binary_sensor.hypercolor_audio_reactive_active
+  audio_energy_entity: sensor.hypercolor_audio_energy
+  live_control_entities:
+    speed: number.hypercolor_speed
+    hue_shift: number.hypercolor_hue_shift
+    intensity: number.hypercolor_intensity
+  per_device_lights:
+    - light.hypercolor_living_room_lamp_1
+  per_device_identify_buttons:
+    - button.hypercolor_identify_living_room_lamp_1
+```
 
 ### Configuration Options
 
@@ -145,7 +170,7 @@ When the entity belongs to a Hypercolor integration, scenes, profiles, live cont
 | `entity`                  | string                     | **Required**              | The entity_id of your SignalRGB or Hypercolor light                        |
 | `backend`                 | `signalrgb` \| `hypercolor` | _auto-detected_           | Override backend detection. Leave unset unless detection picks the wrong one. |
 | `name`                    | string                     | `friendly_name` of entity | Card title                                                                 |
-| `icon`                    | string                     | backend default           | Icon to display (`mdi:led-strip-variant` for SignalRGB, `mdi:lightbulb-multiple` for Hypercolor) |
+| `icon`                    | string                     | backend default           | Icon to display (SignalRGB uses the brand icon URL; Hypercolor uses `mdi:led-strip-variant`) |
 | `background_opacity`      | number                     | `0.7`                     | Opacity of the effect image background (0-1)                               |
 | `show_effect_info`        | boolean                    | `true`                    | Show effect description and publisher                                      |
 | `show_effect_parameters`  | boolean                    | `true`                    | Display effect parameters                                                  |

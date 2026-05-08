@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: release
@@ -118,27 +117,6 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Generate release notes
-        if: ${{ !inputs.dry_run }}
-        uses: hyperb1iss/git-iris@v2
-        with:
-          command: release-notes
-          from: v${{ steps.version.outputs.current }}
-          to: HEAD
-          version-name: v${{ steps.version.outputs.version }}
-          provider: anthropic
-          model: claude-opus-4-6
-          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          output-file: RELEASE_NOTES.md
-
-      - name: Upload release notes artifact
-        if: ${{ !inputs.dry_run }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-notes
-          path: RELEASE_NOTES.md
-          retention-days: 1
-
       - name: Commit version bump
         if: ${{ !inputs.dry_run }}
         run: |
@@ -152,15 +130,6 @@ jobs:
           git push origin HEAD:${{ github.ref_name }}
           git push origin "v${{ steps.version.outputs.version }}"
 
-      - name: Trigger cicd pipeline
-        if: ${{ !inputs.dry_run }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run cicd.yml \
-            --ref "v${{ steps.version.outputs.version }}" \
-            -f release_run_id=${{ github.run_id }}
-
       - name: Summary
         run: |
           echo "## Release ${{ inputs.dry_run && '[DRY RUN] ' || '' }}v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
@@ -170,5 +139,5 @@ jobs:
           else
             echo "Version bumped: ${{ steps.version.outputs.current }} -> ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
             echo "Tag pushed: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-            echo "CI/CD pipeline triggered. The build artifact will land in the GitHub Release once cicd.yml completes." >> $GITHUB_STEP_SUMMARY
+            echo "The tag push will run cicd.yml and attach the release artifact." >> $GITHUB_STEP_SUMMARY
           fi

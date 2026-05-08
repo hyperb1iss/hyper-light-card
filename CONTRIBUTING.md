@@ -90,7 +90,9 @@ If lint flags issues that are autofixable, run `bun run lint:fix` and `bun run f
 bun run build
 ```
 
-This produces the optimized `target/hyper-light-card.js` bundle. CI handles release builds automatically when a tag is pushed.
+This produces the optimized `target/hyper-light-card.js` bundle. The release workflow bumps
+`package.json`, pushes the tag, and lets the tag-triggered CI/CD workflow build and attach the
+release asset. Non-dry-run releases need `ANTHROPIC_API_KEY` configured for shared release notes.
 
 ## 🎉 Submitting a Pull Request
 

@@ -90,6 +90,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 target
+dist
 
 # Gatsby files
 .cache/
@@ -131,4 +132,3 @@ target
 
 # aider-chat
 .aider*
-
