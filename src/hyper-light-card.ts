@@ -3,9 +3,11 @@
 import type { HomeAssistant } from 'custom-card-helpers/dist/types';
 import { css, html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { backendById } from './backends';
 import type {
+  AudioControlsModel,
   AudioModel,
   BackendContext,
   CardModel,
@@ -16,7 +18,9 @@ import type {
   LiveControlModel,
   NavigationModel,
   SelectModel,
+  ZoneModel,
 } from './backends/types';
+import { HYPERCOLOR_MARK_ICON, hypercolorMark } from './brand';
 import type { Config } from './config';
 import { HyperLightCardEditor } from './hyper-light-card-editor';
 // Import CSS as string for Lit CSS
@@ -156,14 +160,18 @@ export class HyperLightCard extends LitElement {
     const connectivity = backend.connectivity?.(ctx) ?? null;
     const fps = backend.fps?.(ctx) ?? null;
     const audio = backend.audio?.(ctx) ?? null;
+    const audioControls = backend.audioControls?.(ctx) ?? null;
     const devices = backend.perDevice?.(ctx) ?? [];
+    const zones = backend.zones?.(ctx) ?? [];
 
     const sliderStyle = { '--slider-color': this.state.accentColor };
     const showStatusChips = this.config.show_status_chips !== false;
     const showSceneSelect = this.config.show_scene_select !== false && scenes !== null;
     const showProfileSelect = this.config.show_profile_select === true && profiles !== null;
     const showLiveControls = this.config.show_live_controls !== false && liveControls.length > 0;
+    const showAudioControls = this.config.show_audio_controls !== false && audioControls !== null;
     const showPerDevice = this.config.show_per_device === true && devices.length > 0;
+    const showZones = this.config.show_zones !== false && zones.length > 0;
     const beating = audio?.reactiveActive && audio?.beat;
 
     return html`
@@ -183,6 +191,7 @@ export class HyperLightCard extends LitElement {
             ${this.state.showEffectControls ? this._renderEffectControls(navigation) : ''}
           </div>
           ${this.state.showEffectInfo ? this._renderEffectInfo(effect) : ''}
+          ${showAudioControls ? this._renderAudioControls(audioControls!) : ''}
           <div class="controls-row">
             ${this.state.showBrightnessControl ? this._renderBrightnessSlider(sliderStyle) : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
@@ -197,6 +206,7 @@ export class HyperLightCard extends LitElement {
                 showLiveControls,
               })
             : ''}
+          ${showZones ? this._renderZones(zones) : ''}
           ${showPerDevice ? this._renderPerDevice(devices) : ''}
         </div>
       </ha-card>
@@ -226,9 +236,7 @@ export class HyperLightCard extends LitElement {
     return html`
       <div class="header" aria-label="${card.name}">
         <div class="light-icon ${this.state.isOn ? 'light-on' : ''}">
-          ${fallbackIcon.startsWith('mdi:')
-            ? html`<ha-icon icon="${fallbackIcon}" aria-hidden="true"></ha-icon>`
-            : html`<img src="${fallbackIcon}" alt="${card.name}" />`}
+          ${this._renderCardIcon(fallbackIcon, card.name)}
         </div>
         <div class="light-name" title="${card.name}">${card.name}</div>
         ${status ? this._renderStatusChips(status) : ''}
@@ -239,6 +247,14 @@ export class HyperLightCard extends LitElement {
         ></ha-switch>
       </div>
     `;
+  }
+
+  private _renderCardIcon(icon: string, name: string) {
+    if (icon === HYPERCOLOR_MARK_ICON) return hypercolorMark();
+    if (icon.startsWith('mdi:')) {
+      return html`<ha-icon icon="${icon}" aria-hidden="true"></ha-icon>`;
+    }
+    return html`<img src="${icon}" alt="${name}" />`;
   }
 
   private _renderStatusChips(status: {
@@ -372,7 +388,14 @@ export class HyperLightCard extends LitElement {
       <div class="effect-info ${this.state.isOn ? 'visible' : ''}">
         <div class="effect-info-text">
           <div class="effect-description">${description}</div>
-          <div class="effect-publisher">Published by: ${publisher}</div>
+          <div class="effect-publisher">
+            Published by: ${publisher}${effect.category ? html` · ${effect.category}` : ''}
+          </div>
+          ${effect.tags.length > 0
+            ? html`<div class="effect-tags" aria-label="Tags">
+                ${effect.tags.map(tag => html`<span class="effect-tag">${tag}</span>`)}
+              </div>`
+            : ''}
         </div>
         <div class="effect-features" aria-label="Effect features">
           ${effect.usesAudio
@@ -504,6 +527,28 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderLiveControl(control: LiveControlModel) {
+    return html`
+      <div class="live-control kind-${control.kind} ${control.available ? '' : 'disabled'}">
+        <div class="live-control-label">${control.label}</div>
+        ${this._renderLiveControlWidget(control)}
+      </div>
+    `;
+  }
+
+  private _renderLiveControlWidget(control: LiveControlModel) {
+    switch (control.kind) {
+      case 'boolean':
+        return this._renderToggleControl(control);
+      case 'enum':
+        return this._renderEnumControl(control);
+      case 'color':
+        return this._renderColorControl(control);
+      default:
+        return this._renderSliderControl(control);
+    }
+  }
+
+  private _renderSliderControl(control: LiveControlModel) {
     const range = control.max - control.min || 1;
     const fillPct = ((control.value - control.min) / range) * 100;
     const sliderStyle = {
@@ -511,24 +556,83 @@ export class HyperLightCard extends LitElement {
       '--slider-color': this.state.accentColor,
     };
     return html`
-      <div class="live-control ${control.available ? '' : 'disabled'}">
-        <div class="live-control-label">${control.label}</div>
-        <div class="live-control-slider" style=${styleMap(sliderStyle)}>
-          <input
-            type="range"
-            min="${control.min}"
-            max="${control.max}"
-            step="${control.step}"
-            .value=${control.value.toString()}
-            ?disabled=${!control.available}
-            @change=${(e: Event) =>
-              this._handleLiveControlChange(control.id, (e.target as HTMLInputElement).value)}
-            @input=${(e: Event) =>
-              this._handleLiveControlInput(control.id, (e.target as HTMLInputElement).value)}
-            aria-label="${control.label}"
-          />
-          <div class="live-control-value">${formatLiveControlValue(control)}</div>
-        </div>
+      <div class="live-control-slider" style=${styleMap(sliderStyle)}>
+        <input
+          type="range"
+          min="${control.min}"
+          max="${control.max}"
+          step="${control.step}"
+          .value=${control.value.toString()}
+          ?disabled=${!control.available}
+          @change=${(e: Event) =>
+            this._handleLiveControlChange(control.id, (e.target as HTMLInputElement).value)}
+          @input=${(e: Event) =>
+            this._handleLiveControlInput(control.id, (e.target as HTMLInputElement).value)}
+          aria-label="${control.label}"
+        />
+        <div class="live-control-value">${formatLiveControlValue(control)}</div>
+      </div>
+    `;
+  }
+
+  private _renderToggleControl(control: LiveControlModel) {
+    return html`
+      <div class="live-control-widget">
+        <ha-switch
+          .checked=${control.value === 1}
+          ?disabled=${!control.available}
+          @change=${(e: Event) =>
+            this.stateManager.setLiveControlImmediate(
+              control.id,
+              (e.target as HTMLInputElement).checked
+            )}
+          aria-label="${control.label}"
+        ></ha-switch>
+      </div>
+    `;
+  }
+
+  private _renderEnumControl(control: LiveControlModel) {
+    const options = control.options ?? [];
+    return html`
+      <div class="live-control-widget">
+        <select
+          class="live-control-select"
+          .value=${live(control.text ?? '')}
+          ?disabled=${!control.available}
+          @change=${(e: Event) =>
+            this.stateManager.setLiveControlImmediate(
+              control.id,
+              (e.target as HTMLSelectElement).value
+            )}
+          aria-label="${control.label}"
+        >
+          ${options.map(
+            option =>
+              html`<option value=${option} ?selected=${option === control.text}>${option}</option>`
+          )}
+        </select>
+      </div>
+    `;
+  }
+
+  private _renderColorControl(control: LiveControlModel) {
+    const value = control.text || '#000000';
+    return html`
+      <div class="live-control-widget live-control-color-widget">
+        <input
+          type="color"
+          class="live-control-color"
+          .value=${value}
+          ?disabled=${!control.available}
+          @change=${(e: Event) =>
+            this.stateManager.setLiveControlImmediate(
+              control.id,
+              (e.target as HTMLInputElement).value
+            )}
+          aria-label="${control.label}"
+        />
+        <span class="live-control-value">${value}</span>
       </div>
     `;
   }
@@ -610,6 +714,120 @@ export class HyperLightCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private _renderAudioControls(audioControls: AudioControlsModel) {
+    const { reactive, device } = audioControls;
+    const deviceOptions = device?.options ?? [];
+    return html`
+      <div class="audio-controls" aria-label="Audio controls">
+        ${reactive
+          ? html`
+              <div class="audio-control-reactive">
+                <ha-icon icon="mdi:music-note" aria-hidden="true"></ha-icon>
+                <span class="audio-control-label">Audio reactive</span>
+                <ha-switch
+                  .checked=${reactive.on}
+                  ?disabled=${!reactive.available}
+                  @change=${(e: Event) =>
+                    this._setAudioReactive((e.target as HTMLInputElement).checked)}
+                  aria-label="Toggle audio reactive"
+                ></ha-switch>
+              </div>
+            `
+          : ''}
+        ${device && deviceOptions.length > 0
+          ? html`
+              <div class="audio-control-device">
+                <span class="audio-control-label">Input</span>
+                <select
+                  class="live-control-select"
+                  .value=${live(device.current)}
+                  ?disabled=${!device.available}
+                  @change=${(e: Event) =>
+                    this._setAudioDevice((e.target as HTMLSelectElement).value)}
+                  aria-label="Audio input device"
+                >
+                  ${deviceOptions.map(
+                    option =>
+                      html`<option value=${option} ?selected=${option === device.current}>
+                        ${option}
+                      </option>`
+                  )}
+                </select>
+              </div>
+            `
+          : ''}
+      </div>
+    `;
+  }
+
+  private _renderZones(zones: ZoneModel[]) {
+    return html`
+      <div class="zones" aria-label="Scene zones">
+        <div class="zones-title"><ha-icon icon="mdi:grid"></ha-icon> Zones</div>
+        ${zones.map(zone => this._renderZone(zone))}
+      </div>
+    `;
+  }
+
+  private _renderZone(zone: ZoneModel) {
+    const sliderStyle = {
+      '--slider-percentage': `${zone.brightness ?? 0}%`,
+      '--slider-color': this.state.accentColor,
+    };
+    return html`
+      <div class="zone-row ${zone.enabled ? '' : 'zone-off'}">
+        <div class="zone-info">
+          <div class="zone-name" title="${zone.name}">${zone.name}</div>
+          ${zone.effect ? html`<div class="zone-effect">${zone.effect}</div>` : ''}
+        </div>
+        <div class="zone-actions">
+          ${zone.brightness !== null
+            ? html`
+                <div class="live-control-slider zone-slider" style=${styleMap(sliderStyle)}>
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    .value=${(zone.brightness ?? 0).toString()}
+                    ?disabled=${!zone.enabled}
+                    @change=${(e: Event) =>
+                      this._setZoneBrightness(
+                        zone.id,
+                        Number((e.target as HTMLInputElement).value)
+                      )}
+                    aria-label="${zone.name} brightness"
+                  />
+                </div>
+              `
+            : ''}
+          <ha-switch
+            .checked=${zone.enabled}
+            @change=${(e: Event) =>
+              this._setZoneEnabled(zone.id, (e.target as HTMLInputElement).checked)}
+            aria-label="Toggle ${zone.name}"
+          ></ha-switch>
+        </div>
+      </div>
+    `;
+  }
+
+  private async _setAudioReactive(on: boolean) {
+    await this.stateManager.setAudioReactive(on);
+  }
+
+  private async _setAudioDevice(value: string) {
+    await this.stateManager.setAudioDevice(value);
+  }
+
+  private async _setZoneBrightness(zoneEntityId: string, value: number) {
+    await this.stateManager.setZoneBrightness(zoneEntityId, value);
+  }
+
+  private async _setZoneEnabled(zoneEntityId: string, on: boolean) {
+    await this.stateManager.setZoneEnabled(zoneEntityId, on);
   }
 
   private _renderPerDevice(devices: DeviceModel[]) {

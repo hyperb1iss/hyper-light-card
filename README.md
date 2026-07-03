@@ -15,18 +15,22 @@ _A dazzling custom card for controlling SignalRGB and Hypercolor lights through 
 ## 🎮 Features
 
 - 💅 Sleek, modern design that adapts to your effect's color palette
+- 🔮 Animated Hypercolor brand mark that glows to life with the light
 - 🎨 Dynamic color extraction with automatic UI theming
 - 🔌 Auto-detects whether your light is a SignalRGB or Hypercolor entity
 - 📱 Responsive layout for desktop and mobile, with native HA section sizing
 - 🔀 Effect switching with an intelligent dropdown menu
+- ℹ️ Rich effect info: description, publisher, and tag chips
+- 🎛️ Full effect controls — sliders, toggles, palette pickers, and color swatches
 - 📊 Layout and preset selection for SignalRGB
 - 🎬 Scenes and profiles for Hypercolor, with live runtime controls
+- 🗺️ Scene zone controls — tune each render group's brightness and power
+- 🎧 Audio controls — toggle reactivity and pick the input device
 - 🛰️ Status chips for FPS, audio reactivity, and connectivity (Hypercolor)
 - 🧩 Per-device drilldown for grouped Hypercolor installs
 - ⏭️ Effect navigation controls (next, previous, random)
 - 💡 Animated power toggle with color-aware feedback
 - 🔆 Smooth brightness control slider
-- ℹ️ Detailed effect information and parameters
 - 🔧 Visual editor with backend-aware schema (powered by `ha-form`)
 
 ## 🌈 Screenshots
@@ -130,9 +134,18 @@ show_status_chips: true
 show_live_controls: true
 show_scene_select: true
 show_profile_select: true
+show_audio_controls: true
+show_zones: true
 show_per_device: false
 background_opacity: 0.7
 ```
+
+> Companion entities (scene/preset/layout selects, live-control numbers, audio
+> switch/device selects, status sensors, and scene-zone lights) are
+> auto-discovered from the `light.hypercolor*` namespace — you rarely need to
+> wire them by hand. Effect description, publisher, tags, and the full control
+> set are read straight from the master light's attributes (published by
+> hypercolor-hass), so the info panel and controls populate automatically.
 
 When the entity belongs to a Hypercolor integration, scenes, profiles, live controls, and per-device
 children are wired up automatically for standard entity names. Non-standard Hypercolor helper entity
@@ -170,7 +183,7 @@ hypercolor:
 | `entity`                  | string                     | **Required**              | The entity_id of your SignalRGB or Hypercolor light                        |
 | `backend`                 | `signalrgb` \| `hypercolor` | _auto-detected_           | Override backend detection. Leave unset unless detection picks the wrong one. |
 | `name`                    | string                     | `friendly_name` of entity | Card title                                                                 |
-| `icon`                    | string                     | backend default           | Icon to display (SignalRGB uses the brand icon URL; Hypercolor uses `mdi:led-strip-variant`) |
+| `icon`                    | string                     | backend default           | Icon to display (SignalRGB uses the brand icon URL; Hypercolor uses the animated Hypercolor brand mark). Set any `mdi:` token or image URL to override. |
 | `background_opacity`      | number                     | `0.7`                     | Opacity of the effect image background (0-1)                               |
 | `show_effect_info`        | boolean                    | `true`                    | Show effect description and publisher                                      |
 | `show_effect_parameters`  | boolean                    | `true`                    | Display effect parameters                                                  |
@@ -198,7 +211,9 @@ These default to the device-scoped helpers exposed by the SignalRGB integration,
 | --------------------- | ------- | ------- | -------------------------------------------------------- |
 | `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
 | `show_profile_select` | boolean | `false` | Show the profile selector dropdown                       |
-| `show_live_controls`  | boolean | `true`  | Show live control sliders (intensity, speed, etc.)       |
+| `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette + color pickers) |
+| `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
+| `show_zones`          | boolean | `true`  | Show scene zone controls — per-group brightness and power (when present) |
 | `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
 | `show_per_device`     | boolean | `false` | Show an expandable list of child lights below the card   |
 

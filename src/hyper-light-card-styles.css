@@ -1138,3 +1138,191 @@ ha-switch {
     grid-template-columns: 90px 1fr;
   }
 }
+
+/* === Hypercolor brand mark === */
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+/* Give the neon bloom a deep backdrop so it pops on the icon chip. */
+.light-icon:has(.brand-mark) {
+  background: radial-gradient(circle at 50% 42%, #2a2350, #0c0a1a);
+}
+
+.brand-mark-bloom {
+  transform-origin: 50% 50%;
+}
+
+/* `light-on` sits on the icon element itself, so match the compound class. */
+.light-icon.light-on .brand-mark-bloom {
+  animation: hc-bloom-spin 14s linear infinite;
+}
+
+@keyframes hc-bloom-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* === Effect tags === */
+.effect-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.effect-tag {
+  font-size: 0.7em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.15);
+  color: var(--accent-color, var(--primary-color, #03a9f4));
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* === Non-slider live controls (toggle / enum / color) === */
+.live-control-widget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-control-select {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.5);
+  background: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+  color: var(--text-color, var(--primary-text-color, black));
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.live-control-color {
+  width: 34px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* === Audio controls === */
+.audio-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.08);
+  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.2);
+  position: relative;
+  z-index: 3;
+}
+
+.audio-control-reactive,
+.audio-control-device {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audio-control-reactive ha-icon {
+  --mdc-icon-size: 18px;
+  color: var(--accent-color, var(--primary-color, #03a9f4));
+}
+
+.audio-control-device {
+  flex: 1;
+  min-width: 150px;
+}
+
+.audio-control-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-color, var(--primary-text-color, black));
+  white-space: nowrap;
+}
+
+/* === Scene zones === */
+.zones {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 3;
+}
+
+.zones-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--text-color, var(--primary-text-color, black));
+  opacity: 0.9;
+}
+
+.zones-title ha-icon {
+  --mdc-icon-size: 16px;
+  color: var(--accent-color, var(--primary-color, #03a9f4));
+}
+
+.zone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.04);
+  transition: opacity 0.3s ease;
+}
+
+.zone-row.zone-off {
+  opacity: 0.55;
+}
+
+.zone-info {
+  flex: 0 0 34%;
+  min-width: 0;
+}
+
+.zone-name {
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color, var(--primary-text-color, black));
+}
+
+.zone-effect {
+  font-size: 0.75em;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-color, var(--secondary-text-color, #666));
+}
+
+.zone-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.zone-slider {
+  flex: 1;
+}

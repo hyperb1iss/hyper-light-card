@@ -51,6 +51,8 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
       show_live_controls: true,
       show_status_chips: true,
       show_per_device: false,
+      show_zones: true,
+      show_audio_controls: true,
       background_opacity: 0.7,
       allowed_effects: [] as string[],
     };
@@ -152,6 +154,8 @@ function buildSchema(
         { name: 'show_scene_select', selector: { boolean: {} } },
         { name: 'show_profile_select', selector: { boolean: {} } },
         { name: 'show_live_controls', selector: { boolean: {} } },
+        { name: 'show_audio_controls', selector: { boolean: {} } },
+        { name: 'show_zones', selector: { boolean: {} } },
         { name: 'show_status_chips', selector: { boolean: {} } },
         { name: 'show_per_device', selector: { boolean: {} } },
       ]
@@ -217,7 +221,9 @@ const LABELS: Record<string, string> = {
   show_effect_controls: 'Show effect navigation',
   show_scene_select: 'Show scene selector',
   show_profile_select: 'Show profile selector',
-  show_live_controls: 'Show live control sliders',
+  show_live_controls: 'Show live effect controls',
+  show_audio_controls: 'Show audio controls (reactive toggle, input device)',
+  show_zones: 'Show scene zones',
   show_status_chips: 'Show status chips (FPS, audio, connectivity)',
   show_per_device: 'Show per-device drilldown',
   background_opacity: 'Background opacity',

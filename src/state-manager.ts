@@ -201,7 +201,7 @@ export class StateManager {
    * release because setLiveControlImmediate triggers the trailing
    * commit when a new debounce window opens.
    */
-  setLiveControl(id: string, value: number) {
+  setLiveControl(id: string, value: number | string | boolean) {
     const existing = this._liveControlDebounce.get(id);
     if (existing) window.clearTimeout(existing);
     const handle = window.setTimeout(() => {
@@ -213,7 +213,7 @@ export class StateManager {
     this._liveControlDebounce.set(id, handle);
   }
 
-  setLiveControlImmediate(id: string, value: number) {
+  setLiveControlImmediate(id: string, value: number | string | boolean) {
     const existing = this._liveControlDebounce.get(id);
     if (existing) {
       window.clearTimeout(existing);
@@ -222,6 +222,30 @@ export class StateManager {
     const ctx = this._ctx;
     if (!ctx) return;
     void this._backend.setLiveControl?.(ctx, id, value);
+  }
+
+  async setAudioReactive(on: boolean) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setAudioReactive?.(ctx, on);
+  }
+
+  async setAudioDevice(value: string) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setAudioDevice?.(ctx, value);
+  }
+
+  async setZoneBrightness(zoneEntityId: string, value: number) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setZoneBrightness?.(ctx, zoneEntityId, value);
+  }
+
+  async setZoneEnabled(zoneEntityId: string, on: boolean) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    await this._backend.setZoneEnabled?.(ctx, zoneEntityId, on);
   }
 
   toggleAttributes() {

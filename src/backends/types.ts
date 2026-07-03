@@ -40,6 +40,10 @@ export interface EffectModel {
   usesInput: boolean;
   /** Effect renders video content. */
   usesVideo: boolean;
+  /** Free-form tags (e.g. `cyberpunk`, `ambient`); empty when unknown. */
+  tags: string[];
+  /** Category/grouping label (e.g. `ambient`); empty string when unknown. */
+  category: string;
   /**
    * Effect-static parameters keyed by display label. Live-tweakable controls
    * live on `LiveControlModel[]` instead.
@@ -76,15 +80,28 @@ export interface NavigationModel {
   hasStop: boolean;
 }
 
+/** How a live effect control is rendered and edited. */
+export type LiveControlKind = 'number' | 'boolean' | 'enum' | 'color';
+
 export interface LiveControlModel {
   /** Stable id used by `setLiveControl`. */
   id: string;
   /** Human-readable label, e.g. "Speed". */
   label: string;
+  /** Widget kind; defaults to `number` (slider) when the backend omits it. */
+  kind: LiveControlKind;
   min: number;
   max: number;
   step: number;
+  /**
+   * Current value. Numeric for `number`; 0/1 for `boolean`; the selected
+   * index for `enum`; ignored for `color` (see `text`).
+   */
   value: number;
+  /** Raw string value for `enum` (selected option) and `color` (hex). */
+  text?: string;
+  /** Option labels for `enum` controls. */
+  options?: string[];
   available: boolean;
 }
 
@@ -98,12 +115,36 @@ export interface AudioModel {
   reactiveActive: boolean;
 }
 
+/** Audio-reactivity controls (toggle + input device), when the backend exposes them. */
+export interface AudioControlsModel {
+  /** Present when a reactive on/off switch exists. */
+  reactive: { on: boolean; available: boolean } | null;
+  /** Present when an audio input device selector exists. */
+  device: SelectModel | null;
+}
+
 export interface DeviceModel {
   id: string;
   name: string;
   brightness: number | null;
   enabled: boolean;
   identifyEntity: string | null;
+}
+
+/** A scene render-group ("zone") the user can tune independently. */
+export interface ZoneModel {
+  /** HA entity id of the zone light. */
+  id: string;
+  /** Zone display name. */
+  name: string;
+  /** Role label (e.g. `primary`, `custom`); empty string when unknown. */
+  role: string;
+  /** 1-100 brightness after HA-to-card conversion; null when unknown. */
+  brightness: number | null;
+  /** Whether the zone is currently enabled/on. */
+  enabled: boolean;
+  /** Active effect name for the zone; empty string when none. */
+  effect: string;
 }
 
 /**
@@ -132,7 +173,9 @@ export interface LightBackend {
   connectivity?(ctx: BackendContext): ConnectivityModel | null;
   fps?(ctx: BackendContext): number | null;
   audio?(ctx: BackendContext): AudioModel | null;
+  audioControls?(ctx: BackendContext): AudioControlsModel | null;
   perDevice?(ctx: BackendContext): DeviceModel[];
+  zones?(ctx: BackendContext): ZoneModel[];
 
   togglePower(ctx: BackendContext, on: boolean): Promise<void>;
   setBrightness(ctx: BackendContext, value: number): Promise<void>;
@@ -141,7 +184,15 @@ export interface LightBackend {
   setPreset(ctx: BackendContext, value: string): Promise<void>;
   setScene?(ctx: BackendContext, value: string): Promise<void>;
   setProfile?(ctx: BackendContext, value: string): Promise<void>;
-  setLiveControl?(ctx: BackendContext, id: string, value: number): Promise<void>;
+  setLiveControl?(ctx: BackendContext, id: string, value: number | string | boolean): Promise<void>;
+  /** Toggle audio-reactive processing on/off. */
+  setAudioReactive?(ctx: BackendContext, on: boolean): Promise<void>;
+  /** Choose the audio input device by option label. */
+  setAudioDevice?(ctx: BackendContext, value: string): Promise<void>;
+  /** Set a zone's brightness (1-100). */
+  setZoneBrightness?(ctx: BackendContext, zoneEntityId: string, value: number): Promise<void>;
+  /** Enable/disable a zone. */
+  setZoneEnabled?(ctx: BackendContext, zoneEntityId: string, on: boolean): Promise<void>;
   pressNavigation(
     ctx: BackendContext,
     action: 'next' | 'previous' | 'random' | 'stop'

@@ -41,6 +41,8 @@ export const signalRgbBackend: LightBackend = {
       usesAudio: Boolean(attrs.effect_uses_audio),
       usesInput: Boolean(attrs.effect_uses_input),
       usesVideo: Boolean(attrs.effect_uses_video),
+      tags: [],
+      category: '',
       parameters,
     };
   },

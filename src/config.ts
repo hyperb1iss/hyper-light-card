@@ -9,9 +9,15 @@ export interface HypercolorConfigAddenda {
   audio_beat_entity?: string;
   audio_reactive_active_entity?: string;
   audio_energy_entity?: string;
+  /** `switch.hypercolor_audio_reactive` — toggles audio processing. */
+  audio_reactive_switch_entity?: string;
+  /** `select.hypercolor_audio_device` — picks the audio input device. */
+  audio_device_entity?: string;
   live_control_entities?: Partial<Record<HypercolorLiveControlId, string>>;
   per_device_lights?: string[];
   per_device_identify_buttons?: string[];
+  /** `light.hypercolor_zone_*` — scene render-group lights. */
+  zone_lights?: string[];
 }
 
 export interface Config {
@@ -43,5 +49,9 @@ export interface Config {
   show_live_controls?: boolean;
   show_status_chips?: boolean;
   show_per_device?: boolean;
+  /** Hypercolor: scene zone (render-group) controls. */
+  show_zones?: boolean;
+  /** Hypercolor: audio-reactive toggle + input device selector. */
+  show_audio_controls?: boolean;
   hypercolor?: HypercolorConfigAddenda;
 }
