@@ -27,7 +27,7 @@ import { HyperLightCardEditor } from './hyper-light-card-editor';
 import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
-import { formatAttributeKey, formatAttributeValue, memoize } from './utils';
+import { formatAttributeKey, formatAttributeValue } from './utils';
 
 if (!customElements.get('hyper-light-card-editor')) {
   customElements.define('hyper-light-card-editor', HyperLightCardEditor);
@@ -164,7 +164,6 @@ export class HyperLightCard extends LitElement {
     const devices = backend.perDevice?.(ctx) ?? [];
     const zones = backend.zones?.(ctx) ?? [];
 
-    const sliderStyle = { '--slider-color': this.state.accentColor };
     const showStatusChips = this.config.show_status_chips !== false;
     const showSceneSelect = this.config.show_scene_select !== false && scenes !== null;
     const showProfileSelect = this.config.show_profile_select === true && profiles !== null;
@@ -176,14 +175,7 @@ export class HyperLightCard extends LitElement {
 
     return html`
       <ha-card>
-        <div
-          class="card ${beating ? 'beat' : ''}"
-          style="
-            --background-color: ${this.state.backgroundColor};
-            --text-color: ${this.state.textColor};
-            --accent-color: ${this.state.accentColor};
-          "
-        >
+        <div class="card ${beating ? 'beat' : ''}" style=${styleMap(this._paletteStyle())}>
           ${this._renderBackground(card)}
           ${this._renderHeader(card, showStatusChips ? { connectivity, fps, audio } : null)}
           <div class="effect-row">
@@ -193,7 +185,7 @@ export class HyperLightCard extends LitElement {
           ${this.state.showEffectInfo ? this._renderEffectInfo(effect) : ''}
           ${showAudioControls ? this._renderAudioControls(audioControls!) : ''}
           <div class="controls-row">
-            ${this.state.showBrightnessControl ? this._renderBrightnessSlider(sliderStyle) : ''}
+            ${this.state.showBrightnessControl ? this._renderBrightnessSlider() : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
           </div>
           ${this.state.showEffectParameters
@@ -211,6 +203,27 @@ export class HyperLightCard extends LitElement {
         </div>
       </ha-card>
     `;
+  }
+
+  /**
+   * Color custom properties for the card root. When no palette could be
+   * extracted this returns nothing at all, which is deliberate: setting a
+   * custom property to an empty string still counts as "set", so every
+   * `var(--accent-color, fallback)` in the stylesheet would substitute empty
+   * and drop the whole declaration. Omitting the property is what lets the
+   * Home Assistant theme fallbacks apply.
+   */
+  private _paletteStyle(): Record<string, string> {
+    const palette = this.state.palette;
+    if (!palette) return {};
+    return {
+      '--background-color': palette.backgroundColor,
+      '--background-color-rgb': palette.backgroundColorRgb,
+      '--text-color': palette.textColor,
+      '--text-color-rgb': palette.textColorRgb,
+      '--accent-color': palette.accentColor,
+      '--accent-color-rgb': palette.accentColorRgb,
+    };
   }
 
   private _renderBackground(card: CardModel) {
@@ -290,21 +303,55 @@ export class HyperLightCard extends LitElement {
   }
 
   private _renderEffectDropdown(effectList: EffectListModel) {
+    const isOpen = this.state.isDropdownOpen;
     return html`
       <div class="effect-select-wrapper">
-        <div class="dropdown ${this.state.isDropdownOpen ? 'open' : ''}">
+        <div class="dropdown ${isOpen ? 'open' : ''}">
           <div
             class="dropdown-header"
             @click=${this._toggleDropdown}
+            @keydown=${this._handleDropdownKeydown}
             aria-label="Current effect: ${this.state.currentEffect}"
+            aria-haspopup="listbox"
+            aria-expanded="${isOpen}"
             role="button"
+            tabindex="0"
           >
-            ${this.state.currentEffect}
+            <span class="dropdown-header-label">${this.state.currentEffect}</span>
           </div>
-          <div class="dropdown-content" role="menu">
-            ${this._memoizedEffectList(effectList.allowed)}
+          <div class="dropdown-content" role="listbox" aria-label="Effects">
+            ${effectList.allowed.map(effect =>
+              this._renderDropdownItem(effect, effect === this.state.currentEffect, () =>
+                this._selectEffect(effect)
+              )
+            )}
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  /**
+   * One dropdown row. Every selector renders through this so selection
+   * highlighting, keyboard activation, and ARIA stay identical across the
+   * effect, layout, preset, scene, and profile pickers.
+   */
+  private _renderDropdownItem(label: string, selected: boolean, activate: () => void) {
+    return html`
+      <div
+        class="dropdown-item ${selected ? 'selected' : ''}"
+        @click=${activate}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            activate();
+          }
+        }}
+        role="option"
+        aria-selected="${selected}"
+        tabindex="0"
+      >
+        ${label}
       </div>
     `;
   }
@@ -365,21 +412,6 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _memoizedEffectList = memoize((effectList: string[]) =>
-    effectList.map(
-      (effect: string) => html`
-        <div
-          class="dropdown-item ${effect === this.state.currentEffect ? 'selected' : ''}"
-          @click=${() => this._selectEffect(effect)}
-          role="menuitem"
-          tabindex="0"
-        >
-          ${effect}
-        </div>
-      `
-    )
-  );
-
   private _renderEffectInfo(effect: EffectModel) {
     const description = effect.description || 'No effect description available';
     const publisher = effect.publisher || 'Unknown publisher';
@@ -420,17 +452,11 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderBrightnessSlider(sliderStyle: Record<string, string>) {
-    const updatedSliderStyle = {
-      ...sliderStyle,
-      '--slider-percentage': `${this.state.brightness}%`,
-      '--slider-color': this.state.accentColor,
-    };
-
+  private _renderBrightnessSlider() {
     return html`
       <div
         class="brightness-slider"
-        style=${styleMap(updatedSliderStyle)}
+        style=${styleMap({ '--slider-percentage': `${this.state.brightness}%` })}
         role="slider"
         aria-valuemin="1"
         aria-valuemax="100"
@@ -482,8 +508,8 @@ export class HyperLightCard extends LitElement {
     }
   ) {
     const hasParameters = Object.keys(effect.parameters).length > 0;
-    const hasLayouts = layouts && layouts.options.length > 0 && this.state.showLayoutSelect;
-    const hasPresets = presets && presets.options.length > 0 && this.state.showPresetSelect;
+    const hasLayouts = Boolean(layouts?.options.length) && this.state.showLayoutSelect;
+    const hasPresets = Boolean(presets?.options.length) && this.state.showPresetSelect;
     const hasScenes = extras.scenes && extras.scenes.options.length > 0 && extras.showSceneSelect;
     const hasProfiles =
       extras.profiles && extras.profiles.options.length > 0 && extras.showProfileSelect;
@@ -499,14 +525,25 @@ export class HyperLightCard extends LitElement {
       return html``;
     }
 
+    // `.attributes-content` scrolls when expanded, which clips any dropdown
+    // opened inside it. Flag the open state so the stylesheet can stop
+    // clipping for as long as a nested list is showing.
+    const nestedDropdownOpen =
+      this.state.isLayoutDropdownOpen ||
+      this.state.isPresetDropdownOpen ||
+      this.state.isSceneDropdownOpen ||
+      this.state.isProfileDropdownOpen;
+
     return html`
       <div
-        class="attributes ${this.state.isAttributesExpanded ? 'expanded' : ''}"
+        class="attributes ${this.state.isAttributesExpanded ? 'expanded' : ''} ${nestedDropdownOpen
+          ? 'dropdown-open'
+          : ''}"
         aria-hidden="${!this.state.isAttributesExpanded}"
       >
         <div class="attributes-content">
           <div class="attributes-selectors">
-            ${this._renderLayoutSelect(layouts, true)} ${this._renderPresetSelect(presets, true)}
+            ${this._renderLayoutSelect(layouts)} ${this._renderPresetSelect(presets)}
             ${hasScenes ? this._renderSceneSelect(extras.scenes!) : ''}
             ${hasProfiles ? this._renderProfileSelect(extras.profiles!) : ''}
           </div>
@@ -553,7 +590,6 @@ export class HyperLightCard extends LitElement {
     const fillPct = ((control.value - control.min) / range) * 100;
     const sliderStyle = {
       '--slider-percentage': `${Math.max(0, Math.min(100, fillPct))}%`,
-      '--slider-color': this.state.accentColor,
     };
     return html`
       <div class="live-control-slider" style=${styleMap(sliderStyle)}>
@@ -637,83 +673,66 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderSceneSelect(scenes: SelectModel) {
-    const hasScenes = scenes.options.length > 0;
+  /**
+   * Shared renderer for the compact selectors (layout, preset, scene,
+   * profile). A selector whose entity exposes no options renders nothing at
+   * all rather than a dead "No X available" row — Hypercolor's preset entity
+   * legitimately has an empty option list for most effects, and a permanently
+   * disabled control reads as breakage.
+   */
+  private _renderSelect(
+    kind: 'layout' | 'preset' | 'scene' | 'profile',
+    model: SelectModel | null,
+    spec: { icon: string; title: string; empty: string; isOpen: boolean; select: (v: string) => void }
+  ) {
+    if (!model || model.options.length === 0) return html``;
+
     return html`
-      <div class="scene-select-wrapper select-wrapper compact">
-        <div class="select-section-title"><ha-icon icon="mdi:movie-open"></ha-icon> Scene</div>
-        <div
-          class="dropdown ${this.state.isSceneDropdownOpen ? 'open' : ''} ${!hasScenes
-            ? 'disabled'
-            : ''}"
-        >
+      <div class="${kind}-select-wrapper select-wrapper compact">
+        <div class="select-section-title">
+          <ha-icon icon="${spec.icon}"></ha-icon> ${spec.title}
+        </div>
+        <div class="dropdown ${spec.isOpen ? 'open' : ''}">
           <div
             class="dropdown-header"
-            @click=${hasScenes ? this._toggleSceneDropdown : undefined}
+            @click=${(e: Event) => this._toggleSelectDropdown(e, kind)}
+            @keydown=${this._handleDropdownKeydown}
+            aria-label="Current ${kind}: ${model.current || spec.empty}"
+            aria-haspopup="listbox"
+            aria-expanded="${spec.isOpen}"
             role="button"
-            aria-disabled="${!hasScenes}"
-            aria-label="Current scene: ${scenes.current}"
+            tabindex="0"
           >
-            ${hasScenes ? scenes.current || 'No active scene' : 'No scenes available'}
+            <span class="dropdown-header-label">${model.current || spec.empty}</span>
           </div>
-          <div class="dropdown-content" role="menu">
-            ${hasScenes
-              ? scenes.options.map(
-                  scene => html`
-                    <div
-                      class="dropdown-item ${scene === scenes.current ? 'selected' : ''}"
-                      @click=${() => this._selectScene(scene)}
-                      role="menuitem"
-                      tabindex="0"
-                    >
-                      ${scene}
-                    </div>
-                  `
-                )
-              : html`<div class="dropdown-item disabled">No scenes available</div>`}
+          <div class="dropdown-content" role="listbox" aria-label="${spec.title}">
+            ${model.options.map(option =>
+              this._renderDropdownItem(option, option === model.current, () => spec.select(option))
+            )}
           </div>
         </div>
       </div>
     `;
   }
 
+  private _renderSceneSelect(scenes: SelectModel) {
+    return this._renderSelect('scene', scenes, {
+      icon: 'mdi:movie-open',
+      title: 'Scene',
+      empty: 'No active scene',
+      isOpen: this.state.isSceneDropdownOpen,
+      select: scene => this._selectScene(scene),
+    });
+  }
+
   private _renderProfileSelect(profiles: SelectModel) {
-    const hasProfiles = profiles.options.length > 0;
-    return html`
-      <div class="profile-select-wrapper select-wrapper compact">
-        <div class="select-section-title"><ha-icon icon="mdi:account-cog"></ha-icon> Profile</div>
-        <div
-          class="dropdown ${this.state.isProfileDropdownOpen ? 'open' : ''} ${!hasProfiles
-            ? 'disabled'
-            : ''}"
-        >
-          <div
-            class="dropdown-header"
-            @click=${hasProfiles ? this._toggleProfileDropdown : undefined}
-            role="button"
-            aria-disabled="${!hasProfiles}"
-          >
-            ${hasProfiles ? profiles.current || 'No active profile' : 'No profiles available'}
-          </div>
-          <div class="dropdown-content" role="menu">
-            ${hasProfiles
-              ? profiles.options.map(
-                  profile => html`
-                    <div
-                      class="dropdown-item ${profile === profiles.current ? 'selected' : ''}"
-                      @click=${() => this._selectProfile(profile)}
-                      role="menuitem"
-                      tabindex="0"
-                    >
-                      ${profile}
-                    </div>
-                  `
-                )
-              : html`<div class="dropdown-item disabled">No profiles available</div>`}
-          </div>
-        </div>
-      </div>
-    `;
+    return this._renderSelect('profile', profiles, {
+      icon: 'mdi:account-cog',
+      title: 'Profile',
+      empty: 'No active profile',
+      isOpen: this.state.isProfileDropdownOpen,
+      select: profile => this._selectProfile(profile),
+    });
   }
 
   private _renderAudioControls(audioControls: AudioControlsModel) {
@@ -774,7 +793,6 @@ export class HyperLightCard extends LitElement {
   private _renderZone(zone: ZoneModel) {
     const sliderStyle = {
       '--slider-percentage': `${zone.brightness ?? 0}%`,
-      '--slider-color': this.state.accentColor,
     };
     return html`
       <div class="zone-row ${zone.enabled ? '' : 'zone-off'}">
@@ -888,96 +906,26 @@ export class HyperLightCard extends LitElement {
     `;
   }
 
-  private _renderLayoutSelect(layouts: SelectModel | null, isCompact = false) {
-    if (!layouts || !this.state.showLayoutSelect) return html``;
-
-    const hasLayouts = layouts.options.length > 0;
-    const currentLayout = layouts.current;
-
-    return html`
-      <div class="layout-select-wrapper select-wrapper ${isCompact ? 'compact' : ''}">
-        <div class="select-section-title">
-          <ha-icon icon="mdi:view-grid-outline"></ha-icon> Layout
-        </div>
-        <div
-          class="dropdown ${this.state.isLayoutDropdownOpen ? 'open' : ''} ${!hasLayouts
-            ? 'disabled'
-            : ''}"
-          title="${!hasLayouts ? 'No layouts available for this effect' : ''}"
-        >
-          <div
-            class="dropdown-header"
-            @click=${hasLayouts ? this._toggleLayoutDropdown : undefined}
-            aria-label="Current layout: ${currentLayout}"
-            role="button"
-            aria-disabled="${!hasLayouts}"
-          >
-            ${hasLayouts ? currentLayout : 'No layouts available'}
-          </div>
-          <div class="dropdown-content" role="menu">
-            ${hasLayouts
-              ? layouts.options.map(
-                  layout => html`
-                    <div
-                      class="dropdown-item ${layout === currentLayout ? 'selected' : ''}"
-                      @click=${() => this._selectLayout(layout)}
-                      role="menuitem"
-                      tabindex="0"
-                    >
-                      ${layout}
-                    </div>
-                  `
-                )
-              : html`<div class="dropdown-item disabled">No layouts available</div>`}
-          </div>
-        </div>
-      </div>
-    `;
+  private _renderLayoutSelect(layouts: SelectModel | null) {
+    if (!this.state.showLayoutSelect) return html``;
+    return this._renderSelect('layout', layouts, {
+      icon: 'mdi:view-grid-outline',
+      title: 'Layout',
+      empty: 'No active layout',
+      isOpen: this.state.isLayoutDropdownOpen,
+      select: layout => this._selectLayout(layout),
+    });
   }
 
-  private _renderPresetSelect(presets: SelectModel | null, isCompact = false) {
-    if (!presets || !this.state.showPresetSelect) return html``;
-
-    const hasPresets = presets.options.length > 0;
-    const currentPreset = presets.current;
-
-    return html`
-      <div class="preset-select-wrapper select-wrapper ${isCompact ? 'compact' : ''}">
-        <div class="select-section-title"><ha-icon icon="mdi:palette"></ha-icon> Preset</div>
-        <div
-          class="dropdown ${this.state.isPresetDropdownOpen ? 'open' : ''} ${!hasPresets
-            ? 'disabled'
-            : ''}"
-          title="${!hasPresets ? 'No presets available for this effect' : ''}"
-        >
-          <div
-            class="dropdown-header"
-            @click=${hasPresets ? this._togglePresetDropdown : undefined}
-            aria-label="Current preset: ${currentPreset}"
-            role="button"
-            aria-disabled="${!hasPresets}"
-          >
-            ${hasPresets ? currentPreset : 'No presets available'}
-          </div>
-          <div class="dropdown-content" role="menu">
-            ${hasPresets
-              ? presets.options.map(
-                  preset => html`
-                    <div
-                      class="dropdown-item ${preset === currentPreset ? 'selected' : ''}"
-                      @click=${() => this._selectPreset(preset)}
-                      role="menuitem"
-                      tabindex="0"
-                    >
-                      ${preset}
-                    </div>
-                  `
-                )
-              : html`<div class="dropdown-item disabled">No presets available</div>`}
-          </div>
-        </div>
-      </div>
-    `;
+  private _renderPresetSelect(presets: SelectModel | null) {
+    if (!this.state.showPresetSelect) return html``;
+    return this._renderSelect('preset', presets, {
+      icon: 'mdi:palette',
+      title: 'Preset',
+      empty: 'No active preset',
+      isOpen: this.state.isPresetDropdownOpen,
+      select: preset => this._selectPreset(preset),
+    });
   }
 
   private _runAutoDiscovery() {
@@ -1010,15 +958,10 @@ export class HyperLightCard extends LitElement {
   }
 
   private async _toggleLight() {
+    // The `.effect-info` visibility class is derived from `state.isOn` in
+    // render(); toggling it imperatively here would be undone by the next
+    // render and shows up as a flicker.
     await this.stateManager.toggleLight();
-    const effectInfo = this.shadowRoot?.querySelector('.effect-info');
-    if (effectInfo) {
-      if (this.state.isOn) {
-        setTimeout(() => effectInfo.classList.add('visible'), 50);
-      } else {
-        effectInfo.classList.remove('visible');
-      }
-    }
   }
 
   private _toggleDropdown(e: Event) {
@@ -1026,34 +969,32 @@ export class HyperLightCard extends LitElement {
     this.stateManager.toggleDropdown();
   }
 
-  private _toggleLayoutDropdown(e: Event) {
+  private _toggleSelectDropdown(e: Event, kind: 'layout' | 'preset' | 'scene' | 'profile') {
     e.stopPropagation();
-    this.stateManager.toggleLayoutDropdown();
+    switch (kind) {
+      case 'layout':
+        return this.stateManager.toggleLayoutDropdown();
+      case 'preset':
+        return this.stateManager.togglePresetDropdown();
+      case 'scene':
+        return this.stateManager.toggleSceneDropdown();
+      case 'profile':
+        return this.stateManager.toggleProfileDropdown();
+    }
   }
 
-  private _togglePresetDropdown(e: Event) {
-    e.stopPropagation();
-    this.stateManager.togglePresetDropdown();
+  private _handleDropdownKeydown(e: KeyboardEvent) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).click();
   }
-
-  private _toggleSceneDropdown = (e: Event) => {
-    e.stopPropagation();
-    this.stateManager.toggleSceneDropdown();
-  };
-
-  private _toggleProfileDropdown = (e: Event) => {
-    e.stopPropagation();
-    this.stateManager.toggleProfileDropdown();
-  };
 
   private async _selectScene(scene: string) {
     await this.stateManager.setScene(scene);
-    this.requestUpdate();
   }
 
   private async _selectProfile(profile: string) {
     await this.stateManager.setProfile(profile);
-    this.requestUpdate();
   }
 
   private async _identifyDevice(entityId: string) {
@@ -1074,52 +1015,34 @@ export class HyperLightCard extends LitElement {
 
   private async _selectEffect(effect: string) {
     await this.stateManager.setCurrentEffect(effect);
-    this._refreshAfterEffectChange();
   }
 
   private async _selectLayout(layout: string) {
     await this.stateManager.setCurrentLayout(layout);
-    this._refreshAfterEffectChange();
   }
 
   private async _selectPreset(preset: string) {
     await this.stateManager.setCurrentPreset(preset);
-    this._refreshAfterEffectChange();
   }
 
   private async _nextEffect() {
     await this.stateManager.nextEffect();
-    this._refreshAfterEffectChange();
   }
 
   private async _previousEffect() {
     await this.stateManager.previousEffect();
-    this._refreshAfterEffectChange();
   }
 
   private async _randomEffect() {
     await this.stateManager.randomEffect();
-    this._refreshAfterEffectChange();
   }
 
   private async _stopEffect() {
     await this.stateManager.stopEffect();
-    this._refreshAfterEffectChange();
-  }
-
-  private _refreshAfterEffectChange() {
-    setTimeout(() => {
-      this.requestUpdate();
-      if (this.state.isOn) {
-        const effectInfo = this.shadowRoot?.querySelector('.effect-info');
-        effectInfo?.classList.add('visible');
-      }
-    }, 350);
   }
 
   private _toggleAttributes() {
     this.stateManager.toggleAttributes();
-    this.requestUpdate();
   }
 
   private _handleClickOutside(event: Event) {
@@ -1151,16 +1074,11 @@ export class HyperLightCard extends LitElement {
         () => this.stateManager.toggleProfileDropdown(),
       ],
     ];
-    let changed = false;
     for (const [isOpen, selector, close] of dropdowns) {
       if (!isOpen) continue;
       const node = this.shadowRoot?.querySelector(selector);
-      if (node && !path.includes(node)) {
-        close();
-        changed = true;
-      }
+      if (node && !path.includes(node)) close();
     }
-    if (changed) this.requestUpdate();
   }
 
   private _handleBrightnessStart() {

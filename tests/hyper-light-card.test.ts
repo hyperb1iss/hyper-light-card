@@ -54,6 +54,9 @@ describe('HyperLightCard', () => {
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
+      backgroundColorRgb: '255, 0, 0',
+      textColorRgb: '0, 0, 0',
+      accentColorRgb: '0, 255, 0',
     });
 
     // Set up the required config property

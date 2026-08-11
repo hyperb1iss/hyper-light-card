@@ -91,7 +91,7 @@ ha-card {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 0 0 rgba(var(--accent-color, var(--primary-color-rgb, 3, 169, 244)), 0);
+  box-shadow: 0 0 0 0 rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0);
   transition: box-shadow 0.3s ease;
 }
 
@@ -115,13 +115,13 @@ ha-card {
 /* Pulsing animation for light icon */
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--rgb-accent-color), 0.7);
+    box-shadow: 0 0 0 0 rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(var(--rgb-accent-color), 0);
+    box-shadow: 0 0 0 10px rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--rgb-accent-color), 0);
+    box-shadow: 0 0 0 0 rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0);
   }
 }
 
@@ -197,6 +197,7 @@ ha-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   background-color: var(--background-color, var(--card-background-color, white));
   color: var(--text-color, var(--primary-text-color, black));
   font-size: 1.1em;
@@ -205,14 +206,28 @@ ha-card {
     color 0.3s ease;
 }
 
+/* Long effect names must not push the caret out of the header. */
+.dropdown-header-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .dropdown-header:hover {
   background-color: var(--accent-color, var(--secondary-background-color, #f0f0f0));
   color: var(--background-color, var(--primary-text-color, black));
 }
 
+.dropdown-header:focus-visible {
+  outline: 2px solid var(--accent-color, var(--primary-color, #03a9f4));
+  outline-offset: 2px;
+}
+
 .dropdown-header::after {
   content: "▼";
   font-size: 0.8em;
+  flex: 0 0 auto;
   transition: transform 0.3s ease;
 }
 
@@ -220,26 +235,42 @@ ha-card {
   transform: rotate(180deg);
 }
 
+/*
+ * The open list floats over sibling content, so its surface has to be fully
+ * opaque under every theme. `--dropdown-surface` resolves to the extracted
+ * palette color when one exists and to the Home Assistant card background
+ * otherwise; the `background-image` layer paints that same color again so a
+ * theme that hands us a translucent card background still can't let the
+ * effect-info panel and brightness slider bleed through the list.
+ */
 .dropdown-content {
+  --dropdown-surface: var(
+    --background-color,
+    var(--ha-card-background, var(--card-background-color, #1c1c1c))
+  );
   position: absolute;
-  top: 100%;
+  top: calc(100% - 1px);
   left: 0;
   right: 0;
-  background-color: var(--background-color, var(--card-background-color, white));
+  background-color: var(--dropdown-surface);
+  background-image: linear-gradient(var(--dropdown-surface), var(--dropdown-surface));
   border: 1px solid var(--accent-color, var(--primary-color, #03a9f4));
-  border-radius: 0 0 4px 4px;
-  max-height: 200px;
+  border-radius: 0 0 6px 6px;
+  max-height: 240px;
   overflow-y: auto;
-  z-index: 6; /* Increased z-index */
+  overscroll-behavior: contain;
+  z-index: 20;
   opacity: 0;
   visibility: hidden;
   transform-origin: top;
   transform: scaleY(0);
   transition:
-    opacity 0.3s,
-    visibility 0.3s,
-    transform 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    opacity 0.18s ease,
+    visibility 0.18s ease,
+    transform 0.18s ease;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .dropdown.open .dropdown-content {
@@ -253,9 +284,12 @@ ha-card {
   cursor: pointer;
   color: var(--text-color, var(--primary-text-color, black));
   font-size: 1.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .dropdown-item:hover {
@@ -263,37 +297,27 @@ ha-card {
   color: var(--background-color, white);
 }
 
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--accent-color, var(--primary-color, #03a9f4));
+  outline-offset: -2px;
+}
+
+/*
+ * The selected row previously reused --text-color for its label, which is the
+ * color chosen for contrast against the *background*, not against the accent
+ * fill. Lean on the accent tint instead so the row reads as selected without
+ * the label disappearing into it.
+ */
 .dropdown-item.selected {
-  background-color: var(--accent-color, #03a9f4);
-  color: var(--text-color, white);
-}
-
-/* Disabled dropdown styles */
-.dropdown.disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.dropdown.disabled .dropdown-header {
-  border-color: rgba(var(--accent-color-rgb, 3, 169, 244), 0.4);
-  cursor: not-allowed;
-  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
-}
-
-.dropdown.disabled .dropdown-header:hover {
-  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
+  background-color: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.28);
   color: var(--text-color, var(--primary-text-color, black));
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 var(--accent-color, var(--primary-color, #03a9f4));
 }
 
-.dropdown-item.disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
-}
-
-.dropdown-item.disabled:hover {
-  background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
-  color: var(--text-color, var(--primary-text-color, black));
+.dropdown-item.selected:hover {
+  background-color: var(--accent-color, var(--primary-color, #03a9f4));
+  color: var(--background-color, white);
 }
 
 /* Effect info section */
@@ -310,7 +334,7 @@ ha-card {
   max-height: 0;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(var(--accent-color-rgb, 3, 169, 244), 0.3);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.3);
   display: flex;
   justify-content: space-between;
   transition:
@@ -406,7 +430,7 @@ ha-card {
   background: var(--slider-color, var(--accent-color));
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color), 0.8);
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.8);
   margin-top: -5px;
 }
 
@@ -418,7 +442,7 @@ ha-card {
   background: var(--slider-color, var(--accent-color));
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color), 0.8);
+  box-shadow: 0 0 0 3px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.8);
 }
 
 .brightness-slider input[type="range"]::-webkit-slider-runnable-track {
@@ -447,13 +471,13 @@ ha-card {
 
 .brightness-slider input[type="range"]:hover::-webkit-slider-thumb,
 .brightness-slider input[type="range"]:active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
+  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.9);
   transform: scale(1.2);
 }
 
 .brightness-slider input[type="range"]:hover::-moz-range-thumb,
 .brightness-slider input[type="range"]:active::-moz-range-thumb {
-  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color), 0.9);
+  box-shadow: 0 0 0 4px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.9);
   transform: scale(1.2);
 }
 
@@ -468,12 +492,12 @@ ha-card {
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
-  background-color: rgba(var(--rgb-primary-text-color), 0.1);
+  background-color: rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.1);
   transition: background-color 0.3s ease;
 }
 
 .attributes-toggle:hover {
-  background-color: rgba(var(--rgb-primary-text-color), 0.2);
+  background-color: rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.2);
 }
 
 .attributes-toggle ha-icon {
@@ -505,8 +529,17 @@ ha-card {
   max-height: 300px;
   padding: 8px 12px;
   overflow-y: auto;
-  border: 1px solid rgba(var(--accent-color-rgb, 3, 169, 244), 0.3);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.3);
   opacity: 1;
+}
+
+/*
+ * A scrolling container clips absolutely-positioned children, which cut every
+ * layout/preset/scene/profile list off at the panel edge. Stop clipping while
+ * one is open; the list is the thing the user is looking at.
+ */
+.attributes.expanded.dropdown-open .attributes-content {
+  overflow: visible;
 }
 
 /* Attribute list styling */
@@ -660,7 +693,7 @@ ha-card {
 
 .effect-button.random {
   background: linear-gradient(45deg, var(--accent-color) 0%, #ff00ff 100%);
-  box-shadow: 0 2px 10px rgba(var(--rgb-accent-color), 0.4);
+  box-shadow: 0 2px 10px rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.4);
   width: 42px;
   height: 42px;
 }
@@ -923,13 +956,13 @@ ha-switch {
 
 .status-chip.status-fps {
   font-variant-numeric: tabular-nums;
-  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.12);
-  color: var(--accent-color, var(--primary-color, #03a9f4));
+  background: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.22);
+  color: var(--text-color, var(--primary-text-color, black));
 }
 
 .status-chip.status-audio {
-  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.12);
-  color: var(--accent-color, var(--primary-color, #03a9f4));
+  background: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.22);
+  color: var(--text-color, var(--primary-text-color, black));
   --mdc-icon-size: 14px;
 }
 
@@ -995,7 +1028,7 @@ ha-switch {
   border-radius: 50%;
   background: var(--slider-color, var(--accent-color));
   cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color), 0.7);
+  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.7);
 }
 
 .live-control-slider input[type="range"]::-moz-range-thumb {
@@ -1005,7 +1038,7 @@ ha-switch {
   border-radius: 50%;
   background: var(--slider-color, var(--accent-color));
   cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color), 0.7);
+  box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.7);
 }
 
 .live-control-slider input[type="range"]::-webkit-slider-runnable-track {
@@ -1113,7 +1146,7 @@ ha-switch {
 
 .per-device-identify {
   background: transparent;
-  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.5);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.5);
   color: var(--accent-color);
   width: 24px;
   height: 24px;
@@ -1129,7 +1162,7 @@ ha-switch {
 }
 
 .per-device-identify:hover {
-  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.15);
+  background: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.15);
   transform: scale(1.05);
 }
 
@@ -1174,12 +1207,18 @@ ha-switch {
   margin-top: 8px;
 }
 
+/*
+ * Accent-on-accent is unreadable whenever the extracted accent is dark, which
+ * is common for moody covers. Keep the accent as the chip tint and outline,
+ * and use the contrast-checked text color for the label itself.
+ */
 .effect-tag {
   font-size: 0.7em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.15);
-  color: var(--accent-color, var(--primary-color, #03a9f4));
+  background: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.22);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.45);
+  color: var(--text-color, var(--primary-text-color, black));
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -1196,7 +1235,7 @@ ha-switch {
   min-width: 0;
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.5);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.5);
   background: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);
   color: var(--text-color, var(--primary-text-color, black));
   font-size: 0.85em;
@@ -1222,8 +1261,8 @@ ha-switch {
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(var(--rgb-accent-color, 3, 169, 244), 0.08);
-  border: 1px solid rgba(var(--rgb-accent-color, 3, 169, 244), 0.2);
+  background: rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.08);
+  border: 1px solid rgba(var(--accent-color-rgb, var(--rgb-accent-color, 3, 169, 244)), 0.2);
   position: relative;
   z-index: 3;
 }

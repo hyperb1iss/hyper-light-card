@@ -13,6 +13,7 @@ export class StateManager {
   private _colorManager: ColorManager;
   private _backend: LightBackend;
   private _brightnessDebounceTimer?: number;
+  private _pendingBrightness?: number;
   private _liveControlDebounce = new Map<string, number>();
   private _isDraggingBrightness = false;
 
@@ -64,13 +65,17 @@ export class StateManager {
       this._state.lastEffectImage = card.paletteSource;
       if (card.paletteSource) {
         try {
-          const colors = await this._colorManager.extractColors(card.paletteSource);
-          this._state.backgroundColor = colors.backgroundColor;
-          this._state.textColor = colors.textColor;
-          this._state.accentColor = colors.accentColor;
+          // A null palette means the cover art was unreadable (commonly a
+          // cross-origin cover with no CORS headers). Keep the previous
+          // palette rather than blanking the card mid-session; a fresh card
+          // simply stays on the Home Assistant theme.
+          const palette = await this._colorManager.extractColors(card.paletteSource);
+          if (palette) this._state.palette = palette;
         } catch (error) {
           log.error('StateManager: Error extracting colors', error);
         }
+      } else {
+        this._state.palette = null;
       }
     }
 
@@ -265,21 +270,43 @@ export class StateManager {
 
   endBrightnessDrag() {
     this._isDraggingBrightness = false;
+    if (this._brightnessDebounceTimer) {
+      window.clearTimeout(this._brightnessDebounceTimer);
+      this._brightnessDebounceTimer = undefined;
+    }
+    this._commitBrightness();
   }
 
+  /**
+   * Update brightness optimistically and coalesce the service call. A 10ms
+   * window fired roughly once per drag tick, flooding the daemon with one
+   * `light.turn_on` per frame; 120ms keeps the drag visually live (local
+   * state updates immediately) while sending an order of magnitude fewer
+   * calls. `endBrightnessDrag` flushes the pending value on release so the
+   * final position always lands.
+   */
   setBrightness(brightness: number) {
     const validBrightness = Math.min(100, Math.max(1, Math.round(brightness)));
     this._state.brightness = validBrightness;
+    this._pendingBrightness = validBrightness;
 
     if (this._brightnessDebounceTimer) {
       window.clearTimeout(this._brightnessDebounceTimer);
     }
 
     this._brightnessDebounceTimer = window.setTimeout(() => {
-      const ctx = this._ctx;
-      if (!ctx) return;
-      void this._backend.setBrightness(ctx, validBrightness);
-    }, 10);
+      this._brightnessDebounceTimer = undefined;
+      this._commitBrightness();
+    }, 120);
+  }
+
+  private _commitBrightness() {
+    const value = this._pendingBrightness;
+    if (value === undefined) return;
+    this._pendingBrightness = undefined;
+    const ctx = this._ctx;
+    if (!ctx) return;
+    void this._backend.setBrightness(ctx, value);
   }
 
   async setCurrentEffect(effect: string) {

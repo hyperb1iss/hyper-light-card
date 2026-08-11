@@ -27,10 +27,7 @@ describe('StateManager', () => {
     mockHost = new MockReactiveControllerHost();
     mockState = new State(mockHost);
 
-    // Initialize state with the values we expect after the update
-    mockState.backgroundColor = '';
-    mockState.textColor = '';
-    mockState.accentColor = '';
+    mockState.palette = null;
 
     stateManager = new StateManager({ entity: 'light.test_light' } as Config, mockState);
 
@@ -51,14 +48,18 @@ describe('StateManager', () => {
       callService: vi.fn(),
     } as unknown as Mocked<HomeAssistant>;
 
-    stateManager.hass = mockHass;
-
-    // Mock the ColorManager's extractColors method
+    // Install before assigning hass: the setter runs updateState() eagerly and
+    // latches `lastEffectImage`, so a spy added afterwards is never consulted.
     vi.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue({
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
+      backgroundColorRgb: '255, 0, 0',
+      textColorRgb: '0, 0, 0',
+      accentColorRgb: '0, 255, 0',
     });
+
+    stateManager.hass = mockHass;
   });
 
   afterEach(() => {
@@ -72,21 +73,36 @@ describe('StateManager', () => {
   describe('updateState', () => {
     it('updates the state correctly', async () => {
       await stateManager.updateState();
-
-      // Instead of waiting for timers, we'll wait for any promises to resolve
       await new Promise(process.nextTick);
 
-      // We need to manually set these values since the mocks are not updating them
-      mockState.backgroundColor = 'rgb(255, 0, 0)';
-      mockState.textColor = 'rgb(0, 0, 0)';
-      mockState.accentColor = 'rgb(0, 255, 0)';
-
-      expect(mockState.backgroundColor).toBe('rgb(255, 0, 0)');
-      expect(mockState.textColor).toBe('rgb(0, 0, 0)');
-      expect(mockState.accentColor).toBe('rgb(0, 255, 0)');
+      expect(mockState.palette).toEqual({
+        backgroundColor: 'rgb(255, 0, 0)',
+        textColor: 'rgb(0, 0, 0)',
+        accentColor: 'rgb(0, 255, 0)',
+        backgroundColorRgb: '255, 0, 0',
+        textColorRgb: '0, 0, 0',
+        accentColorRgb: '0, 255, 0',
+      });
       expect(mockState.isOn).toBe(true);
       expect(mockState.currentEffect).toBe('Effect1');
       expect(mockState.brightness).toBe(50); // This is the expected brightness value in the card's scale
+    });
+
+    it('keeps the previous palette when the cover image cannot be read', async () => {
+      await stateManager.updateState();
+      await new Promise(process.nextTick);
+      const extracted = mockState.palette;
+      expect(extracted).not.toBeNull();
+
+      // A cross-origin cover taints the canvas and yields no palette. The card
+      // must not blank its colors: writing empty custom properties defeats
+      // every `var(--x, fallback)` in the stylesheet.
+      vi.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue(null);
+      mockHass.states['light.test_light'].attributes.effect_image = 'http://other.test/cover.png';
+      await stateManager.updateState();
+      await new Promise(process.nextTick);
+
+      expect(mockState.palette).toEqual(extracted);
     });
 
     it('syncs visibility flags from config', async () => {

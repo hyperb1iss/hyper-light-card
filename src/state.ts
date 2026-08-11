@@ -1,10 +1,9 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import type { Palette } from './color-manager';
 
 export class State implements ReactiveController {
   private _host: ReactiveControllerHost;
-  private _backgroundColor = '';
-  private _textColor = '';
-  private _accentColor = '';
+  private _palette: Palette | null = null;
   private _isOn = false;
   private _currentEffect = 'No effect';
   private _isDropdownOpen = false;
@@ -42,30 +41,18 @@ export class State implements ReactiveController {
     this._host.requestUpdate();
   }
 
-  get backgroundColor() {
-    return this._backgroundColor;
+  /**
+   * Colors derived from the active effect's cover art, or `null` when the
+   * image could not be read. `null` means "use the Home Assistant theme": the
+   * card omits the color custom properties entirely so the stylesheet
+   * fallbacks take over.
+   */
+  get palette(): Palette | null {
+    return this._palette;
   }
 
-  set backgroundColor(value: string) {
-    this._backgroundColor = value;
-    this._host.requestUpdate();
-  }
-
-  get textColor() {
-    return this._textColor;
-  }
-
-  set textColor(value: string) {
-    this._textColor = value;
-    this._host.requestUpdate();
-  }
-
-  get accentColor() {
-    return this._accentColor;
-  }
-
-  set accentColor(value: string) {
-    this._accentColor = value;
+  set palette(value: Palette | null) {
+    this._palette = value;
     this._host.requestUpdate();
   }
 
