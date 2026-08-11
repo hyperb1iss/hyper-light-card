@@ -62,15 +62,19 @@ export class StateManager {
     const effect = this._backend.describeEffect(ctx, stateObj);
 
     if (card.paletteSource !== this._state.lastEffectImage) {
-      this._state.lastEffectImage = card.paletteSource;
-      if (card.paletteSource) {
+      const requested = card.paletteSource;
+      this._state.lastEffectImage = requested;
+      if (requested) {
         try {
-          // A null palette means the cover art was unreadable (commonly a
-          // cross-origin cover with no CORS headers). Keep the previous
-          // palette rather than blanking the card mid-session; a fresh card
-          // simply stays on the Home Assistant theme.
-          const palette = await this._colorManager.extractColors(card.paletteSource);
-          if (palette) this._state.palette = palette;
+          const palette = await this._colorManager.extractColors(requested);
+          // Extraction is async, so a faster-resolving earlier request must not
+          // repaint the card for an effect that is no longer running.
+          if (this._state.lastEffectImage !== requested) return;
+          // A null palette means the cover was unreadable. Publish the null
+          // rather than keeping the previous effect's colors: stale colors
+          // misreport the running effect, while null falls back to the Home
+          // Assistant theme and self-corrects on the next readable cover.
+          this._state.palette = palette;
         } catch (error) {
           log.error('StateManager: Error extracting colors', error);
         }

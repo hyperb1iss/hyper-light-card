@@ -189,13 +189,14 @@ export const hypercolorBackend: LightBackend = {
     const extra = addenda(ctx.config);
     const lights = extra.per_device_lights ?? [];
     const identifyButtons = extra.per_device_identify_buttons ?? [];
+    const slugs = instanceSlugs(ctx.config.entity);
     return lights.flatMap(entityId => {
       const stateObj = ctx.hass.states[entityId];
       if (!stateObj) return [];
       const haBrightness = stateObj.attributes.brightness;
       // Find an identify button under the same device_id slug pattern.
       const slug = entityId.replace(/^light\./, '');
-      const identifyEntity = identifyEntityFor(slug, identifyButtons);
+      const identifyEntity = identifyEntityFor(slug, slugs, identifyButtons);
       return [
         {
           id: stateObj.entity_id,
@@ -312,18 +313,19 @@ export const hypercolorBackend: LightBackend = {
     if (!mainEntity?.startsWith('light.')) return {};
     const entities = Object.keys(ctx.hass.states);
 
-    // Sibling entities are named after the daemon instance, not the
-    // integration: a hub called "Hyperia" yields `light.hyperia` alongside
-    // `select.hyperia_layout`. Derive the slug from the configured entity and
-    // keep `hypercolor` as a secondary guess for default-named installs.
-    const slug = mainEntity.slice('light.'.length);
-    const slugs = slug === 'hypercolor' ? [slug] : [slug, 'hypercolor'];
+    const slugs = instanceSlugs(mainEntity);
+    const known = new Set(entities);
 
+    // Exact ids only, and only against slugs derived from this card's own
+    // entity id. A prefix match would bind a collision-renamed neighbour such
+    // as `select.hyperia_layout_2`, and a hard-coded `hypercolor` fallback
+    // would let a Hyperia card adopt a *different* instance's helpers when
+    // both integrations are installed. Anything unusual stays configurable by
+    // hand under `hypercolor:`.
     const findOne = (domain: string, suffix: string) => {
       for (const candidate of slugs) {
-        const exact = `${domain}.${candidate}_${suffix}`;
-        const hit = entities.find(id => id === exact) ?? entities.find(id => id.startsWith(exact));
-        if (hit) return hit;
+        const id = `${domain}.${candidate}_${suffix}`;
+        if (known.has(id)) return id;
       }
       return undefined;
     };
@@ -448,14 +450,38 @@ function liveControlLabel(id: string): string {
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function identifyEntityFor(slug: string, identifyButtons: string[]): string | null {
-  const shortSlug = slug.replace(/^hypercolor_/, '');
-  const candidates = new Set([
-    `button.${slug}_identify`,
-    `button.${shortSlug}_identify`,
-    `button.hypercolor_identify_${slug}`,
-    `button.hypercolor_identify_${shortSlug}`,
-  ]);
+/**
+ * Instance-slug candidates for a light entity, longest first: `light.hyperia`
+ * yields `[hyperia]`, and a child card `light.hyperia_living_room` yields
+ * `[hyperia_living_room, hyperia_living, hyperia]` so it can still reach its
+ * own hub's helpers. Every candidate is a prefix of the card's own entity id,
+ * so discovery can never wander into a differently-named instance.
+ */
+function instanceSlugs(entityId: string): string[] {
+  const parts = entityId.slice('light.'.length).split('_');
+  const slugs: string[] = [];
+  for (let i = parts.length; i > 0; i--) {
+    slugs.push(parts.slice(0, i).join('_'));
+  }
+  return slugs;
+}
+
+function identifyEntityFor(
+  childSlug: string,
+  slugs: string[],
+  identifyButtons: string[]
+): string | null {
+  const candidates = new Set([`button.${childSlug}_identify`]);
+  for (const instance of slugs) {
+    // Hub-managed children are exposed as `button.<instance>_identify_<child>`,
+    // where <child> has the hub prefix stripped.
+    const short = childSlug.startsWith(`${instance}_`)
+      ? childSlug.slice(instance.length + 1)
+      : childSlug;
+    candidates.add(`button.${instance}_identify_${short}`);
+    candidates.add(`button.${instance}_identify_${childSlug}`);
+    candidates.add(`button.${short}_identify`);
+  }
   return identifyButtons.find(id => candidates.has(id)) ?? null;
 }
 

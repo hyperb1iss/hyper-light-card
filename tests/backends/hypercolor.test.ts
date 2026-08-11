@@ -136,6 +136,54 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.next_effect_entity).toBeUndefined();
   });
 
+  it('never falls back to a different instance that happens to be default-named', () => {
+    // Both a custom instance and a stock one are installed. The Hyperia card
+    // must not adopt the hypercolor instance's helpers just because its own
+    // are absent.
+    const ctx = {
+      hass: hassWith([
+        'light.hyperia',
+        'light.hypercolor',
+        'select.hypercolor_layout',
+        'button.hypercolor_next_effect',
+      ]),
+      config: { entity: 'light.hyperia' } as Config,
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBeUndefined();
+    expect(patch.next_effect_entity).toBeUndefined();
+  });
+
+  it('does not bind a collision-renamed neighbour by prefix', () => {
+    const ctx = {
+      hass: hassWith(['light.hyperia', 'select.hyperia_layout_2']),
+      config: { entity: 'light.hyperia' } as Config,
+    };
+
+    expect((hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch).layout_entity).toBeUndefined();
+  });
+
+  it('lets a child card fall back to its own hub helpers', () => {
+    // `light.hyperia_living_room` has no `select.hyperia_living_room_layout`,
+    // so it must resolve its hub's `select.hyperia_layout` by trimming its own
+    // slug, without reaching for an unrelated instance.
+    const ctx = {
+      hass: hassWith([
+        'light.hyperia',
+        'light.hyperia_living_room',
+        'select.hyperia_layout',
+        'select.hypercolor_layout',
+      ]),
+      config: { entity: 'light.hyperia_living_room' } as Config,
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBe('select.hyperia_layout');
+  });
+
   it('scopes per-device children to the configured group, not the whole install', () => {
     const ctx = {
       hass: hassWith([
@@ -200,6 +248,27 @@ describe('hypercolorBackend.autoDiscover', () => {
     });
 
     expect(devices?.[0]?.identifyEntity).toBe('button.hypercolor_identify_living_room');
+  });
+
+  it('matches hub identify buttons for a custom instance name', () => {
+    // Discovery collects `button.<instance>_identify_<child>`, so the matcher
+    // has to build that shape too or the Identify control silently vanishes.
+    const hass = hassWith(['light.hyperia_lamp', 'button.hyperia_identify_lamp']);
+    hass.states['light.hyperia_lamp'].state = 'on';
+    hass.states['light.hyperia_lamp'].attributes = { friendly_name: 'Lamp' };
+
+    const devices = hypercolorBackend.perDevice?.({
+      hass,
+      config: {
+        entity: 'light.hyperia',
+        hypercolor: {
+          per_device_lights: ['light.hyperia_lamp'],
+          per_device_identify_buttons: ['button.hyperia_identify_lamp'],
+        },
+      },
+    });
+
+    expect(devices?.[0]?.identifyEntity).toBe('button.hyperia_identify_lamp');
   });
 
   it('separates zone lights from device lights and finds audio + render entities', () => {

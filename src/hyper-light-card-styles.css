@@ -527,12 +527,25 @@ ha-card {
 }
 
 /*
- * A scrolling container clips absolutely-positioned children, which cut every
- * layout/preset/scene/profile list off at the panel edge. Stop clipping while
- * one is open; the list is the thing the user is looking at.
+ * Nested selectors live inside a scrolling panel, which clips an absolutely
+ * positioned list at the panel edge. Letting the panel overflow instead is
+ * worse: with enough live controls the whole control rail spills out over the
+ * sections below and past the card. So these lists open *in flow* — the panel
+ * scrolls to them, nothing is clipped, and the card never changes height.
+ * `display` does the showing and hiding here because a statically positioned
+ * list would still reserve its space under `visibility: hidden`.
  */
-.attributes.expanded.dropdown-open .attributes-content {
-  overflow: visible;
+.attributes-content .dropdown-content {
+  position: static;
+  display: none;
+  max-height: none;
+  margin-top: 2px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.attributes-content .dropdown.open .dropdown-content {
+  display: block;
 }
 
 /* Attribute list styling */

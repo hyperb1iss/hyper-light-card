@@ -88,21 +88,65 @@ describe('StateManager', () => {
       expect(mockState.brightness).toBe(50); // This is the expected brightness value in the card's scale
     });
 
-    it('keeps the previous palette when the cover image cannot be read', async () => {
+    it('clears the palette when a later cover image cannot be read', async () => {
       await stateManager.updateState();
       await new Promise(process.nextTick);
-      const extracted = mockState.palette;
-      expect(extracted).not.toBeNull();
+      expect(mockState.palette).not.toBeNull();
 
-      // A cross-origin cover taints the canvas and yields no palette. The card
-      // must not blank its colors: writing empty custom properties defeats
-      // every `var(--x, fallback)` in the stylesheet.
+      // A cross-origin cover taints the canvas and yields no palette. Keeping
+      // the previous effect's colors would misreport the running effect, so
+      // the card publishes null and falls back to the Home Assistant theme.
       vi.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue(null);
       mockHass.states['light.test_light'].attributes.effect_image = 'http://other.test/cover.png';
       await stateManager.updateState();
       await new Promise(process.nextTick);
 
-      expect(mockState.palette).toEqual(extracted);
+      expect(mockState.palette).toBeNull();
+    });
+
+    it('ignores a slow extraction for a cover that is no longer current', async () => {
+      await stateManager.updateState();
+      await new Promise(process.nextTick);
+
+      const stale = {
+        backgroundColor: 'rgb(1, 1, 1)',
+        textColor: 'rgb(2, 2, 2)',
+        accentColor: 'rgb(3, 3, 3)',
+        backgroundColorRgb: '1, 1, 1',
+        textColorRgb: '2, 2, 2',
+        accentColorRgb: '3, 3, 3',
+      };
+      const fresh = {
+        backgroundColor: 'rgb(9, 9, 9)',
+        textColor: 'rgb(8, 8, 8)',
+        accentColor: 'rgb(7, 7, 7)',
+        backgroundColorRgb: '9, 9, 9',
+        textColorRgb: '8, 8, 8',
+        accentColorRgb: '7, 7, 7',
+      };
+
+      // Cover A resolves *after* cover B. Without a guard the older request
+      // would repaint the card for an effect that is no longer running.
+      let releaseSlow: (() => void) | undefined;
+      const slow = new Promise<typeof stale>(resolve => {
+        releaseSlow = () => resolve(stale);
+      });
+      vi.spyOn(ColorManager.prototype, 'extractColors').mockImplementation(
+        async (url: string) => (url.includes('slow') ? slow : fresh)
+      );
+
+      mockHass.states['light.test_light'].attributes.effect_image = 'http://a.test/slow.png';
+      const first = stateManager.updateState();
+      mockHass.states['light.test_light'].attributes.effect_image = 'http://b.test/fast.png';
+      await stateManager.updateState();
+      await new Promise(process.nextTick);
+      expect(mockState.palette).toEqual(fresh);
+
+      releaseSlow?.();
+      await first;
+      await new Promise(process.nextTick);
+
+      expect(mockState.palette).toEqual(fresh);
     });
 
     it('syncs visibility flags from config', async () => {
