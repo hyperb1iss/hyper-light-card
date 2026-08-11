@@ -1033,6 +1033,13 @@ ha-switch {
   background: var(--slider-color, var(--accent-color));
   cursor: pointer;
   box-shadow: 0 0 0 2px rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.7);
+  /*
+   * WebKit aligns the thumb's top edge to the track's top edge, so a thumb
+   * taller than its track hangs below the line unless it is pulled back up by
+   * half the difference: (6px track - 14px thumb) / 2. Firefox centers
+   * ::-moz-range-thumb on its own, which is why the rule below has no margin.
+   */
+  margin-top: -4px;
 }
 
 .live-control-slider input[type="range"]::-moz-range-thumb {
