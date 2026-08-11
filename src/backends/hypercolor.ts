@@ -322,8 +322,7 @@ export const hypercolorBackend: LightBackend = {
     const findOne = (domain: string, suffix: string) => {
       for (const candidate of slugs) {
         const exact = `${domain}.${candidate}_${suffix}`;
-        const hit =
-          entities.find(id => id === exact) ?? entities.find(id => id.startsWith(exact));
+        const hit = entities.find(id => id === exact) ?? entities.find(id => id.startsWith(exact));
         if (hit) return hit;
       }
       return undefined;

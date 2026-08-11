@@ -683,7 +683,13 @@ export class HyperLightCard extends LitElement {
   private _renderSelect(
     kind: 'layout' | 'preset' | 'scene' | 'profile',
     model: SelectModel | null,
-    spec: { icon: string; title: string; empty: string; isOpen: boolean; select: (v: string) => void }
+    spec: {
+      icon: string;
+      title: string;
+      empty: string;
+      isOpen: boolean;
+      select: (v: string) => void;
+    }
   ) {
     if (!model || model.options.length === 0) return html``;
 
