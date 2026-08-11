@@ -8,7 +8,7 @@
 
 _A dazzling custom card for controlling SignalRGB and Hypercolor lights through Home Assistant_
 
-[Installation](#installation) • [Configuration](#configuration) • [Usage](#usage) • [Contributing](#contributing) • [License](#license)
+[Installation](#installation) • [Configuration](#configuration) • [Usage](#usage) • [Troubleshooting](#troubleshooting) • [Contributing](#contributing) • [License](#license)
 
 </div>
 
@@ -16,16 +16,17 @@ _A dazzling custom card for controlling SignalRGB and Hypercolor lights through 
 
 - 💅 Sleek, modern design that adapts to your effect's color palette
 - 🔮 Animated Hypercolor brand mark that glows to life with the light
-- 🎨 Dynamic color extraction with automatic UI theming
+- 🎨 Dynamic color extraction with automatic UI theming, falling back cleanly to your Home Assistant theme when the effect art can't be read
 - 🔌 Auto-detects whether your light is a SignalRGB or Hypercolor entity
 - 📱 Responsive layout for desktop and mobile, with native HA section sizing
-- 🔀 Effect switching with an intelligent dropdown menu
+- 🔀 Effect switching with an intelligent dropdown menu that highlights and scrolls to the running effect
+- ⌨️ Keyboard-navigable selectors with visible focus rings
 - ℹ️ Rich effect info: description, publisher, and tag chips
-- 🎛️ Full effect controls — sliders, toggles, palette pickers, and color swatches
+- 🎛️ Full effect controls: sliders, toggles, palette pickers, and color swatches
 - 📊 Layout and preset selection for SignalRGB
 - 🎬 Scenes and profiles for Hypercolor, with live runtime controls
-- 🗺️ Scene zone controls — tune each render group's brightness and power
-- 🎧 Audio controls — toggle reactivity and pick the input device
+- 🗺️ Scene zone controls for tuning each render group's brightness and power
+- 🎧 Audio controls for toggling reactivity and picking the input device
 - 🛰️ Status chips for FPS, audio reactivity, and connectivity (Hypercolor)
 - 🧩 Per-device drilldown for grouped Hypercolor installs
 - ⏭️ Effect navigation controls (next, previous, random)
@@ -126,9 +127,14 @@ allowed_effects:
 
 ### Hypercolor example
 
+The Hypercolor integration names its entities after the **daemon instance**, not
+after the integration. A daemon called `Hyperia` produces `light.hyperia`
+alongside `select.hyperia_layout`, `button.hyperia_next_effect`, and so on. Use
+whatever your own instance is called:
+
 ```yaml
 type: custom:hyper-light-card
-entity: light.hypercolor_living_room
+entity: light.hyperia
 name: 'Living Room'
 show_status_chips: true
 show_live_controls: true
@@ -141,37 +147,42 @@ background_opacity: 0.7
 ```
 
 > Companion entities (scene/preset/layout selects, live-control numbers, audio
-> switch/device selects, status sensors, and scene-zone lights) are
-> auto-discovered from the `light.hypercolor*` namespace — you rarely need to
-> wire them by hand. Effect description, publisher, tags, and the full control
+> switch/device selects, status sensors, scene-zone lights, and per-device
+> children) are auto-discovered by deriving the sibling name from the entity you
+> configure. Point the card at `light.hyperia` and it finds the `hyperia_*`
+> helpers on its own. Effect description, publisher, tags, and the full control
 > set are read straight from the master light's attributes (published by
 > hypercolor-hass), so the info panel and controls populate automatically.
 
-When the entity belongs to a Hypercolor integration, scenes, profiles, live controls, and per-device
-children are wired up automatically for standard entity names. Non-standard Hypercolor helper entity
-IDs can be supplied in YAML under `hypercolor`:
+Discovery only fills in options you haven't set, so any helper that lives
+somewhere unexpected can be pinned by hand under `hypercolor`:
 
 ```yaml
 type: custom:hyper-light-card
-entity: light.hypercolor_living_room
+entity: light.hyperia
 backend: hypercolor
 hypercolor:
-  scene_entity: select.hypercolor_scene
-  profile_entity: select.hypercolor_profile
-  stop_effect_entity: button.hypercolor_stop_effect
-  fps_entity: sensor.hypercolor_fps
-  connected_entity: binary_sensor.hypercolor_connected
-  audio_beat_entity: binary_sensor.hypercolor_audio_beat
-  audio_reactive_active_entity: binary_sensor.hypercolor_audio_reactive_active
-  audio_energy_entity: sensor.hypercolor_audio_energy
+  scene_entity: select.hyperia_scene
+  profile_entity: select.hyperia_profile
+  stop_effect_entity: button.hyperia_stop_effect
+  fps_entity: sensor.hyperia_fps
+  connected_entity: binary_sensor.hyperia_connected
+  audio_beat_entity: binary_sensor.hyperia_audio_beat
+  audio_reactive_active_entity: binary_sensor.hyperia_audio_reactive_active
+  audio_energy_entity: sensor.hyperia_audio_energy
+  audio_reactive_switch_entity: switch.hyperia_audio_reactive
+  audio_device_entity: select.hyperia_audio_device
   live_control_entities:
-    speed: number.hypercolor_speed
-    hue_shift: number.hypercolor_hue_shift
-    intensity: number.hypercolor_intensity
+    brightness: number.hyperia_brightness
+    speed: number.hyperia_speed
+    hue_shift: number.hyperia_hue_shift
+    intensity: number.hyperia_intensity
+  zone_lights:
+    - light.hyperia_default_zone
   per_device_lights:
-    - light.hypercolor_living_room_lamp_1
+    - light.hyperia_lamp_1
   per_device_identify_buttons:
-    - button.hypercolor_identify_living_room_lamp_1
+    - button.hyperia_identify_lamp_1
 ```
 
 ### Configuration Options
@@ -213,9 +224,36 @@ These default to the device-scoped helpers exposed by the SignalRGB integration,
 | `show_profile_select` | boolean | `false` | Show the profile selector dropdown                       |
 | `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette + color pickers) |
 | `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
-| `show_zones`          | boolean | `true`  | Show scene zone controls — per-group brightness and power (when present) |
+| `show_zones`          | boolean | `true`  | Show scene zone controls for per-group brightness and power (when present) |
 | `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
 | `show_per_device`     | boolean | `false` | Show an expandable list of child lights below the card   |
+
+Every selector hides itself when its entity exposes no options, so a card never
+shows a dead control. Hypercolor's preset list, for instance, is empty for
+effects that have no saved presets, and the Preset dropdown simply won't appear
+for those.
+
+#### Hypercolor helper entities
+
+All of these live under the `hypercolor:` key and are auto-discovered from your
+instance name. Set one only when you need to override discovery.
+
+| Option                         | Type     | Description                                             |
+| ------------------------------ | -------- | ------------------------------------------------------- |
+| `scene_entity`                 | string   | Scene `select` entity                                   |
+| `profile_entity`               | string   | Profile `select` entity                                 |
+| `stop_effect_entity`           | string   | Stop-effect `button` entity                             |
+| `fps_entity`                   | string   | Render-rate `sensor` for the FPS chip                   |
+| `connected_entity`             | string   | Daemon connectivity `binary_sensor`                     |
+| `audio_beat_entity`            | string   | Beat `binary_sensor`; drives the icon pulse             |
+| `audio_reactive_active_entity` | string   | Audio-reactive `binary_sensor` for the status chip      |
+| `audio_energy_entity`          | string   | Audio energy `sensor`                                   |
+| `audio_reactive_switch_entity` | string   | Audio-reactive `switch` shown in the audio controls     |
+| `audio_device_entity`          | string   | Audio input device `select`                             |
+| `live_control_entities`        | map      | `brightness` / `speed` / `hue_shift` / `intensity` to `number` entities |
+| `zone_lights`                  | string[] | Scene render-group lights backing the Zones section     |
+| `per_device_lights`            | string[] | Child lights for the per-device drilldown               |
+| `per_device_identify_buttons`  | string[] | Identify `button` entities matched to those children    |
 
 ## 🚀 Usage
 
@@ -228,12 +266,45 @@ hyper-light-card adapts to whichever backend it detects:
 - **Layout & Preset / Scene & Profile**: SignalRGB exposes layouts and presets; Hypercolor exposes scenes and (optionally) profiles.
 - **Effect Navigation**: Cycle through effects with next, previous, and random buttons.
 - **Brightness Control**: Adjust brightness with the slider.
-- **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus — input is debounced and committed on release.
+- **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus. Input is coalesced while you drag and committed on release.
+- **Keyboard**: Tab to any selector, then Enter or Space to open it and to pick a row.
 - **Status Chips**: Hypercolor surfaces FPS, audio reactivity, and connectivity at a glance.
 - **Per-Device Drilldown**: Expand grouped Hypercolor installs to see and toggle each child light.
 - **Effect Info & Parameters**: Description, publisher, and current parameter values for the running effect.
 
-The card pulls its accent palette from the running effect image, giving each effect its own coherent look. Color contrast is verified with `chroma-js` so foreground text stays readable against any extracted background.
+The card pulls its accent palette from the running effect image, giving each effect its own coherent look. The extracted background is measured against the WCAG relative-luminance threshold to pick black or white foreground text, so labels stay readable on any cover art.
+
+When the effect image can't be read, the card leaves its color variables unset and inherits your Home Assistant theme instead. See [Troubleshooting](#troubleshooting) if you expected palette colors and got theme colors.
+
+## 🩺 Troubleshooting
+
+<a name="troubleshooting"></a>
+
+**The card uses my Home Assistant theme colors instead of the effect's palette.**
+Palette extraction reads the effect cover image through a canvas, which browsers
+only allow for images served with permissive CORS headers. Hypercolor serves
+cover art from the daemon's own origin, and the daemon allows loopback origins
+plus anything listed in its `web.cors_origins` config. If you reach Home
+Assistant at a hostname rather than `localhost`, add that exact origin (scheme,
+host, and port, for example `http://homeassistant.local:8123`) to the daemon's
+`cors_origins` and reload. Until then the card degrades to your theme rather
+than rendering unstyled.
+
+**The Preset dropdown never appears.**
+Hypercolor's preset `select` lists only presets saved for the effect that is
+currently running, so it is empty for effects you have never saved a preset for.
+The card hides selectors with no options, so the dropdown is absent rather than
+disabled. Save a preset for the running effect and it appears.
+
+**A Hypercolor light is detected as SignalRGB.**
+Detection uses attributes the Hypercolor light publishes (`effect_controls`,
+`active_effect_id`, `zone_count`). A light that is unavailable at page load may
+not expose them yet. Set `backend: hypercolor` to pin it.
+
+**Companion entities aren't discovered.**
+Discovery derives sibling names from the entity you configure, so it expects
+`select.<instance>_layout` next to `light.<instance>`. If you have renamed
+entity IDs away from that pattern, wire them explicitly under `hypercolor:`.
 
 ## 👩‍💻 Development
 
@@ -248,7 +319,7 @@ This project uses a modern toolchain:
 - **[Prettier 3](https://prettier.io/)** scoped to TS/JS (Lit `html` template formatting)
 - **TypeScript 6** with strict mode and Lit's experimental decorators
 - **[Lit 3](https://lit.dev/)** for reactive web components
-- **ColorThief** for palette extraction, **Chroma.js** for contrast verification
+- **ColorThief** for palette extraction, with a WCAG luminance check picking the foreground color
 
 ### Getting Started
 

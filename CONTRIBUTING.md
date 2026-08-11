@@ -22,8 +22,8 @@
 
 ### Prerequisites
 
-- 📦 [Bun](https://bun.com/) `>=1.3.0` — used as the package manager and script runner
-- 🟢 [Node.js](https://nodejs.org/) `>=24.0.0` — Vite still runs on Node for the production build
+- 📦 [Bun](https://bun.com/) `>=1.3.0`: used as the package manager and script runner
+- 🟢 [Node.js](https://nodejs.org/) `>=24.0.0`: Vite still runs on Node for the production build
 
 ### Setup
 
@@ -44,17 +44,17 @@
 
 We use Bun scripts for everything:
 
-- `bun run dev` — Builds in development mode and copies the bundle into your local Home Assistant `www/` folder.
-- `bun run build:dev` — One-shot development build (no copy).
-- `bun run build` — Production build (minified, terser, prod constants).
-- `bun run lint` — Biome lint (also checks JSON/CSS formatting).
-- `bun run lint:fix` — Apply Biome autofixes.
-- `bun run format:check` — Prettier check on TS/JS sources.
-- `bun run format` — Apply Prettier (TS/JS) and Biome formatting.
-- `bun run typecheck` — `tsc --noEmit`.
-- `bun run test` — Run the Vitest suite once.
-- `bun run test:watch` — Vitest in watch mode.
-- `bun run test:coverage` — Vitest with V8 coverage output.
+- `bun run dev`: Builds in development mode and copies the bundle into your local Home Assistant `www/` folder.
+- `bun run build:dev`: One-shot development build (no copy).
+- `bun run build`: Production build (minified, terser, prod constants).
+- `bun run lint`: Biome lint (also checks JSON/CSS formatting).
+- `bun run lint:fix`: Apply Biome autofixes.
+- `bun run format:check`: Prettier check on TS/JS sources.
+- `bun run format`: Apply Prettier (TS/JS) and Biome formatting.
+- `bun run typecheck`: `tsc --noEmit`.
+- `bun run test`: Run the Vitest suite once.
+- `bun run test:watch`: Vitest in watch mode.
+- `bun run test:coverage`: Vitest with V8 coverage output.
 
 ### Getting Started with Development
 
