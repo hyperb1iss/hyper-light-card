@@ -488,6 +488,10 @@ ha-card {
   z-index: 2;
 }
 
+.attributes.dropdown-open {
+  z-index: 10;
+}
+
 .attributes-toggle {
   cursor: pointer;
   padding: 8px;
