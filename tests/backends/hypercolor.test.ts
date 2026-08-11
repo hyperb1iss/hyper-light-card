@@ -165,6 +165,38 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect((hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch).layout_entity).toBeUndefined();
   });
 
+  it('uses the device registry to pick the right hub when names overlap', () => {
+    // Two instances whose names collide by prefix: a `hyperia_living` hub
+    // alongside this card's `light.hyperia_living_room`. Names alone cannot
+    // disambiguate, so discovery follows the registry instead.
+    const hass = hassWith([
+      'light.hyperia',
+      'light.hyperia_living_room',
+      'select.hyperia_layout',
+      'light.hyperia_living',
+      'select.hyperia_living_layout',
+    ]);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hyperia': { device_id: 'hub' },
+      'select.hyperia_layout': { device_id: 'hub' },
+      'light.hyperia_living_room': { device_id: 'child' },
+      'light.hyperia_living': { device_id: 'other_hub' },
+      'select.hyperia_living_layout': { device_id: 'other_hub' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+      child: { via_device_id: 'hub' },
+      other_hub: { via_device_id: null },
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.({
+      hass,
+      config: { entity: 'light.hyperia_living_room' } as Config,
+    }) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBe('select.hyperia_layout');
+  });
+
   it('lets a child card fall back to its own hub helpers', () => {
     // `light.hyperia_living_room` has no `select.hyperia_living_room_layout`,
     // so it must resolve its hub's `select.hyperia_layout` by trimming its own

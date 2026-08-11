@@ -957,9 +957,15 @@ export class HyperLightCard extends LitElement {
       const selectedItem = this.shadowRoot?.querySelector(
         `${wrapperSelector} .dropdown-item.selected`
       ) as HTMLElement | null;
-      if (dropdownContent && selectedItem) {
+      if (!dropdownContent || !selectedItem) return;
+      if (dropdownContent.scrollHeight > dropdownContent.clientHeight) {
         dropdownContent.scrollTop = selectedItem.offsetTop - dropdownContent.offsetTop;
+        return;
       }
+      // Nested selectors open in flow, so the list itself does not scroll; the
+      // attributes panel around it does. Let the browser pick the nearest
+      // scrollable ancestor instead of writing a scrollTop nothing reads.
+      selectedItem.scrollIntoView({ block: 'nearest' });
     });
   }
 

@@ -315,14 +315,24 @@ export const hypercolorBackend: LightBackend = {
 
     const slugs = instanceSlugs(mainEntity);
     const known = new Set(entities);
+    const hubIds = hubEntityIds(ctx.hass, mainEntity);
 
-    // Exact ids only, and only against slugs derived from this card's own
-    // entity id. A prefix match would bind a collision-renamed neighbour such
-    // as `select.hyperia_layout_2`, and a hard-coded `hypercolor` fallback
-    // would let a Hyperia card adopt a *different* instance's helpers when
-    // both integrations are installed. Anything unusual stays configurable by
-    // hand under `hypercolor:`.
+    // Prefer the device registry: it states which entities share this card's
+    // hub, which entity ids alone cannot. Two instances whose names overlap
+    // (a `hyperia_living` hub alongside `light.hyperia_living_room`) are
+    // indistinguishable by name, so name matching is only the fallback for
+    // when the frontend registries aren't populated.
+    //
+    // In that fallback, exact ids only, and only against slugs derived from
+    // this card's own entity id. A prefix match would bind a collision-renamed
+    // neighbour such as `select.hyperia_layout_2`, and a hard-coded
+    // `hypercolor` fallback would let a Hyperia card adopt a different
+    // instance's helpers. Anything unusual stays configurable by hand.
     const findOne = (domain: string, suffix: string) => {
+      if (hubIds) {
+        const hit = hubIds.find(id => id.startsWith(`${domain}.`) && id.endsWith(`_${suffix}`));
+        if (hit) return hit;
+      }
       for (const candidate of slugs) {
         const id = `${domain}.${candidate}_${suffix}`;
         if (known.has(id)) return id;
@@ -448,6 +458,28 @@ function addenda(config: Config): HypercolorConfigAddenda {
 function liveControlLabel(id: string): string {
   if (id === 'brightness') return 'Effect Brightness';
   return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Entity ids that share the card light's Hypercolor hub, via the Home
+ * Assistant device registry. Child lights sit on their own device linked to
+ * the hub by `via_device_id`, so walk up one level before collecting. Returns
+ * null when the registries aren't populated (they often aren't at first
+ * paint), leaving the caller to fall back to name matching.
+ */
+function hubEntityIds(hass: HomeAssistant, lightEntityId: string): string[] | null {
+  const registries = hass as unknown as {
+    entities?: Record<string, { device_id?: string } | undefined>;
+    devices?: Record<string, { via_device_id?: string | null } | undefined>;
+  };
+  const entities = registries.entities;
+  const devices = registries.devices;
+  if (!entities || !devices) return null;
+  const deviceId = entities[lightEntityId]?.device_id;
+  if (!deviceId) return null;
+  const hubId = devices[deviceId]?.via_device_id ?? deviceId;
+  const ids = Object.keys(entities).filter(id => entities[id]?.device_id === hubId);
+  return ids.length > 0 ? ids : null;
 }
 
 /**
