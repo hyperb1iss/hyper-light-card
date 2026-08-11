@@ -309,69 +309,82 @@ export const hypercolorBackend: LightBackend = {
 
   autoDiscover(ctx) {
     const mainEntity = ctx.config.entity;
-    if (!mainEntity?.startsWith('light.hypercolor')) return {};
+    if (!mainEntity?.startsWith('light.')) return {};
     const entities = Object.keys(ctx.hass.states);
 
-    const findOne = (prefix: string) =>
-      entities.find(id => id === prefix) ?? entities.find(id => id.startsWith(prefix));
+    // Sibling entities are named after the daemon instance, not the
+    // integration: a hub called "Hyperia" yields `light.hyperia` alongside
+    // `select.hyperia_layout`. Derive the slug from the configured entity and
+    // keep `hypercolor` as a secondary guess for default-named installs.
+    const slug = mainEntity.slice('light.'.length);
+    const slugs = slug === 'hypercolor' ? [slug] : [slug, 'hypercolor'];
+
+    const findOne = (domain: string, suffix: string) => {
+      for (const candidate of slugs) {
+        const exact = `${domain}.${candidate}_${suffix}`;
+        const hit =
+          entities.find(id => id === exact) ?? entities.find(id => id.startsWith(exact));
+        if (hit) return hit;
+      }
+      return undefined;
+    };
 
     const patch: Partial<Config> = {};
 
     if (!ctx.config.layout_entity) {
-      const found = findOne('select.hypercolor_layout');
+      const found = findOne('select', 'layout');
       if (found) patch.layout_entity = found;
     }
     if (!ctx.config.preset_entity) {
-      const found = findOne('select.hypercolor_preset');
+      const found = findOne('select', 'preset');
       if (found) patch.preset_entity = found;
     }
     if (!ctx.config.next_effect_entity) {
-      const found = findOne('button.hypercolor_next_effect');
+      const found = findOne('button', 'next_effect');
       if (found) patch.next_effect_entity = found;
     }
     if (!ctx.config.previous_effect_entity) {
-      const found = findOne('button.hypercolor_previous_effect');
+      const found = findOne('button', 'previous_effect');
       if (found) patch.previous_effect_entity = found;
     }
     if (!ctx.config.random_effect_entity) {
-      const found = findOne('button.hypercolor_random_effect');
+      const found = findOne('button', 'random_effect');
       if (found) patch.random_effect_entity = found;
     }
 
     const extra: HypercolorConfigAddenda = {};
-    const scene = findOne('select.hypercolor_scene');
+    const scene = findOne('select', 'scene');
     if (scene) extra.scene_entity = scene;
-    const profile = findOne('select.hypercolor_profile');
+    const profile = findOne('select', 'profile');
     if (profile) extra.profile_entity = profile;
-    const stop = findOne('button.hypercolor_stop_effect');
+    const stop = findOne('button', 'stop_effect');
     if (stop) extra.stop_effect_entity = stop;
-    const fps = findOne('sensor.hypercolor_fps');
+    const fps = findOne('sensor', 'fps');
     if (fps) extra.fps_entity = fps;
-    const connected = findOne('binary_sensor.hypercolor_connected');
+    const connected = findOne('binary_sensor', 'connected');
     if (connected) extra.connected_entity = connected;
-    const beat = findOne('binary_sensor.hypercolor_audio_beat');
+    const beat = findOne('binary_sensor', 'audio_beat');
     if (beat) extra.audio_beat_entity = beat;
-    const reactive = findOne('binary_sensor.hypercolor_audio_reactive_active');
+    const reactive = findOne('binary_sensor', 'audio_reactive_active');
     if (reactive) extra.audio_reactive_active_entity = reactive;
-    const energy = findOne('sensor.hypercolor_audio_energy');
+    const energy = findOne('sensor', 'audio_energy');
     if (energy) extra.audio_energy_entity = energy;
-    const audioReactiveSwitch = findOne('switch.hypercolor_audio_reactive');
+    const audioReactiveSwitch = findOne('switch', 'audio_reactive');
     if (audioReactiveSwitch) extra.audio_reactive_switch_entity = audioReactiveSwitch;
-    const audioDevice = findOne('select.hypercolor_audio_device');
+    const audioDevice = findOne('select', 'audio_device');
     if (audioDevice) extra.audio_device_entity = audioDevice;
 
     const liveControls: Partial<Record<HypercolorLiveControlId, string>> = {};
     for (const id of LIVE_CONTROL_IDS) {
-      const found = findOne(`number.hypercolor_${id}`);
+      const found = findOne('number', id);
       if (found) liveControls[id] = found;
     }
     if (Object.keys(liveControls).length > 0) extra.live_control_entities = liveControls;
 
-    // Scope per-device discovery to the cards's own group. A non-root card
-    // like `light.hypercolor_living_room` must not pick up children from
-    // unrelated groups (e.g. `light.hypercolor_kitchen_*`); only the root
-    // `light.hypercolor` card sees every Hypercolor light in the install.
-    const childPrefix = mainEntity === 'light.hypercolor' ? 'light.hypercolor_' : `${mainEntity}_`;
+    // Scope per-device discovery to the card's own group. A non-root card
+    // must not pick up children from unrelated groups; only a root hub card
+    // sees every light under its own prefix.
+    const childPrefix = `${mainEntity}_`;
     // Zone lights share the hub prefix but carry a `zone_id` attribute; they
     // are scene render-groups, not physical devices, so split them out and
     // keep them from polluting the per-device drilldown.
@@ -380,12 +393,12 @@ export const hypercolorBackend: LightBackend = {
       id => id.startsWith(childPrefix) && id !== mainEntity && !isZoneLight(id)
     );
     const zoneLights = entities.filter(id => id.startsWith(childPrefix) && isZoneLight(id));
-    // Hypercolor exposes identify buttons as `button.hypercolor_identify_<device>`
-    // for hub-managed children, plus the conventional `<device>_identify`
-    // pattern HA generates from `_attr_name = "Identify"` on a child entity.
+    // Identify buttons appear as `button.<instance>_identify_<device>` for
+    // hub-managed children, plus the conventional `<device>_identify` pattern
+    // HA generates from `_attr_name = "Identify"` on a child entity.
     const identifyButtons = entities.filter(
       id =>
-        id.startsWith('button.hypercolor_identify_') ||
+        slugs.some(candidate => id.startsWith(`button.${candidate}_identify_`)) ||
         (id.startsWith('button.') && id.endsWith('_identify'))
     );
     if (childLights.length > 0) extra.per_device_lights = childLights;

@@ -82,6 +82,60 @@ describe('hypercolorBackend.autoDiscover', () => {
     ]);
   });
 
+  it('discovers siblings named after the daemon instance, not the integration', () => {
+    // The integration names entities after the hub device, so an instance
+    // called "Hyperia" produces light.hyperia / select.hyperia_layout. Keying
+    // discovery off the literal string "hypercolor" found nothing here and
+    // forced users to hand-write every entity id in YAML.
+    const ctx = {
+      hass: hassWith([
+        'light.hyperia',
+        'select.hyperia_layout',
+        'select.hyperia_preset',
+        'select.hyperia_scene',
+        'button.hyperia_next_effect',
+        'button.hyperia_previous_effect',
+        'button.hyperia_random_effect',
+        'button.hyperia_stop_effect',
+        'sensor.hyperia_fps',
+        'binary_sensor.hyperia_connected',
+        'switch.hyperia_audio_reactive',
+        'number.hyperia_brightness',
+        'number.hyperia_speed',
+      ]),
+      config: { entity: 'light.hyperia' } as Config,
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBe('select.hyperia_layout');
+    expect(patch.preset_entity).toBe('select.hyperia_preset');
+    expect(patch.next_effect_entity).toBe('button.hyperia_next_effect');
+    expect(patch.previous_effect_entity).toBe('button.hyperia_previous_effect');
+    expect(patch.random_effect_entity).toBe('button.hyperia_random_effect');
+    expect(patch.hypercolor?.scene_entity).toBe('select.hyperia_scene');
+    expect(patch.hypercolor?.stop_effect_entity).toBe('button.hyperia_stop_effect');
+    expect(patch.hypercolor?.fps_entity).toBe('sensor.hyperia_fps');
+    expect(patch.hypercolor?.connected_entity).toBe('binary_sensor.hyperia_connected');
+    expect(patch.hypercolor?.audio_reactive_switch_entity).toBe('switch.hyperia_audio_reactive');
+    expect(patch.hypercolor?.live_control_entities).toEqual({
+      brightness: 'number.hyperia_brightness',
+      speed: 'number.hyperia_speed',
+    });
+  });
+
+  it('does not borrow another instance entities when the slug does not match', () => {
+    const ctx = {
+      hass: hassWith(['light.hyperia', 'select.otherbox_layout', 'button.otherbox_next_effect']),
+      config: { entity: 'light.hyperia' } as Config,
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBeUndefined();
+    expect(patch.next_effect_entity).toBeUndefined();
+  });
+
   it('scopes per-device children to the configured group, not the whole install', () => {
     const ctx = {
       hass: hassWith([
