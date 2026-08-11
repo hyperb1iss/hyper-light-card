@@ -12,17 +12,11 @@ export class State implements ReactiveController {
   private _showEffectParameters = true;
   private _showBrightnessControl = true;
   private _brightness = 100;
-  private _allowedEffects?: string[];
   private _lastEffectImage: string | null = null;
 
-  // New properties for layout and preset
-  private _currentLayout = '';
-  private _availableLayouts: string[] = [];
   private _isLayoutDropdownOpen = false;
   private _showLayoutSelect = true;
 
-  private _currentPreset = '';
-  private _availablePresets: string[] = [];
   private _isPresetDropdownOpen = false;
   private _showPresetSelect = true;
 
@@ -128,40 +122,12 @@ export class State implements ReactiveController {
     this._host.requestUpdate();
   }
 
-  get allowedEffects() {
-    return this._allowedEffects;
-  }
-
-  set allowedEffects(value: string[] | undefined) {
-    this._allowedEffects = value;
-    this._host.requestUpdate();
-  }
-
   get lastEffectImage() {
     return this._lastEffectImage;
   }
 
   set lastEffectImage(value: string | null) {
     this._lastEffectImage = value;
-    this._host.requestUpdate();
-  }
-
-  // New getters and setters for layout
-  get currentLayout() {
-    return this._currentLayout;
-  }
-
-  set currentLayout(value: string) {
-    this._currentLayout = value;
-    this._host.requestUpdate();
-  }
-
-  get availableLayouts() {
-    return this._availableLayouts;
-  }
-
-  set availableLayouts(value: string[]) {
-    this._availableLayouts = value;
     this._host.requestUpdate();
   }
 
@@ -180,25 +146,6 @@ export class State implements ReactiveController {
 
   set showLayoutSelect(value: boolean) {
     this._showLayoutSelect = value;
-    this._host.requestUpdate();
-  }
-
-  // New getters and setters for preset
-  get currentPreset() {
-    return this._currentPreset;
-  }
-
-  set currentPreset(value: string) {
-    this._currentPreset = value;
-    this._host.requestUpdate();
-  }
-
-  get availablePresets() {
-    return this._availablePresets;
-  }
-
-  set availablePresets(value: string[]) {
-    this._availablePresets = value;
     this._host.requestUpdate();
   }
 

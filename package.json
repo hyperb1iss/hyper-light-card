@@ -39,7 +39,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "chroma-js": "^3.2.0",
     "colorthief": "^2.6.0",
     "custom-card-helpers": "^2.0.0",
     "lit": "^3.3.2"
@@ -50,6 +49,7 @@
     "@types/chroma-js": "^3.1.1",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "chroma-js": "^3.2.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.8.3",
     "terser": "^5.46.2",

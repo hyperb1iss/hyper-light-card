@@ -1,12 +1,7 @@
 import chroma from 'chroma-js';
 import { render } from 'lit';
 import { describe, expect, test } from 'vitest';
-import {
-  ensureContrastLab,
-  formatAttributeKey,
-  formatAttributeValue,
-  getAccessibleTextColors,
-} from '@/utils';
+import { formatAttributeKey, formatAttributeValue, getAccessibleTextColors } from '@/utils';
 
 describe('getAccessibleTextColors', () => {
   test.each([
@@ -29,26 +24,6 @@ describe('getAccessibleTextColors', () => {
     const textContrast = chroma.contrast(chroma(bgTuple), chroma(textTuple));
 
     expect(textContrast).toBeGreaterThanOrEqual(4.5);
-  });
-});
-
-describe('ensureContrastLab', () => {
-  test('ensures contrast ratio of at least 4.5', () => {
-    const darkBg = chroma('hsl(0, 0%, 0%)');
-    const lightBg = chroma('hsl(0, 0%, 100%)');
-    const midColor = chroma('hsl(0, 0%, 50%)');
-
-    const adjustedDark = ensureContrastLab(darkBg, midColor);
-    const adjustedLight = ensureContrastLab(lightBg, midColor);
-
-    expect(adjustedDark.lab()[0]).not.toBe(darkBg.lab()[0]);
-    expect(adjustedLight.lab()[0]).not.toBe(lightBg.lab()[0]);
-
-    const darkContrast = chroma.contrast(darkBg, adjustedDark);
-    const lightContrast = chroma.contrast(lightBg, adjustedLight);
-
-    expect(darkContrast).toBeGreaterThanOrEqual(4.5);
-    expect(lightContrast).toBeGreaterThanOrEqual(4.5);
   });
 });
 

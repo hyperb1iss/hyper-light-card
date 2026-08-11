@@ -1,40 +1,4 @@
-import chroma from 'chroma-js';
 import { html, type TemplateResult } from 'lit';
-
-/**
- * Ensures that the text color has sufficient contrast against the background color.
- * @param {chroma.Color} bgColor - The background color.
- * @param {chroma.Color} textColor - The initial text color.
- * @returns {chroma.Color} - The adjusted text color with sufficient contrast.
- */
-export function ensureContrastLab(bgColor: chroma.Color, textColor: chroma.Color): chroma.Color {
-  let adjustedColor = textColor;
-  let contrast = chroma.contrast(bgColor, adjustedColor);
-
-  const maxAttempts = 200;
-  let attempts = 0;
-  const step = 1; // Smaller step for finer adjustments
-
-  while (contrast < 4.5 && attempts < maxAttempts) {
-    if (bgColor.lab()[0] > 50) {
-      // For light backgrounds, decrease lightness
-      adjustedColor = adjustedColor.set('lab.l', Math.max(0, adjustedColor.lab()[0] - step));
-    } else {
-      // For dark backgrounds, increase lightness
-      adjustedColor = adjustedColor.set('lab.l', Math.min(100, adjustedColor.lab()[0] + step));
-    }
-    contrast = chroma.contrast(bgColor, adjustedColor);
-    attempts++;
-  }
-
-  if (contrast < 4.5) {
-    // If contrast is still insufficient, invert the lightness
-    adjustedColor = adjustedColor.set('lab.l', 100 - adjustedColor.lab()[0]);
-    contrast = chroma.contrast(bgColor, adjustedColor);
-  }
-
-  return adjustedColor;
-}
 
 /**
  * Gets accessible text colors based on the background color.
@@ -81,15 +45,6 @@ export function getAccessibleTextColors(rgb: number[]): number[] {
 }
 
 /**
- * Converts an array of RGB values to a CSS rgb() string.
- * @param {number[]} color - The RGB values.
- * @returns {string} - The CSS rgb() string.
- */
-export function getColor(color: number[]): string {
-  return `rgb(${color.join(',')})`;
-}
-
-/**
  * Formats an attribute key by capitalizing each word and replacing underscores with spaces.
  * @param {string} key - The attribute key.
  * @returns {string} - The formatted attribute key.
@@ -123,40 +78,6 @@ export function formatAttributeValue(
     default:
       return value.toString();
   }
-}
-
-/**
- * Memoizes a function to cache its results based on the arguments provided.
- * This can improve performance by avoiding repeated calculations for the same inputs.
- *
- * @param fn - The function to memoize.
- * @returns A new function that caches the results of the original function.
- */
-export function memoize<TArgs extends unknown[], TResult>(
-  fn: (...args: TArgs) => TResult
-): (...args: TArgs) => TResult {
-  // Create a cache to store the results of the function calls.
-  const cache = new Map<string, TResult>();
-
-  // Return a new function that wraps the original function.
-  return (...args: TArgs): TResult => {
-    // Create a key based on the arguments provided.
-    const key = JSON.stringify(args);
-
-    // If the result for these arguments is already in the cache, return it.
-    if (cache.has(key)) {
-      return cache.get(key) as TResult;
-    }
-
-    // Otherwise, call the original function with the arguments.
-    const result = fn(...args);
-
-    // Store the result in the cache.
-    cache.set(key, result);
-
-    // Return the result.
-    return result;
-  };
 }
 
 export function convertHABrightnessToCard(haBrightness: number): number {

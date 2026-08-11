@@ -94,27 +94,8 @@ export class StateManager {
       }
     }
 
-    const layouts = this._backend.layouts(ctx);
-    if (layouts) {
-      if (
-        this._state.currentLayout !== layouts.current ||
-        !arraysEqual(this._state.availableLayouts, layouts.options)
-      ) {
-        this._state.currentLayout = layouts.current;
-        this._state.availableLayouts = [...layouts.options];
-      }
-    }
-
-    const presets = this._backend.presets(ctx);
-    if (presets) {
-      if (
-        this._state.currentPreset !== presets.current ||
-        !arraysEqual(this._state.availablePresets, presets.options)
-      ) {
-        this._state.currentPreset = presets.current;
-        this._state.availablePresets = [...presets.options];
-      }
-    }
+    // Layout and preset are read straight off the backend view models at
+    // render time, so there is deliberately no mirrored copy here.
 
     const cfg = ctx.config;
     const visibilityChanged =
@@ -364,12 +345,4 @@ export class StateManager {
     }
     this._liveControlDebounce.clear();
   }
-}
-
-function arraysEqual<T>(a: T[], b: T[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
