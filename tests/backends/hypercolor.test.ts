@@ -197,6 +197,77 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.layout_entity).toBe('select.hyperia_layout');
   });
 
+  it('does not fall back to names when the registry answers but lacks the helper', () => {
+    // The registry is the authority. A miss means this hub has no layout
+    // select, so discovery must report nothing rather than reaching for a
+    // same-named entity that belongs to a different hub.
+    const hass = hassWith([
+      'light.hyperia',
+      'light.hyperia_living_room',
+      'light.hyperia_living',
+      'select.hyperia_living_layout',
+    ]);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      // The hub is present and registered, it simply exposes no layout select.
+      'light.hyperia': { device_id: 'hub' },
+      'light.hyperia_living_room': { device_id: 'child' },
+      'light.hyperia_living': { device_id: 'other_hub' },
+      'select.hyperia_living_layout': { device_id: 'other_hub' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+      child: { via_device_id: 'hub' },
+      other_hub: { via_device_id: null },
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.({
+      hass,
+      config: { entity: 'light.hyperia_living_room' } as Config,
+    }) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBeUndefined();
+  });
+
+  it('keeps name matching when the device registry is only half loaded', () => {
+    // `entities` knows the light but `devices` has not caught up. Treating the
+    // child device as a hub would return a one-entity set and, since the
+    // registry answer wins, suppress discovery entirely.
+    const hass = hassWith(['light.hyperia', 'select.hyperia_layout']);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hyperia': { device_id: 'hub' },
+      'select.hyperia_layout': { device_id: 'hub' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {};
+
+    const patch = hypercolorBackend.autoDiscover?.({
+      hass,
+      config: { entity: 'light.hyperia' } as Config,
+    }) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBe('select.hyperia_layout');
+  });
+
+  it('ignores an ambiguous suffix match within the hub', () => {
+    // Two same-device entities end in `_layout`; picking one would make the
+    // result depend on registry key order.
+    const hass = hassWith(['light.hyperia', 'select.custom_layout', 'select.spare_layout']);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hyperia': { device_id: 'hub' },
+      'select.custom_layout': { device_id: 'hub' },
+      'select.spare_layout': { device_id: 'hub' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+    };
+
+    const patch = hypercolorBackend.autoDiscover?.({
+      hass,
+      config: { entity: 'light.hyperia' } as Config,
+    }) as DiscoveredPatch;
+
+    expect(patch.layout_entity).toBeUndefined();
+  });
+
   it('lets a child card fall back to its own hub helpers', () => {
     // `light.hyperia_living_room` has no `select.hyperia_living_room_layout`,
     // so it must resolve its hub's `select.hyperia_layout` by trimming its own

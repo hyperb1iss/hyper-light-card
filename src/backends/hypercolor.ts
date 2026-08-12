@@ -317,21 +317,32 @@ export const hypercolorBackend: LightBackend = {
     const known = new Set(entities);
     const hubIds = hubEntityIds(ctx.hass, mainEntity);
 
-    // Prefer the device registry: it states which entities share this card's
-    // hub, which entity ids alone cannot. Two instances whose names overlap
-    // (a `hyperia_living` hub alongside `light.hyperia_living_room`) are
-    // indistinguishable by name, so name matching is only the fallback for
-    // when the frontend registries aren't populated.
+    // The device registry states which entities share this card's hub, which
+    // entity ids alone cannot: a `hyperia_living` hub and a
+    // `light.hyperia_living_room` belonging to a `hyperia` hub are
+    // indistinguishable by name. So when the registry answers, it is the only
+    // authority — falling through to name matching after a registry miss would
+    // reintroduce exactly the cross-hub binding it exists to prevent. A miss
+    // means the hub genuinely has no such helper.
     //
-    // In that fallback, exact ids only, and only against slugs derived from
-    // this card's own entity id. A prefix match would bind a collision-renamed
-    // neighbour such as `select.hyperia_layout_2`, and a hard-coded
-    // `hypercolor` fallback would let a Hyperia card adopt a different
-    // instance's helpers. Anything unusual stays configurable by hand.
+    // Name matching runs only when the registries aren't populated. There,
+    // exact ids only, against slugs derived from this card's own entity id: a
+    // prefix match would bind a collision-renamed neighbour such as
+    // `select.hyperia_layout_2`, and a hard-coded `hypercolor` fallback would
+    // let a Hyperia card adopt a different instance's helpers.
     const findOne = (domain: string, suffix: string) => {
       if (hubIds) {
-        const hit = hubIds.find(id => id.startsWith(`${domain}.`) && id.endsWith(`_${suffix}`));
-        if (hit) return hit;
+        for (const candidate of slugs) {
+          const id = `${domain}.${candidate}_${suffix}`;
+          if (hubIds.has(id)) return id;
+        }
+        // Renamed helpers no longer match the slug, so fall back to the
+        // suffix, but only when it is unambiguous. Two candidates would make
+        // the pick depend on registry key order.
+        const matches = [...hubIds].filter(
+          id => id.startsWith(`${domain}.`) && id.endsWith(`_${suffix}`)
+        );
+        return matches.length === 1 ? matches[0] : undefined;
       }
       for (const candidate of slugs) {
         const id = `${domain}.${candidate}_${suffix}`;
@@ -467,7 +478,7 @@ function liveControlLabel(id: string): string {
  * null when the registries aren't populated (they often aren't at first
  * paint), leaving the caller to fall back to name matching.
  */
-function hubEntityIds(hass: HomeAssistant, lightEntityId: string): string[] | null {
+function hubEntityIds(hass: HomeAssistant, lightEntityId: string): Set<string> | null {
   const registries = hass as unknown as {
     entities?: Record<string, { device_id?: string } | undefined>;
     devices?: Record<string, { via_device_id?: string | null } | undefined>;
@@ -477,9 +488,14 @@ function hubEntityIds(hass: HomeAssistant, lightEntityId: string): string[] | nu
   if (!entities || !devices) return null;
   const deviceId = entities[lightEntityId]?.device_id;
   if (!deviceId) return null;
-  const hubId = devices[deviceId]?.via_device_id ?? deviceId;
+  // A half-loaded registry that lacks this device would otherwise look like a
+  // root hub owning exactly one entity (the light), and because the registry
+  // answer is authoritative that would silently suppress all discovery.
+  const device = devices[deviceId];
+  if (!device) return null;
+  const hubId = device.via_device_id ?? deviceId;
   const ids = Object.keys(entities).filter(id => entities[id]?.device_id === hubId);
-  return ids.length > 0 ? ids : null;
+  return ids.length > 0 ? new Set(ids) : null;
 }
 
 /**

@@ -39,9 +39,7 @@ export class HyperLightCard extends LitElement {
   @state() private state: State;
   private stateManager: StateManager;
   private _clickOutsideHandler: (event: Event) => void;
-  private _hasScrolledToEffect = false;
-  private _hasScrolledToLayout = false;
-  private _hasScrolledToPreset = false;
+  private _scrolledDropdowns = new Set<string>();
   private _autoDiscovered = false;
 
   constructor() {
@@ -110,26 +108,26 @@ export class HyperLightCard extends LitElement {
       }
     }
 
-    if (this.state.isDropdownOpen && !this._hasScrolledToEffect) {
-      this._hasScrolledToEffect = true;
-      this._scrollDropdownToSelected('.effect-select-wrapper');
-    } else if (!this.state.isDropdownOpen) {
-      this._hasScrolledToEffect = false;
+    // Scroll each newly-opened list to its active row exactly once, and re-arm
+    // when it closes. Scene and profile were previously left out entirely.
+    for (const [isOpen, selector] of this._dropdownScrollTargets()) {
+      if (isOpen && !this._scrolledDropdowns.has(selector)) {
+        this._scrolledDropdowns.add(selector);
+        this._scrollDropdownToSelected(selector);
+      } else if (!isOpen) {
+        this._scrolledDropdowns.delete(selector);
+      }
     }
+  }
 
-    if (this.state.isLayoutDropdownOpen && !this._hasScrolledToLayout) {
-      this._hasScrolledToLayout = true;
-      this._scrollDropdownToSelected('.layout-select-wrapper');
-    } else if (!this.state.isLayoutDropdownOpen) {
-      this._hasScrolledToLayout = false;
-    }
-
-    if (this.state.isPresetDropdownOpen && !this._hasScrolledToPreset) {
-      this._hasScrolledToPreset = true;
-      this._scrollDropdownToSelected('.preset-select-wrapper');
-    } else if (!this.state.isPresetDropdownOpen) {
-      this._hasScrolledToPreset = false;
-    }
+  private _dropdownScrollTargets(): Array<[boolean, string]> {
+    return [
+      [this.state.isDropdownOpen, '.effect-select-wrapper'],
+      [this.state.isLayoutDropdownOpen, '.layout-select-wrapper'],
+      [this.state.isPresetDropdownOpen, '.preset-select-wrapper'],
+      [this.state.isSceneDropdownOpen, '.scene-select-wrapper'],
+      [this.state.isProfileDropdownOpen, '.profile-select-wrapper'],
+    ];
   }
 
   render() {
