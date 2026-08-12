@@ -131,8 +131,8 @@ describe('StateManager', () => {
       const slow = new Promise<typeof stale>(resolve => {
         releaseSlow = () => resolve(stale);
       });
-      vi.spyOn(ColorManager.prototype, 'extractColors').mockImplementation(
-        async (url: string) => (url.includes('slow') ? slow : fresh)
+      vi.spyOn(ColorManager.prototype, 'extractColors').mockImplementation(async (url: string) =>
+        url.includes('slow') ? slow : fresh
       );
 
       mockHass.states['light.test_light'].attributes.effect_image = 'http://a.test/slow.png';

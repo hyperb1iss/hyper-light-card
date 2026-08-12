@@ -344,6 +344,9 @@ export class StateManager {
       window.clearTimeout(this._brightnessDebounceTimer);
       this._brightnessDebounceTimer = undefined;
     }
+    // Drop the queued value too, so a later drag-end can't flush a brightness
+    // that was deliberately cancelled.
+    this._pendingBrightness = undefined;
     for (const handle of this._liveControlDebounce.values()) {
       window.clearTimeout(handle);
     }

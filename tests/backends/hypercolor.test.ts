@@ -162,7 +162,9 @@ describe('hypercolorBackend.autoDiscover', () => {
       config: { entity: 'light.hyperia' } as Config,
     };
 
-    expect((hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch).layout_entity).toBeUndefined();
+    expect(
+      (hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch).layout_entity
+    ).toBeUndefined();
   });
 
   it('uses the device registry to pick the right hub when names overlap', () => {
