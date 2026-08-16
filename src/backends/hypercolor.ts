@@ -375,7 +375,7 @@ export const hypercolorBackend: LightBackend = {
     }
 
     const configuredExtra = addenda(ctx.config);
-    const extra: HypercolorConfigAddenda = { ...configuredExtra };
+    const extra: HypercolorConfigAddenda = {};
     const discoverExtra = <K extends keyof HypercolorConfigAddenda>(
       key: K,
       domain: string,
@@ -399,12 +399,16 @@ export const hypercolorBackend: LightBackend = {
     const liveControls: Partial<Record<HypercolorLiveControlId, string>> = {
       ...configuredExtra.live_control_entities,
     };
+    let discoveredLiveControl = false;
     for (const id of LIVE_CONTROL_IDS) {
       if (liveControls[id] !== undefined) continue;
       const found = findOne('number', id);
-      if (found) liveControls[id] = found;
+      if (found) {
+        liveControls[id] = found;
+        discoveredLiveControl = true;
+      }
     }
-    if (Object.keys(liveControls).length > 0) extra.live_control_entities = liveControls;
+    if (discoveredLiveControl) extra.live_control_entities = liveControls;
 
     const isZoneLight = (id: string) => ctx.hass.states[id]?.attributes.zone_id != null;
     let childLights: string[];
@@ -419,16 +423,9 @@ export const hypercolorBackend: LightBackend = {
       );
       identifyButtons = [...registryScope.childEntityIds].filter(id => id.startsWith('button.'));
     } else {
-      const childPrefix = `${mainEntity}_`;
-      childLights = entities.filter(
-        id => id.startsWith(childPrefix) && id !== mainEntity && !isZoneLight(id)
-      );
-      zoneLights = entities.filter(id => id.startsWith(childPrefix) && isZoneLight(id));
-      identifyButtons = entities.filter(
-        id =>
-          slugs.some(candidate => id.startsWith(`button.${candidate}_identify_`)) ||
-          (id.startsWith('button.') && id.endsWith('_identify'))
-      );
+      childLights = [];
+      zoneLights = [];
+      identifyButtons = [];
     }
     if (configuredExtra.per_device_lights === undefined && childLights.length > 0) {
       extra.per_device_lights = childLights;
@@ -441,7 +438,7 @@ export const hypercolorBackend: LightBackend = {
     }
 
     if (Object.keys(extra).length > 0) {
-      patch.hypercolor = extra;
+      patch.hypercolor = { ...configuredExtra, ...extra };
     }
     return patch;
   },

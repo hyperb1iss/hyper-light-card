@@ -50,7 +50,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(hypercolorBackend.autoDiscover?.(ctx)).toEqual({});
   });
 
-  it('discovers core entities and per-device children for the root card', () => {
+  it('discovers core helpers before registries load', () => {
     const ctx = {
       hass: hassWith([
         'light.hypercolor',
@@ -76,10 +76,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.hypercolor?.live_control_entities?.brightness).toBe(
       'number.hypercolor_brightness'
     );
-    expect(patch.hypercolor?.per_device_lights).toEqual([
-      'light.hypercolor_living_room',
-      'light.hypercolor_living_room_lamp_1',
-    ]);
+    expect(patch.hypercolor?.per_device_lights).toBeUndefined();
   });
 
   it('discovers the product and instance namespace before registries load', () => {
@@ -343,26 +340,20 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.layout_entity).toBeUndefined();
   });
 
-  it('scopes per-device children to the configured group, not the whole install', () => {
+  it('does not infer topology from overlapping names before registries load', () => {
     const ctx = {
       hass: hassWith([
-        'light.hypercolor_living_room',
-        'light.hypercolor_living_room_lamp_1',
-        'light.hypercolor_living_room_lamp_2',
-        'light.hypercolor_kitchen',
-        'light.hypercolor_kitchen_strip_1',
+        'light.hypercolor_hyperia',
+        'light.hypercolor_hyperia_living',
+        'button.hypercolor_hyperia_living_identify',
       ]),
-      config: { entity: 'light.hypercolor_living_room' } as Config,
+      config: { entity: 'light.hypercolor_hyperia' } as Config,
     };
 
     const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
 
-    expect(patch.hypercolor?.per_device_lights).toEqual([
-      'light.hypercolor_living_room_lamp_1',
-      'light.hypercolor_living_room_lamp_2',
-    ]);
-    expect(patch.hypercolor?.per_device_lights).not.toContain('light.hypercolor_kitchen');
-    expect(patch.hypercolor?.per_device_lights).not.toContain('light.hypercolor_kitchen_strip_1');
+    expect(patch.hypercolor?.per_device_lights).toBeUndefined();
+    expect(patch.hypercolor?.per_device_identify_buttons).toBeUndefined();
   });
 
   it('returns no per-device entry when the group has no children', () => {
@@ -442,6 +433,18 @@ describe('hypercolorBackend.autoDiscover', () => {
       'switch.hypercolor_audio_reactive': {},
       'select.hypercolor_audio_device': {},
     });
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hypercolor': { device_id: 'hub' },
+      'light.hypercolor_studio': { device_id: 'studio' },
+      'light.hypercolor_main': { device_id: 'hub' },
+      'light.hypercolor_accent': { device_id: 'hub' },
+      'switch.hypercolor_audio_reactive': { device_id: 'hub' },
+      'select.hypercolor_audio_device': { device_id: 'hub' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+      studio: { via_device_id: 'hub' },
+    };
 
     const patch = hypercolorBackend.autoDiscover?.({
       hass,
@@ -467,6 +470,7 @@ describe('hypercolorBackend.autoDiscover', () => {
         'select.hypercolor_custom_scene',
         'number.hypercolor_brightness',
         'number.hypercolor_custom_brightness',
+        'button.hypercolor_stop_effect',
       ]),
       config: {
         entity: 'light.hypercolor',
@@ -487,6 +491,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.hypercolor?.live_control_entities?.brightness).toBe(
       'number.hypercolor_custom_brightness'
     );
+    expect(patch.hypercolor?.stop_effect_entity).toBe('button.hypercolor_stop_effect');
   });
 });
 

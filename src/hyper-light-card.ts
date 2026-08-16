@@ -41,6 +41,8 @@ export class HyperLightCard extends LitElement {
   private _clickOutsideHandler: (event: Event) => void;
   private _scrolledDropdowns = new Set<string>();
   private _autoDiscovered = false;
+  private _discoveryEntities: unknown;
+  private _discoveryDevices: unknown;
 
   constructor() {
     super();
@@ -61,6 +63,8 @@ export class HyperLightCard extends LitElement {
     }
 
     this._autoDiscovered = false;
+    this._discoveryEntities = undefined;
+    this._discoveryDevices = undefined;
 
     this.config = {
       name: config.name,
@@ -103,9 +107,7 @@ export class HyperLightCard extends LitElement {
 
     if (changedProperties.has('hass') && this.hass && this.config) {
       this.stateManager.hass = this.hass;
-      if (!this._autoDiscovered) {
-        this._runAutoDiscovery();
-      }
+      this._runAutoDiscovery();
     }
 
     // Scroll each newly-opened list to its active row exactly once, and re-arm
@@ -674,7 +676,7 @@ export class HyperLightCard extends LitElement {
   /**
    * Shared renderer for the compact selectors (layout, preset, scene,
    * profile). A selector whose entity exposes no options renders nothing at
-   * all rather than a dead "No X available" row — Hypercolor's preset entity
+   * all rather than a dead "No X available" row. Hypercolor's preset entity
    * legitimately has an empty option list for most effects, and a permanently
    * disabled control reads as breakage.
    */
@@ -933,7 +935,15 @@ export class HyperLightCard extends LitElement {
   }
 
   private _runAutoDiscovery() {
-    if (!this.hass || !this.config || this._autoDiscovered) return;
+    if (!this.hass || !this.config) return;
+    const registries = this.hass as unknown as { entities?: unknown; devices?: unknown };
+    if (
+      this._autoDiscovered &&
+      registries.entities === this._discoveryEntities &&
+      registries.devices === this._discoveryDevices
+    ) {
+      return;
+    }
     const ctx: BackendContext = { hass: this.hass, config: this.config };
     const patch = this.stateManager.backend.autoDiscover?.(ctx);
     if (patch && Object.keys(patch).length > 0) {
@@ -945,6 +955,8 @@ export class HyperLightCard extends LitElement {
       this.requestUpdate();
     }
     this._autoDiscovered = true;
+    this._discoveryEntities = registries.entities;
+    this._discoveryDevices = registries.devices;
   }
 
   private _scrollDropdownToSelected(wrapperSelector: string) {

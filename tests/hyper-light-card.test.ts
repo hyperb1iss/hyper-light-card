@@ -121,6 +121,59 @@ describe('HyperLightCard', () => {
     });
   });
 
+  describe('auto-discovery', () => {
+    it('retries when Home Assistant publishes its registries after first paint', async () => {
+      const states = {
+        'light.hypercolor_hyperia': {
+          entity_id: 'light.hypercolor_hyperia',
+          state: 'on',
+          attributes: { active_effect_id: 'aurora' },
+        },
+        'select.custom_layout': {
+          entity_id: 'select.custom_layout',
+          state: 'default',
+          attributes: { options: ['default'] },
+        },
+        'light.lamp': {
+          entity_id: 'light.lamp',
+          state: 'on',
+          attributes: { friendly_name: 'Lamp' },
+        },
+        'button.find_lamp': {
+          entity_id: 'button.find_lamp',
+          state: 'unknown',
+          attributes: {},
+        },
+      };
+      const firstPaint = { states, callService: vi.fn() } as unknown as HomeAssistant;
+      card.setConfig({ entity: 'light.hypercolor_hyperia', backend: 'hypercolor' });
+      card.hass = firstPaint;
+      card['_runAutoDiscovery']();
+
+      expect(card.config?.layout_entity).toBeUndefined();
+      expect(card.config?.hypercolor?.per_device_lights).toBeUndefined();
+
+      card.hass = {
+        ...firstPaint,
+        entities: {
+          'light.hypercolor_hyperia': { device_id: 'hub' },
+          'select.custom_layout': { device_id: 'hub' },
+          'light.lamp': { device_id: 'lamp' },
+          'button.find_lamp': { device_id: 'lamp' },
+        },
+        devices: {
+          hub: { via_device_id: null },
+          lamp: { via_device_id: 'hub' },
+        },
+      } as unknown as HomeAssistant;
+      await card.updateComplete;
+
+      expect(card.config?.layout_entity).toBe('select.custom_layout');
+      expect(card.config?.hypercolor?.per_device_lights).toEqual(['light.lamp']);
+      expect(card.config?.hypercolor?.per_device_identify_buttons).toEqual(['button.find_lamp']);
+    });
+  });
+
   describe('render', () => {
     it('renders without errors', () => {
       const renderResult = card.render();
