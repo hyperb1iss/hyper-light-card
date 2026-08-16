@@ -50,7 +50,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(hypercolorBackend.autoDiscover?.(ctx)).toEqual({});
   });
 
-  it('discovers core helpers before registries load', () => {
+  it('waits for registry roles even when helper names match', () => {
     const ctx = {
       hass: hassWith([
         'light.hypercolor',
@@ -66,36 +66,66 @@ describe('hypercolorBackend.autoDiscover', () => {
       config: { entity: 'light.hypercolor' } as Config,
     };
 
-    const patch = hypercolorBackend.autoDiscover?.(ctx) as DiscoveredPatch;
-
-    expect(patch.layout_entity).toBe('select.hypercolor_layout');
-    expect(patch.preset_entity).toBe('select.hypercolor_preset');
-    expect(patch.next_effect_entity).toBe('button.hypercolor_next_effect');
-    expect(patch.hypercolor?.fps_entity).toBe('sensor.hypercolor_fps');
-    expect(patch.hypercolor?.connected_entity).toBe('binary_sensor.hypercolor_connected');
-    expect(patch.hypercolor?.live_control_entities?.brightness).toBe(
-      'number.hypercolor_brightness'
-    );
-    expect(patch.hypercolor?.per_device_lights).toBeUndefined();
+    expect(hypercolorBackend.autoDiscover?.(ctx)).toEqual({});
   });
 
-  it('discovers the product and instance namespace before registries load', () => {
+  it('discovers the full hub surface from stable registry roles', () => {
+    const hass = hassWith([
+      'light.hypercolor_hyperia',
+      'select.hypercolor_hyperia_layout',
+      'select.hypercolor_hyperia_preset',
+      'select.hypercolor_hyperia_scene',
+      'button.hypercolor_hyperia_next_effect',
+      'button.hypercolor_hyperia_previous_effect',
+      'button.hypercolor_hyperia_random_effect',
+      'button.hypercolor_hyperia_stop_effect',
+      'sensor.hypercolor_hyperia_fps',
+      'binary_sensor.hypercolor_hyperia_connected',
+      'switch.hypercolor_hyperia_audio_reactive',
+      'number.hypercolor_hyperia_brightness',
+      'number.hypercolor_hyperia_speed',
+    ]);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hypercolor_hyperia': { device_id: 'hub' },
+      'select.hypercolor_hyperia_layout': { device_id: 'hub', translation_key: 'layout' },
+      'select.hypercolor_hyperia_preset': { device_id: 'hub', translation_key: 'preset' },
+      'select.hypercolor_hyperia_scene': { device_id: 'hub', translation_key: 'scene' },
+      'button.hypercolor_hyperia_next_effect': {
+        device_id: 'hub',
+        translation_key: 'next_effect',
+      },
+      'button.hypercolor_hyperia_previous_effect': {
+        device_id: 'hub',
+        translation_key: 'previous_effect',
+      },
+      'button.hypercolor_hyperia_random_effect': {
+        device_id: 'hub',
+        translation_key: 'random_effect',
+      },
+      'button.hypercolor_hyperia_stop_effect': {
+        device_id: 'hub',
+        translation_key: 'stop_effect',
+      },
+      'sensor.hypercolor_hyperia_fps': { device_id: 'hub', translation_key: 'fps' },
+      'binary_sensor.hypercolor_hyperia_connected': {
+        device_id: 'hub',
+        translation_key: 'connected',
+      },
+      'switch.hypercolor_hyperia_audio_reactive': {
+        device_id: 'hub',
+        translation_key: 'audio_reactive',
+      },
+      'number.hypercolor_hyperia_brightness': {
+        device_id: 'hub',
+        translation_key: 'brightness',
+      },
+      'number.hypercolor_hyperia_speed': { device_id: 'hub', translation_key: 'speed' },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+    };
     const ctx = {
-      hass: hassWith([
-        'light.hypercolor_hyperia',
-        'select.hypercolor_hyperia_layout',
-        'select.hypercolor_hyperia_preset',
-        'select.hypercolor_hyperia_scene',
-        'button.hypercolor_hyperia_next_effect',
-        'button.hypercolor_hyperia_previous_effect',
-        'button.hypercolor_hyperia_random_effect',
-        'button.hypercolor_hyperia_stop_effect',
-        'sensor.hypercolor_hyperia_fps',
-        'binary_sensor.hypercolor_hyperia_connected',
-        'switch.hypercolor_hyperia_audio_reactive',
-        'number.hypercolor_hyperia_brightness',
-        'number.hypercolor_hyperia_speed',
-      ]),
+      hass,
       config: { entity: 'light.hypercolor_hyperia' } as Config,
     };
 
@@ -136,12 +166,12 @@ describe('hypercolorBackend.autoDiscover', () => {
     hass.states['light.lamp'].attributes = { friendly_name: 'Lamp' };
     (hass as unknown as { entities: Record<string, unknown> }).entities = {
       'light.hypercolor_hyperia': { device_id: 'hub' },
-      'select.custom_layout': { device_id: 'hub' },
+      'select.custom_layout': { device_id: 'hub', translation_key: 'layout' },
       'light.hypercolor_hyperia_default_zone': { device_id: 'hub' },
       'light.lamp': { device_id: 'lamp' },
-      'button.find_lamp': { device_id: 'lamp' },
+      'button.find_lamp': { device_id: 'lamp', translation_key: 'identify' },
       'light.other_lamp': { device_id: 'other_lamp' },
-      'button.find_other_lamp': { device_id: 'other_lamp' },
+      'button.find_other_lamp': { device_id: 'other_lamp', translation_key: 'identify' },
     };
     (hass as unknown as { devices: Record<string, unknown> }).devices = {
       hub: { via_device_id: null },
@@ -230,10 +260,13 @@ describe('hypercolorBackend.autoDiscover', () => {
     ]);
     (hass as unknown as { entities: Record<string, unknown> }).entities = {
       'light.hypercolor_hyperia': { device_id: 'hub' },
-      'select.hypercolor_hyperia_layout': { device_id: 'hub' },
+      'select.hypercolor_hyperia_layout': { device_id: 'hub', translation_key: 'layout' },
       'light.hypercolor_hyperia_living_room': { device_id: 'child' },
       'light.hypercolor_hyperia_living': { device_id: 'other_hub' },
-      'select.hypercolor_hyperia_living_layout': { device_id: 'other_hub' },
+      'select.hypercolor_hyperia_living_layout': {
+        device_id: 'other_hub',
+        translation_key: 'layout',
+      },
     };
     (hass as unknown as { devices: Record<string, unknown> }).devices = {
       hub: { via_device_id: null },
@@ -280,7 +313,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     expect(patch.layout_entity).toBeUndefined();
   });
 
-  it('keeps name matching when the device registry is only half loaded', () => {
+  it('waits when the device registry is only half loaded', () => {
     // `entities` knows the light but `devices` has not caught up. Treating the
     // child device as a hub would return a one-entity set and, since the
     // registry answer wins, suppress discovery entirely.
@@ -296,7 +329,7 @@ describe('hypercolorBackend.autoDiscover', () => {
       config: { entity: 'light.hypercolor_hyperia' } as Config,
     }) as DiscoveredPatch;
 
-    expect(patch.layout_entity).toBe('select.hypercolor_hyperia_layout');
+    expect(patch.layout_entity).toBeUndefined();
   });
 
   it('ignores an ambiguous suffix match within the hub', () => {
@@ -309,8 +342,8 @@ describe('hypercolorBackend.autoDiscover', () => {
     ]);
     (hass as unknown as { entities: Record<string, unknown> }).entities = {
       'light.hypercolor_hyperia': { device_id: 'hub' },
-      'select.custom_layout': { device_id: 'hub' },
-      'select.spare_layout': { device_id: 'hub' },
+      'select.custom_layout': { device_id: 'hub', translation_key: 'layout' },
+      'select.spare_layout': { device_id: 'hub', translation_key: 'layout' },
     };
     (hass as unknown as { devices: Record<string, unknown> }).devices = {
       hub: { via_device_id: null },
@@ -438,8 +471,14 @@ describe('hypercolorBackend.autoDiscover', () => {
       'light.hypercolor_studio': { device_id: 'studio' },
       'light.hypercolor_main': { device_id: 'hub' },
       'light.hypercolor_accent': { device_id: 'hub' },
-      'switch.hypercolor_audio_reactive': { device_id: 'hub' },
-      'select.hypercolor_audio_device': { device_id: 'hub' },
+      'switch.hypercolor_audio_reactive': {
+        device_id: 'hub',
+        translation_key: 'audio_reactive',
+      },
+      'select.hypercolor_audio_device': {
+        device_id: 'hub',
+        translation_key: 'audio_device',
+      },
     };
     (hass as unknown as { devices: Record<string, unknown> }).devices = {
       hub: { via_device_id: null },
@@ -461,17 +500,28 @@ describe('hypercolorBackend.autoDiscover', () => {
   });
 
   it('does not overwrite explicitly configured entities', () => {
+    const hass = hassWith([
+      'light.hypercolor',
+      'select.hypercolor_layout',
+      'select.hypercolor_custom_layout',
+      'select.hypercolor_scene',
+      'select.hypercolor_custom_scene',
+      'number.hypercolor_brightness',
+      'number.hypercolor_custom_brightness',
+      'button.hypercolor_stop_effect',
+    ]);
+    (hass as unknown as { entities: Record<string, unknown> }).entities = {
+      'light.hypercolor': { device_id: 'hub' },
+      'button.hypercolor_stop_effect': {
+        device_id: 'hub',
+        translation_key: 'stop_effect',
+      },
+    };
+    (hass as unknown as { devices: Record<string, unknown> }).devices = {
+      hub: { via_device_id: null },
+    };
     const ctx = {
-      hass: hassWith([
-        'light.hypercolor',
-        'select.hypercolor_layout',
-        'select.hypercolor_custom_layout',
-        'select.hypercolor_scene',
-        'select.hypercolor_custom_scene',
-        'number.hypercolor_brightness',
-        'number.hypercolor_custom_brightness',
-        'button.hypercolor_stop_effect',
-      ]),
+      hass,
       config: {
         entity: 'light.hypercolor',
         layout_entity: 'select.hypercolor_custom_layout',

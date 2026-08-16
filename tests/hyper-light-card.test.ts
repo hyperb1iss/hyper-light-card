@@ -157,9 +157,9 @@ describe('HyperLightCard', () => {
         ...firstPaint,
         entities: {
           'light.hypercolor_hyperia': { device_id: 'hub' },
-          'select.custom_layout': { device_id: 'hub' },
+          'select.custom_layout': { device_id: 'hub', translation_key: 'layout' },
           'light.lamp': { device_id: 'lamp' },
-          'button.find_lamp': { device_id: 'lamp' },
+          'button.find_lamp': { device_id: 'lamp', translation_key: 'identify' },
         },
         devices: {
           hub: { via_device_id: null },
@@ -171,6 +171,49 @@ describe('HyperLightCard', () => {
       expect(card.config?.layout_entity).toBe('select.custom_layout');
       expect(card.config?.hypercolor?.per_device_lights).toEqual(['light.lamp']);
       expect(card.config?.hypercolor?.per_device_identify_buttons).toEqual(['button.find_lamp']);
+
+      card.hass = {
+        ...firstPaint,
+        states: {
+          ...states,
+          'select.spatial_picker': {
+            entity_id: 'select.spatial_picker',
+            state: 'default',
+            attributes: { options: ['default'] },
+          },
+          'light.new_strip': {
+            entity_id: 'light.new_strip',
+            state: 'on',
+            attributes: { friendly_name: 'New strip' },
+          },
+          'button.locate_strip': {
+            entity_id: 'button.locate_strip',
+            state: 'unknown',
+            attributes: {},
+          },
+        },
+        entities: {
+          'light.hypercolor_hyperia': { device_id: 'hub' },
+          'select.spatial_picker': { device_id: 'hub', translation_key: 'layout' },
+          'light.lamp': { device_id: 'lamp' },
+          'button.find_lamp': { device_id: 'lamp', translation_key: 'identify' },
+          'light.new_strip': { device_id: 'strip' },
+          'button.locate_strip': { device_id: 'strip', translation_key: 'identify' },
+        },
+        devices: {
+          hub: { via_device_id: null },
+          lamp: { via_device_id: 'hub' },
+          strip: { via_device_id: 'hub' },
+        },
+      } as unknown as HomeAssistant;
+      await card.updateComplete;
+
+      expect(card.config?.layout_entity).toBe('select.spatial_picker');
+      expect(card.config?.hypercolor?.per_device_lights).toEqual(['light.lamp', 'light.new_strip']);
+      expect(card.config?.hypercolor?.per_device_identify_buttons).toEqual([
+        'button.find_lamp',
+        'button.locate_strip',
+      ]);
     });
   });
 

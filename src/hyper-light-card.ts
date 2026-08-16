@@ -38,6 +38,7 @@ export class HyperLightCard extends LitElement {
   @property({ type: Object }) config?: Config;
   @state() private state: State;
   private stateManager: StateManager;
+  private _sourceConfig?: Config;
   private _clickOutsideHandler: (event: Event) => void;
   private _scrolledDropdowns = new Set<string>();
   private _autoDiscovered = false;
@@ -66,7 +67,7 @@ export class HyperLightCard extends LitElement {
     this._discoveryEntities = undefined;
     this._discoveryDevices = undefined;
 
-    this.config = {
+    this._sourceConfig = {
       name: config.name,
       // Icon defaults are backend-specific; describeCard fills in the
       // right one when the user has not supplied an explicit override.
@@ -86,6 +87,7 @@ export class HyperLightCard extends LitElement {
       random_effect_entity: config.random_effect_entity,
       ...config,
     };
+    this.config = this._sourceConfig;
     this.stateManager.cleanup();
     this.stateManager = new StateManager(this.config, this.state);
   }
@@ -935,7 +937,7 @@ export class HyperLightCard extends LitElement {
   }
 
   private _runAutoDiscovery() {
-    if (!this.hass || !this.config) return;
+    if (!this.hass || !this.config || !this._sourceConfig) return;
     const registries = this.hass as unknown as { entities?: unknown; devices?: unknown };
     if (
       this._autoDiscovered &&
@@ -944,10 +946,17 @@ export class HyperLightCard extends LitElement {
     ) {
       return;
     }
-    const ctx: BackendContext = { hass: this.hass, config: this.config };
+    const ctx: BackendContext = { hass: this.hass, config: this._sourceConfig };
     const patch = this.stateManager.backend.autoDiscover?.(ctx);
-    if (patch && Object.keys(patch).length > 0) {
-      this.config = { ...this.config, ...patch };
+    const nextConfig: Config = {
+      ...this._sourceConfig,
+      ...patch,
+      hypercolor: patch?.hypercolor
+        ? { ...this._sourceConfig.hypercolor, ...patch.hypercolor }
+        : this._sourceConfig.hypercolor,
+    };
+    if (JSON.stringify(nextConfig) !== JSON.stringify(this.config)) {
+      this.config = nextConfig;
       this.stateManager.cleanup();
       this.stateManager = new StateManager(this.config, this.state);
       this.stateManager.hass = this.hass;

@@ -314,41 +314,18 @@ export const hypercolorBackend: LightBackend = {
   autoDiscover(ctx) {
     const mainEntity = ctx.config.entity;
     if (!mainEntity?.startsWith('light.')) return {};
-    const entities = Object.keys(ctx.hass.states);
 
-    const slugs = instanceSlugs(mainEntity);
-    const known = new Set(entities);
     const registryScope = hypercolorRegistryScope(ctx.hass, mainEntity);
-    const hubIds = registryScope?.hubEntityIds ?? null;
+    if (!registryScope) return {};
 
-    // The device registry states which entities share this card's hub, which
-    // entity ids alone cannot. When the registry answers, it is the only
-    // authority. Falling through to name matching after a registry miss would
-    // reintroduce cross-hub binding. A miss means the hub has no such helper.
-    //
-    // Name matching runs only when the registries aren't populated. There,
-    // exact ids only, against slugs derived from this card's own entity id: a
-    // prefix match would bind a collision-renamed neighbour, and a hard-coded
-    // fallback would let one instance adopt another instance's helpers.
+    // The device registry is the authority for hub membership. Entity ids can
+    // be renamed and can collide across integrations, so discovery never
+    // infers ownership from a name.
     const findOne = (domain: string, suffix: string) => {
-      if (hubIds) {
-        for (const candidate of slugs) {
-          const id = `${domain}.${candidate}_${suffix}`;
-          if (hubIds.has(id)) return id;
-        }
-        // Renamed helpers no longer match the slug, so fall back to the
-        // suffix, but only when it is unambiguous. Two candidates would make
-        // the pick depend on registry key order.
-        const matches = [...hubIds].filter(
-          id => id.startsWith(`${domain}.`) && id.endsWith(`_${suffix}`)
-        );
-        return matches.length === 1 ? matches[0] : undefined;
-      }
-      for (const candidate of slugs) {
-        const id = `${domain}.${candidate}_${suffix}`;
-        if (known.has(id)) return id;
-      }
-      return undefined;
+      const matches = [...registryScope.hubEntities].flatMap(([id, entity]) =>
+        id.startsWith(`${domain}.`) && entity.translation_key === suffix ? [id] : []
+      );
+      return matches.length === 1 ? matches[0] : undefined;
     };
 
     const patch: Partial<Config> = {};
@@ -411,22 +388,15 @@ export const hypercolorBackend: LightBackend = {
     if (discoveredLiveControl) extra.live_control_entities = liveControls;
 
     const isZoneLight = (id: string) => ctx.hass.states[id]?.attributes.zone_id != null;
-    let childLights: string[];
-    let zoneLights: string[];
-    let identifyButtons: string[];
-    if (registryScope) {
-      childLights = [...registryScope.childEntityIds].filter(
-        id => id.startsWith('light.') && id !== mainEntity && !isZoneLight(id)
-      );
-      zoneLights = [...registryScope.hubEntityIds].filter(
-        id => id.startsWith('light.') && id !== mainEntity && isZoneLight(id)
-      );
-      identifyButtons = [...registryScope.childEntityIds].filter(id => id.startsWith('button.'));
-    } else {
-      childLights = [];
-      zoneLights = [];
-      identifyButtons = [];
-    }
+    const childLights = [...registryScope.childEntities.keys()].filter(
+      id => id.startsWith('light.') && id !== mainEntity && !isZoneLight(id)
+    );
+    const zoneLights = [...registryScope.hubEntities.keys()].filter(
+      id => id.startsWith('light.') && id !== mainEntity && isZoneLight(id)
+    );
+    const identifyButtons = [...registryScope.childEntities].flatMap(([id, entity]) =>
+      id.startsWith('button.') && entity.translation_key === 'identify' ? [id] : []
+    );
     if (configuredExtra.per_device_lights === undefined && childLights.length > 0) {
       extra.per_device_lights = childLights;
     }
@@ -488,9 +458,12 @@ function liveControlLabel(id: string): string {
 function hypercolorRegistryScope(
   hass: HomeAssistant,
   lightEntityId: string
-): { hubEntityIds: Set<string>; childEntityIds: Set<string> } | null {
+): {
+  hubEntities: Map<string, HypercolorRegistryEntity>;
+  childEntities: Map<string, HypercolorRegistryEntity>;
+} | null {
   const registries = hass as unknown as {
-    entities?: Record<string, { device_id?: string } | undefined>;
+    entities?: Record<string, HypercolorRegistryEntity | undefined>;
     devices?: Record<string, { via_device_id?: string | null } | undefined>;
   };
   const entities = registries.entities;
@@ -509,19 +482,24 @@ function hypercolorRegistryScope(
       candidate?.via_device_id === hubId ? [id] : []
     )
   );
-  const hubEntityIds = new Set<string>();
-  const childEntityIds = new Set<string>();
+  const hubEntities = new Map<string, HypercolorRegistryEntity>();
+  const childEntities = new Map<string, HypercolorRegistryEntity>();
   for (const [id, entity] of Object.entries(entities)) {
-    if (entity?.device_id === hubId) hubEntityIds.add(id);
-    if (entity?.device_id && childDeviceIds.has(entity.device_id)) childEntityIds.add(id);
+    if (!entity) continue;
+    if (entity.device_id === hubId) hubEntities.set(id, entity);
+    if (entity.device_id && childDeviceIds.has(entity.device_id)) childEntities.set(id, entity);
   }
-  return hubEntityIds.size > 0 ? { hubEntityIds, childEntityIds } : null;
+  return hubEntities.size > 0 ? { hubEntities, childEntities } : null;
+}
+
+interface HypercolorRegistryEntity {
+  device_id?: string;
+  translation_key?: string | null;
 }
 
 /**
- * The complete entity slug used for name matching before Home Assistant's
- * registries are populated. Partial prefixes are never candidates because
- * they can belong to another Hypercolor instance.
+ * The complete master slug used only to match manually configured Identify
+ * buttons when Home Assistant's registries are unavailable.
  */
 function instanceSlugs(entityId: string): string[] {
   return [entityId.slice('light.'.length)];
