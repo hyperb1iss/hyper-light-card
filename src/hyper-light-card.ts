@@ -27,7 +27,7 @@ import { HyperLightCardEditor } from './hyper-light-card-editor';
 import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
-import { formatAttributeKey, formatAttributeValue } from './utils';
+import { formatAttributeKey, formatAttributeValue, structurallyEqual } from './utils';
 
 if (!customElements.get('hyper-light-card-editor')) {
   customElements.define('hyper-light-card-editor', HyperLightCardEditor);
@@ -955,7 +955,7 @@ export class HyperLightCard extends LitElement {
         ? { ...this._sourceConfig.hypercolor, ...patch.hypercolor }
         : this._sourceConfig.hypercolor,
     };
-    if (JSON.stringify(nextConfig) !== JSON.stringify(this.config)) {
+    if (!structurallyEqual(nextConfig, this.config)) {
       this.config = nextConfig;
       this.stateManager.cleanup();
       this.stateManager = new StateManager(this.config, this.state);

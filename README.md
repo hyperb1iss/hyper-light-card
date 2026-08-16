@@ -235,8 +235,9 @@ for those.
 
 #### Hypercolor helper entities
 
-All of these live under the `hypercolor:` key and are auto-discovered from your
-instance name. Set one only when you need to override discovery.
+All of these live under the `hypercolor:` key and are auto-discovered from Home
+Assistant's device and entity registries. Set one only when you need to override
+discovery.
 
 | Option                         | Type     | Description                                             |
 | ------------------------------ | -------- | ------------------------------------------------------- |
@@ -302,9 +303,10 @@ Detection uses attributes the Hypercolor light publishes (`effect_controls`,
 not expose them yet. Set `backend: hypercolor` to pin it.
 
 **Companion entities aren't discovered.**
-Discovery derives sibling names from the entity you configure, so it expects
-`select.<instance>_layout` next to `light.<instance>`. If you have renamed
-entity IDs away from that pattern, wire them explicitly under `hypercolor:`.
+Discovery waits for Home Assistant's device and entity registries, so helpers
+may appear after the card's first paint. A helper attached to a different device
+cannot be associated with the Hypercolor hub automatically. Pin that helper
+explicitly under `hypercolor:`.
 
 ## 👩‍💻 Development
 

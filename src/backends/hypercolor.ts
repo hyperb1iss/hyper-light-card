@@ -387,13 +387,14 @@ export const hypercolorBackend: LightBackend = {
     }
     if (discoveredLiveControl) extra.live_control_entities = liveControls;
 
-    const isZoneLight = (id: string) => ctx.hass.states[id]?.attributes.zone_id != null;
     const childLights = [...registryScope.childEntities.keys()].filter(
-      id => id.startsWith('light.') && id !== mainEntity && !isZoneLight(id)
+      id => id.startsWith('light.') && id !== mainEntity
     );
-    const zoneLights = [...registryScope.hubEntities.keys()].filter(
-      id => id.startsWith('light.') && id !== mainEntity && isZoneLight(id)
-    );
+    const zoneLights = registryScope.hubEntities.has(mainEntity)
+      ? [...registryScope.hubEntities.keys()].filter(
+          id => id.startsWith('light.') && id !== mainEntity
+        )
+      : [];
     const identifyButtons = [...registryScope.childEntities].flatMap(([id, entity]) =>
       id.startsWith('button.') && entity.translation_key === 'identify' ? [id] : []
     );
@@ -462,12 +463,7 @@ function hypercolorRegistryScope(
   hubEntities: Map<string, HypercolorRegistryEntity>;
   childEntities: Map<string, HypercolorRegistryEntity>;
 } | null {
-  const registries = hass as unknown as {
-    entities?: Record<string, HypercolorRegistryEntity | undefined>;
-    devices?: Record<string, { via_device_id?: string | null } | undefined>;
-  };
-  const entities = registries.entities;
-  const devices = registries.devices;
+  const { entities, devices } = hypercolorRegistries(hass);
   if (!entities || !devices) return null;
   const deviceId = entities[lightEntityId]?.device_id;
   if (!deviceId) return null;
@@ -493,8 +489,25 @@ function hypercolorRegistryScope(
 }
 
 interface HypercolorRegistryEntity {
+  config_entry_id?: string;
   device_id?: string;
   translation_key?: string | null;
+}
+
+interface HypercolorRegistryDevice {
+  config_entries?: string[];
+  primary_config_entry?: string;
+  via_device_id?: string | null;
+}
+
+function hypercolorRegistries(hass: HomeAssistant): {
+  entities?: Record<string, HypercolorRegistryEntity | undefined>;
+  devices?: Record<string, HypercolorRegistryDevice | undefined>;
+} {
+  return hass as unknown as {
+    entities?: Record<string, HypercolorRegistryEntity | undefined>;
+    devices?: Record<string, HypercolorRegistryDevice | undefined>;
+  };
 }
 
 /**
@@ -529,11 +542,7 @@ function siblingEntityOnDevice(
   entityId: string,
   candidates: string[]
 ): string | null | undefined {
-  const entities = (
-    hass as unknown as {
-      entities?: Record<string, { device_id?: string } | undefined>;
-    }
-  ).entities;
+  const { entities } = hypercolorRegistries(hass);
   if (!entities) return undefined;
   const deviceId = entities[entityId]?.device_id;
   if (!deviceId) return undefined;
@@ -788,18 +797,12 @@ function colorToHex(value: unknown): string {
  * caller degrades gracefully (the control simply won't commit via service).
  */
 function configEntryId(hass: HomeAssistant, entityId: string): string | undefined {
-  const registries = hass as unknown as {
-    entities?: Record<string, { config_entry_id?: string; device_id?: string } | undefined>;
-    devices?: Record<
-      string,
-      { primary_config_entry?: string; config_entries?: string[] } | undefined
-    >;
-  };
-  const entity = registries.entities?.[entityId];
+  const { entities, devices } = hypercolorRegistries(hass);
+  const entity = entities?.[entityId];
   if (entity?.config_entry_id) return entity.config_entry_id;
   const deviceId = entity?.device_id;
   if (deviceId) {
-    const device = registries.devices?.[deviceId];
+    const device = devices?.[deviceId];
     return device?.primary_config_entry ?? device?.config_entries?.[0];
   }
   return undefined;

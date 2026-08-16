@@ -1,7 +1,12 @@
 import chroma from 'chroma-js';
 import { render } from 'lit';
 import { describe, expect, test } from 'vitest';
-import { formatAttributeKey, formatAttributeValue, getAccessibleTextColors } from '@/utils';
+import {
+  formatAttributeKey,
+  formatAttributeValue,
+  getAccessibleTextColors,
+  structurallyEqual,
+} from '@/utils';
 
 describe('getAccessibleTextColors', () => {
   test.each([
@@ -49,5 +54,18 @@ describe('Formatting Functions', () => {
     expect(renderedHTML).toBe('<span style="color: #ff0000;">#ff0000</span>');
 
     expect(formatAttributeValue('Single Color', 'combobox')).toBe('Single Color');
+  });
+
+  test('structurallyEqual ignores object key order without dropping undefined fields', () => {
+    expect(
+      structurallyEqual(
+        { hypercolor: { zone_lights: ['light.zone'] }, layout_entity: 'select.layout' },
+        { layout_entity: 'select.layout', hypercolor: { zone_lights: ['light.zone'] } }
+      )
+    ).toBe(true);
+    expect(structurallyEqual({ layout_entity: undefined }, {})).toBe(false);
+    expect(structurallyEqual(new Date(0), new Date(1))).toBe(false);
+    expect(structurallyEqual(new Map([['zone', 1]]), new Map([['zone', 2]]))).toBe(false);
+    expect(structurallyEqual(/zone/, /device/)).toBe(false);
   });
 });

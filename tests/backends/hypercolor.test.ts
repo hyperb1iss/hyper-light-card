@@ -153,15 +153,11 @@ describe('hypercolorBackend.autoDiscover', () => {
     const hass = hassWith([
       'light.hypercolor_hyperia',
       'select.custom_layout',
-      'light.hypercolor_hyperia_default_zone',
       'light.lamp',
       'button.find_lamp',
       'light.other_lamp',
       'button.find_other_lamp',
     ]);
-    hass.states['light.hypercolor_hyperia_default_zone'].attributes = {
-      zone_id: 'zone_default',
-    };
     hass.states['light.lamp'].state = 'on';
     hass.states['light.lamp'].attributes = { friendly_name: 'Lamp' };
     (hass as unknown as { entities: Record<string, unknown> }).entities = {
@@ -280,6 +276,7 @@ describe('hypercolorBackend.autoDiscover', () => {
     }) as DiscoveredPatch;
 
     expect(patch.layout_entity).toBe('select.hypercolor_hyperia_layout');
+    expect(patch.hypercolor?.zone_lights).toBeUndefined();
   });
 
   it('does not fall back to names when the registry answers but lacks the helper', () => {
