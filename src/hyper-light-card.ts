@@ -27,7 +27,7 @@ import { HyperLightCardEditor } from './hyper-light-card-editor';
 import styleText from './hyper-light-card-styles.css?inline';
 import { State } from './state';
 import { StateManager } from './state-manager';
-import { formatAttributeKey, formatAttributeValue } from './utils';
+import { formatAttributeKey, formatAttributeValue, structurallyEqual } from './utils';
 
 if (!customElements.get('hyper-light-card-editor')) {
   customElements.define('hyper-light-card-editor', HyperLightCardEditor);
@@ -38,9 +38,12 @@ export class HyperLightCard extends LitElement {
   @property({ type: Object }) config?: Config;
   @state() private state: State;
   private stateManager: StateManager;
+  private _sourceConfig?: Config;
   private _clickOutsideHandler: (event: Event) => void;
   private _scrolledDropdowns = new Set<string>();
   private _autoDiscovered = false;
+  private _discoveryEntities: unknown;
+  private _discoveryDevices: unknown;
 
   constructor() {
     super();
@@ -61,8 +64,10 @@ export class HyperLightCard extends LitElement {
     }
 
     this._autoDiscovered = false;
+    this._discoveryEntities = undefined;
+    this._discoveryDevices = undefined;
 
-    this.config = {
+    this._sourceConfig = {
       name: config.name,
       // Icon defaults are backend-specific; describeCard fills in the
       // right one when the user has not supplied an explicit override.
@@ -82,6 +87,7 @@ export class HyperLightCard extends LitElement {
       random_effect_entity: config.random_effect_entity,
       ...config,
     };
+    this.config = this._sourceConfig;
     this.stateManager.cleanup();
     this.stateManager = new StateManager(this.config, this.state);
   }
@@ -103,9 +109,7 @@ export class HyperLightCard extends LitElement {
 
     if (changedProperties.has('hass') && this.hass && this.config) {
       this.stateManager.hass = this.hass;
-      if (!this._autoDiscovered) {
-        this._runAutoDiscovery();
-      }
+      this._runAutoDiscovery();
     }
 
     // Scroll each newly-opened list to its active row exactly once, and re-arm
@@ -674,7 +678,7 @@ export class HyperLightCard extends LitElement {
   /**
    * Shared renderer for the compact selectors (layout, preset, scene,
    * profile). A selector whose entity exposes no options renders nothing at
-   * all rather than a dead "No X available" row — Hypercolor's preset entity
+   * all rather than a dead "No X available" row. Hypercolor's preset entity
    * legitimately has an empty option list for most effects, and a permanently
    * disabled control reads as breakage.
    */
@@ -933,11 +937,26 @@ export class HyperLightCard extends LitElement {
   }
 
   private _runAutoDiscovery() {
-    if (!this.hass || !this.config || this._autoDiscovered) return;
-    const ctx: BackendContext = { hass: this.hass, config: this.config };
+    if (!this.hass || !this.config || !this._sourceConfig) return;
+    const registries = this.hass as unknown as { entities?: unknown; devices?: unknown };
+    if (
+      this._autoDiscovered &&
+      registries.entities === this._discoveryEntities &&
+      registries.devices === this._discoveryDevices
+    ) {
+      return;
+    }
+    const ctx: BackendContext = { hass: this.hass, config: this._sourceConfig };
     const patch = this.stateManager.backend.autoDiscover?.(ctx);
-    if (patch && Object.keys(patch).length > 0) {
-      this.config = { ...this.config, ...patch };
+    const nextConfig: Config = {
+      ...this._sourceConfig,
+      ...patch,
+      hypercolor: patch?.hypercolor
+        ? { ...this._sourceConfig.hypercolor, ...patch.hypercolor }
+        : this._sourceConfig.hypercolor,
+    };
+    if (!structurallyEqual(nextConfig, this.config)) {
+      this.config = nextConfig;
       this.stateManager.cleanup();
       this.stateManager = new StateManager(this.config, this.state);
       this.stateManager.hass = this.hass;
@@ -945,6 +964,8 @@ export class HyperLightCard extends LitElement {
       this.requestUpdate();
     }
     this._autoDiscovered = true;
+    this._discoveryEntities = registries.entities;
+    this._discoveryDevices = registries.devices;
   }
 
   private _scrollDropdownToSelected(wrapperSelector: string) {

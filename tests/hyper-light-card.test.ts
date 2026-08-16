@@ -121,6 +121,102 @@ describe('HyperLightCard', () => {
     });
   });
 
+  describe('auto-discovery', () => {
+    it('retries when Home Assistant publishes its registries after first paint', async () => {
+      const states = {
+        'light.hypercolor_hyperia': {
+          entity_id: 'light.hypercolor_hyperia',
+          state: 'on',
+          attributes: { active_effect_id: 'aurora' },
+        },
+        'select.custom_layout': {
+          entity_id: 'select.custom_layout',
+          state: 'default',
+          attributes: { options: ['default'] },
+        },
+        'light.lamp': {
+          entity_id: 'light.lamp',
+          state: 'on',
+          attributes: { friendly_name: 'Lamp' },
+        },
+        'button.find_lamp': {
+          entity_id: 'button.find_lamp',
+          state: 'unknown',
+          attributes: {},
+        },
+      };
+      const firstPaint = { states, callService: vi.fn() } as unknown as HomeAssistant;
+      card.setConfig({ entity: 'light.hypercolor_hyperia', backend: 'hypercolor' });
+      card.hass = firstPaint;
+      card['_runAutoDiscovery']();
+
+      expect(card.config?.layout_entity).toBeUndefined();
+      expect(card.config?.hypercolor?.per_device_lights).toBeUndefined();
+
+      card.hass = {
+        ...firstPaint,
+        entities: {
+          'light.hypercolor_hyperia': { device_id: 'hub' },
+          'select.custom_layout': { device_id: 'hub', translation_key: 'layout' },
+          'light.lamp': { device_id: 'lamp' },
+          'button.find_lamp': { device_id: 'lamp', translation_key: 'identify' },
+        },
+        devices: {
+          hub: { via_device_id: null },
+          lamp: { via_device_id: 'hub' },
+        },
+      } as unknown as HomeAssistant;
+      await card.updateComplete;
+
+      expect(card.config?.layout_entity).toBe('select.custom_layout');
+      expect(card.config?.hypercolor?.per_device_lights).toEqual(['light.lamp']);
+      expect(card.config?.hypercolor?.per_device_identify_buttons).toEqual(['button.find_lamp']);
+
+      card.hass = {
+        ...firstPaint,
+        states: {
+          ...states,
+          'select.spatial_picker': {
+            entity_id: 'select.spatial_picker',
+            state: 'default',
+            attributes: { options: ['default'] },
+          },
+          'light.new_strip': {
+            entity_id: 'light.new_strip',
+            state: 'on',
+            attributes: { friendly_name: 'New strip' },
+          },
+          'button.locate_strip': {
+            entity_id: 'button.locate_strip',
+            state: 'unknown',
+            attributes: {},
+          },
+        },
+        entities: {
+          'light.hypercolor_hyperia': { device_id: 'hub' },
+          'select.spatial_picker': { device_id: 'hub', translation_key: 'layout' },
+          'light.lamp': { device_id: 'lamp' },
+          'button.find_lamp': { device_id: 'lamp', translation_key: 'identify' },
+          'light.new_strip': { device_id: 'strip' },
+          'button.locate_strip': { device_id: 'strip', translation_key: 'identify' },
+        },
+        devices: {
+          hub: { via_device_id: null },
+          lamp: { via_device_id: 'hub' },
+          strip: { via_device_id: 'hub' },
+        },
+      } as unknown as HomeAssistant;
+      await card.updateComplete;
+
+      expect(card.config?.layout_entity).toBe('select.spatial_picker');
+      expect(card.config?.hypercolor?.per_device_lights).toEqual(['light.lamp', 'light.new_strip']);
+      expect(card.config?.hypercolor?.per_device_identify_buttons).toEqual([
+        'button.find_lamp',
+        'button.locate_strip',
+      ]);
+    });
+  });
+
   describe('render', () => {
     it('renders without errors', () => {
       const renderResult = card.render();

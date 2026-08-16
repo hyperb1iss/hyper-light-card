@@ -10,10 +10,10 @@ const REGISTRY: Record<BackendId, LightBackend> = {
 };
 
 /**
- * Attributes only Hypercolor's light entity publishes. The integration names
- * entities after the daemon instance (`light.hyperia`, not
- * `light.hypercolor_*`), so an entity-id prefix alone cannot identify it and
- * these are the reliable signature.
+ * Attributes only Hypercolor's light entity publishes. Home Assistant lets
+ * users rename entity ids, so the default `light.hypercolor_*` namespace is
+ * not sufficient on its own and these attributes remain the reliable
+ * signature.
  */
 const HYPERCOLOR_ATTRIBUTES = ['effect_controls', 'active_effect_id', 'zone_count'] as const;
 

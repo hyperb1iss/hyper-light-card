@@ -88,6 +88,32 @@ export function convertCardBrightnessToHA(cardBrightness: number): number {
   return Math.round((cardBrightness / 100) * 252) + 3;
 }
 
+export function structurallyEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+    return left.every((value, index) => structurallyEqual(value, right[index]));
+  }
+  if (left === null || right === null || typeof left !== 'object' || typeof right !== 'object') {
+    return false;
+  }
+  if (!isPlainRecord(left) || !isPlainRecord(right)) return false;
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every(
+    key => Object.hasOwn(right, key) && structurallyEqual(left[key], right[key])
+  );
+}
+
+function isPlainRecord(value: object): value is Record<string, unknown> {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 // Logging utility
 // This will be replaced at build time with a literal true/false by vite's define plugin
 declare const __IS_LOGGING_ENABLED__: boolean;
