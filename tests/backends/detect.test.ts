@@ -17,15 +17,13 @@ describe('detectBackend', () => {
   });
 
   it('detects hypercolor from its attribute signature regardless of entity name', () => {
-    // The integration names the light after the daemon instance, so the entity
-    // id carries no "hypercolor" marker to key off.
-    const hass = hassWith('light.hyperia', {
+    const hass = hassWith('light.rgb_queen', {
       effect: 'Borealis',
       effect_image: 'http://hyperia.local:7777/cover.png',
       effect_controls: [{ id: 'speed', kind: 'number', min: 0, max: 100, value: 50 }],
       active_effect_id: 'borealis',
     });
-    expect(detectBackend(hass, { entity: 'light.hyperia' } as Config).id).toBe('hypercolor');
+    expect(detectBackend(hass, { entity: 'light.rgb_queen' } as Config).id).toBe('hypercolor');
   });
 
   it('still detects hypercolor from the default entity prefix', () => {

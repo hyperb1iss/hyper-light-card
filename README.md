@@ -127,14 +127,15 @@ allowed_effects:
 
 ### Hypercolor example
 
-The Hypercolor integration names its entities after the **daemon instance**, not
-after the integration. A daemon called `Hyperia` produces `light.hyperia`
-alongside `select.hyperia_layout`, `button.hyperia_next_effect`, and so on. Use
-whatever your own instance is called:
+The Hypercolor integration namespaces each hub with the product and daemon
+instance name. A daemon called `Hyperia` appears as **Hypercolor Hyperia** and
+produces `light.hypercolor_hyperia` alongside
+`select.hypercolor_hyperia_layout`, `button.hypercolor_hyperia_next_effect`,
+and the rest of its hub entities:
 
 ```yaml
 type: custom:hyper-light-card
-entity: light.hyperia
+entity: light.hypercolor_hyperia
 name: 'Living Room'
 show_status_chips: true
 show_live_controls: true
@@ -146,43 +147,42 @@ show_per_device: false
 background_opacity: 0.7
 ```
 
-> Companion entities (scene/preset/layout selects, live-control numbers, audio
-> switch/device selects, status sensors, scene-zone lights, and per-device
-> children) are auto-discovered by deriving the sibling name from the entity you
-> configure. Point the card at `light.hyperia` and it finds the `hyperia_*`
-> helpers on its own. Effect description, publisher, tags, and the full control
-> set are read straight from the master light's attributes (published by
-> hypercolor-hass), so the info panel and controls populate automatically.
+> Companion entities are auto-discovered through Home Assistant's device and
+> entity registries. Hub controls, scene zones, and physical child devices stay
+> attached to the correct Hypercolor instance even when their entity ids are
+> renamed. Effect description, publisher, tags, and the full control set come
+> from the master light's attributes, so the info panel and controls populate
+> automatically.
 
 Discovery only fills in options you haven't set, so any helper that lives
 somewhere unexpected can be pinned by hand under `hypercolor`:
 
 ```yaml
 type: custom:hyper-light-card
-entity: light.hyperia
+entity: light.hypercolor_hyperia
 backend: hypercolor
 hypercolor:
-  scene_entity: select.hyperia_scene
-  profile_entity: select.hyperia_profile
-  stop_effect_entity: button.hyperia_stop_effect
-  fps_entity: sensor.hyperia_fps
-  connected_entity: binary_sensor.hyperia_connected
-  audio_beat_entity: binary_sensor.hyperia_audio_beat
-  audio_reactive_active_entity: binary_sensor.hyperia_audio_reactive_active
-  audio_energy_entity: sensor.hyperia_audio_energy
-  audio_reactive_switch_entity: switch.hyperia_audio_reactive
-  audio_device_entity: select.hyperia_audio_device
+  scene_entity: select.hypercolor_hyperia_scene
+  profile_entity: select.hypercolor_hyperia_profile
+  stop_effect_entity: button.hypercolor_hyperia_stop_effect
+  fps_entity: sensor.hypercolor_hyperia_fps
+  connected_entity: binary_sensor.hypercolor_hyperia_connected
+  audio_beat_entity: binary_sensor.hypercolor_hyperia_audio_beat
+  audio_reactive_active_entity: binary_sensor.hypercolor_hyperia_audio_reactive_active
+  audio_energy_entity: sensor.hypercolor_hyperia_audio_energy
+  audio_reactive_switch_entity: switch.hypercolor_hyperia_audio_reactive
+  audio_device_entity: select.hypercolor_hyperia_audio_device
   live_control_entities:
-    brightness: number.hyperia_brightness
-    speed: number.hyperia_speed
-    hue_shift: number.hyperia_hue_shift
-    intensity: number.hyperia_intensity
+    brightness: number.hypercolor_hyperia_brightness
+    speed: number.hypercolor_hyperia_speed
+    hue_shift: number.hypercolor_hyperia_hue_shift
+    intensity: number.hypercolor_hyperia_intensity
   zone_lights:
-    - light.hyperia_default_zone
+    - light.hypercolor_hyperia_default_zone
   per_device_lights:
-    - light.hyperia_lamp_1
+    - light.lamp_1
   per_device_identify_buttons:
-    - button.hyperia_identify_lamp_1
+    - button.lamp_1_identify
 ```
 
 ### Configuration Options

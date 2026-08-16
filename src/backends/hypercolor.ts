@@ -194,9 +194,12 @@ export const hypercolorBackend: LightBackend = {
       const stateObj = ctx.hass.states[entityId];
       if (!stateObj) return [];
       const haBrightness = stateObj.attributes.brightness;
-      // Find an identify button under the same device_id slug pattern.
       const slug = entityId.replace(/^light\./, '');
-      const identifyEntity = identifyEntityFor(slug, slugs, identifyButtons);
+      const registryIdentify = siblingEntityOnDevice(ctx.hass, entityId, identifyButtons);
+      const identifyEntity =
+        registryIdentify === undefined
+          ? identifyEntityFor(slug, slugs, identifyButtons)
+          : registryIdentify;
       return [
         {
           id: stateObj.entity_id,
@@ -315,21 +318,18 @@ export const hypercolorBackend: LightBackend = {
 
     const slugs = instanceSlugs(mainEntity);
     const known = new Set(entities);
-    const hubIds = hubEntityIds(ctx.hass, mainEntity);
+    const registryScope = hypercolorRegistryScope(ctx.hass, mainEntity);
+    const hubIds = registryScope?.hubEntityIds ?? null;
 
     // The device registry states which entities share this card's hub, which
-    // entity ids alone cannot: a `hyperia_living` hub and a
-    // `light.hyperia_living_room` belonging to a `hyperia` hub are
-    // indistinguishable by name. So when the registry answers, it is the only
-    // authority — falling through to name matching after a registry miss would
-    // reintroduce exactly the cross-hub binding it exists to prevent. A miss
-    // means the hub genuinely has no such helper.
+    // entity ids alone cannot. When the registry answers, it is the only
+    // authority. Falling through to name matching after a registry miss would
+    // reintroduce cross-hub binding. A miss means the hub has no such helper.
     //
     // Name matching runs only when the registries aren't populated. There,
     // exact ids only, against slugs derived from this card's own entity id: a
-    // prefix match would bind a collision-renamed neighbour such as
-    // `select.hyperia_layout_2`, and a hard-coded `hypercolor` fallback would
-    // let a Hyperia card adopt a different instance's helpers.
+    // prefix match would bind a collision-renamed neighbour, and a hard-coded
+    // fallback would let one instance adopt another instance's helpers.
     const findOne = (domain: string, suffix: string) => {
       if (hubIds) {
         for (const candidate of slugs) {
@@ -374,58 +374,71 @@ export const hypercolorBackend: LightBackend = {
       if (found) patch.random_effect_entity = found;
     }
 
-    const extra: HypercolorConfigAddenda = {};
-    const scene = findOne('select', 'scene');
-    if (scene) extra.scene_entity = scene;
-    const profile = findOne('select', 'profile');
-    if (profile) extra.profile_entity = profile;
-    const stop = findOne('button', 'stop_effect');
-    if (stop) extra.stop_effect_entity = stop;
-    const fps = findOne('sensor', 'fps');
-    if (fps) extra.fps_entity = fps;
-    const connected = findOne('binary_sensor', 'connected');
-    if (connected) extra.connected_entity = connected;
-    const beat = findOne('binary_sensor', 'audio_beat');
-    if (beat) extra.audio_beat_entity = beat;
-    const reactive = findOne('binary_sensor', 'audio_reactive_active');
-    if (reactive) extra.audio_reactive_active_entity = reactive;
-    const energy = findOne('sensor', 'audio_energy');
-    if (energy) extra.audio_energy_entity = energy;
-    const audioReactiveSwitch = findOne('switch', 'audio_reactive');
-    if (audioReactiveSwitch) extra.audio_reactive_switch_entity = audioReactiveSwitch;
-    const audioDevice = findOne('select', 'audio_device');
-    if (audioDevice) extra.audio_device_entity = audioDevice;
+    const configuredExtra = addenda(ctx.config);
+    const extra: HypercolorConfigAddenda = { ...configuredExtra };
+    const discoverExtra = <K extends keyof HypercolorConfigAddenda>(
+      key: K,
+      domain: string,
+      suffix: string
+    ) => {
+      if (configuredExtra[key] !== undefined) return;
+      const found = findOne(domain, suffix);
+      if (found) extra[key] = found as HypercolorConfigAddenda[K];
+    };
+    discoverExtra('scene_entity', 'select', 'scene');
+    discoverExtra('profile_entity', 'select', 'profile');
+    discoverExtra('stop_effect_entity', 'button', 'stop_effect');
+    discoverExtra('fps_entity', 'sensor', 'fps');
+    discoverExtra('connected_entity', 'binary_sensor', 'connected');
+    discoverExtra('audio_beat_entity', 'binary_sensor', 'audio_beat');
+    discoverExtra('audio_reactive_active_entity', 'binary_sensor', 'audio_reactive_active');
+    discoverExtra('audio_energy_entity', 'sensor', 'audio_energy');
+    discoverExtra('audio_reactive_switch_entity', 'switch', 'audio_reactive');
+    discoverExtra('audio_device_entity', 'select', 'audio_device');
 
-    const liveControls: Partial<Record<HypercolorLiveControlId, string>> = {};
+    const liveControls: Partial<Record<HypercolorLiveControlId, string>> = {
+      ...configuredExtra.live_control_entities,
+    };
     for (const id of LIVE_CONTROL_IDS) {
+      if (liveControls[id] !== undefined) continue;
       const found = findOne('number', id);
       if (found) liveControls[id] = found;
     }
     if (Object.keys(liveControls).length > 0) extra.live_control_entities = liveControls;
 
-    // Scope per-device discovery to the card's own group. A non-root card
-    // must not pick up children from unrelated groups; only a root hub card
-    // sees every light under its own prefix.
-    const childPrefix = `${mainEntity}_`;
-    // Zone lights share the hub prefix but carry a `zone_id` attribute; they
-    // are scene render-groups, not physical devices, so split them out and
-    // keep them from polluting the per-device drilldown.
     const isZoneLight = (id: string) => ctx.hass.states[id]?.attributes.zone_id != null;
-    const childLights = entities.filter(
-      id => id.startsWith(childPrefix) && id !== mainEntity && !isZoneLight(id)
-    );
-    const zoneLights = entities.filter(id => id.startsWith(childPrefix) && isZoneLight(id));
-    // Identify buttons appear as `button.<instance>_identify_<device>` for
-    // hub-managed children, plus the conventional `<device>_identify` pattern
-    // HA generates from `_attr_name = "Identify"` on a child entity.
-    const identifyButtons = entities.filter(
-      id =>
-        slugs.some(candidate => id.startsWith(`button.${candidate}_identify_`)) ||
-        (id.startsWith('button.') && id.endsWith('_identify'))
-    );
-    if (childLights.length > 0) extra.per_device_lights = childLights;
-    if (zoneLights.length > 0) extra.zone_lights = zoneLights;
-    if (identifyButtons.length > 0) extra.per_device_identify_buttons = identifyButtons;
+    let childLights: string[];
+    let zoneLights: string[];
+    let identifyButtons: string[];
+    if (registryScope) {
+      childLights = [...registryScope.childEntityIds].filter(
+        id => id.startsWith('light.') && id !== mainEntity && !isZoneLight(id)
+      );
+      zoneLights = [...registryScope.hubEntityIds].filter(
+        id => id.startsWith('light.') && id !== mainEntity && isZoneLight(id)
+      );
+      identifyButtons = [...registryScope.childEntityIds].filter(id => id.startsWith('button.'));
+    } else {
+      const childPrefix = `${mainEntity}_`;
+      childLights = entities.filter(
+        id => id.startsWith(childPrefix) && id !== mainEntity && !isZoneLight(id)
+      );
+      zoneLights = entities.filter(id => id.startsWith(childPrefix) && isZoneLight(id));
+      identifyButtons = entities.filter(
+        id =>
+          slugs.some(candidate => id.startsWith(`button.${candidate}_identify_`)) ||
+          (id.startsWith('button.') && id.endsWith('_identify'))
+      );
+    }
+    if (configuredExtra.per_device_lights === undefined && childLights.length > 0) {
+      extra.per_device_lights = childLights;
+    }
+    if (configuredExtra.zone_lights === undefined && zoneLights.length > 0) {
+      extra.zone_lights = zoneLights;
+    }
+    if (configuredExtra.per_device_identify_buttons === undefined && identifyButtons.length > 0) {
+      extra.per_device_identify_buttons = identifyButtons;
+    }
 
     if (Object.keys(extra).length > 0) {
       patch.hypercolor = extra;
@@ -472,13 +485,13 @@ function liveControlLabel(id: string): string {
 }
 
 /**
- * Entity ids that share the card light's Hypercolor hub, via the Home
- * Assistant device registry. Child lights sit on their own device linked to
- * the hub by `via_device_id`, so walk up one level before collecting. Returns
- * null when the registries aren't populated (they often aren't at first
- * paint), leaving the caller to fall back to name matching.
+ * Entity ids attached to the card light's Hypercolor hub and child devices.
+ * Returns null while Home Assistant's registries are not fully populated.
  */
-function hubEntityIds(hass: HomeAssistant, lightEntityId: string): Set<string> | null {
+function hypercolorRegistryScope(
+  hass: HomeAssistant,
+  lightEntityId: string
+): { hubEntityIds: Set<string>; childEntityIds: Set<string> } | null {
   const registries = hass as unknown as {
     entities?: Record<string, { device_id?: string } | undefined>;
     devices?: Record<string, { via_device_id?: string | null } | undefined>;
@@ -494,24 +507,27 @@ function hubEntityIds(hass: HomeAssistant, lightEntityId: string): Set<string> |
   const device = devices[deviceId];
   if (!device) return null;
   const hubId = device.via_device_id ?? deviceId;
-  const ids = Object.keys(entities).filter(id => entities[id]?.device_id === hubId);
-  return ids.length > 0 ? new Set(ids) : null;
+  const childDeviceIds = new Set(
+    Object.entries(devices).flatMap(([id, candidate]) =>
+      candidate?.via_device_id === hubId ? [id] : []
+    )
+  );
+  const hubEntityIds = new Set<string>();
+  const childEntityIds = new Set<string>();
+  for (const [id, entity] of Object.entries(entities)) {
+    if (entity?.device_id === hubId) hubEntityIds.add(id);
+    if (entity?.device_id && childDeviceIds.has(entity.device_id)) childEntityIds.add(id);
+  }
+  return hubEntityIds.size > 0 ? { hubEntityIds, childEntityIds } : null;
 }
 
 /**
- * Instance-slug candidates for a light entity, longest first: `light.hyperia`
- * yields `[hyperia]`, and a child card `light.hyperia_living_room` yields
- * `[hyperia_living_room, hyperia_living, hyperia]` so it can still reach its
- * own hub's helpers. Every candidate is a prefix of the card's own entity id,
- * so discovery can never wander into a differently-named instance.
+ * The complete entity slug used for name matching before Home Assistant's
+ * registries are populated. Partial prefixes are never candidates because
+ * they can belong to another Hypercolor instance.
  */
 function instanceSlugs(entityId: string): string[] {
-  const parts = entityId.slice('light.'.length).split('_');
-  const slugs: string[] = [];
-  for (let i = parts.length; i > 0; i--) {
-    slugs.push(parts.slice(0, i).join('_'));
-  }
-  return slugs;
+  return [entityId.slice('light.'.length)];
 }
 
 function identifyEntityFor(
@@ -531,6 +547,23 @@ function identifyEntityFor(
     candidates.add(`button.${short}_identify`);
   }
   return identifyButtons.find(id => candidates.has(id)) ?? null;
+}
+
+function siblingEntityOnDevice(
+  hass: HomeAssistant,
+  entityId: string,
+  candidates: string[]
+): string | null | undefined {
+  const entities = (
+    hass as unknown as {
+      entities?: Record<string, { device_id?: string } | undefined>;
+    }
+  ).entities;
+  if (!entities) return undefined;
+  const deviceId = entities[entityId]?.device_id;
+  if (!deviceId) return undefined;
+  const matches = candidates.filter(candidate => entities[candidate]?.device_id === deviceId);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function readSelectModel(hass: HomeAssistant, entityId?: string): SelectModel | null {
@@ -576,7 +609,7 @@ function liveControlsFromAttribute(ctx: BackendContext): LiveControlModel[] {
   const stateObj = ctx.hass.states[ctx.config.entity];
   const raw = stateObj?.attributes.effect_controls;
   if (!Array.isArray(raw)) return [];
-  // Controls inherit the master light's availability — a stale attribute on an
+  // Controls inherit the master light's availability. A stale attribute on an
   // unavailable light must not render as interactive.
   const available = stateObj
     ? stateObj.state !== 'unavailable' && stateObj.state !== 'unknown'
