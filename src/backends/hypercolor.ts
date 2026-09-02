@@ -89,10 +89,6 @@ export const hypercolorBackend: LightBackend = {
     return readSelectModel(ctx.hass, addenda(ctx.config).scene_entity);
   },
 
-  profiles(ctx) {
-    return readSelectModel(ctx.hass, addenda(ctx.config).profile_entity);
-  },
-
   navigation(ctx) {
     const extra = addenda(ctx.config);
     return {
@@ -255,12 +251,6 @@ export const hypercolorBackend: LightBackend = {
     await ctx.hass.callService('select', 'select_option', { entity_id: entityId, option: value });
   },
 
-  async setProfile(ctx, value) {
-    const entityId = addenda(ctx.config).profile_entity;
-    if (!entityId) return;
-    await ctx.hass.callService('select', 'select_option', { entity_id: entityId, option: value });
-  },
-
   async setLiveControl(ctx, id, value) {
     const entityId = addenda(ctx.config).live_control_entities?.[id as HypercolorLiveControlId];
     // The four canonical controls have smooth `number.*` entities; use them so
@@ -363,7 +353,6 @@ export const hypercolorBackend: LightBackend = {
       if (found) extra[key] = found as HypercolorConfigAddenda[K];
     };
     discoverExtra('scene_entity', 'select', 'scene');
-    discoverExtra('profile_entity', 'select', 'profile');
     discoverExtra('stop_effect_entity', 'button', 'stop_effect');
     discoverExtra('fps_entity', 'sensor', 'fps');
     discoverExtra('connected_entity', 'binary_sensor', 'connected');
@@ -431,7 +420,6 @@ export const hypercolorBackend: LightBackend = {
       show_preset_select: true,
       show_effect_controls: true,
       show_scene_select: true,
-      show_profile_select: false,
       show_live_controls: true,
       show_status_chips: true,
       show_per_device: false,
@@ -550,12 +538,22 @@ function siblingEntityOnDevice(
   return matches.length === 1 ? matches[0] : null;
 }
 
+/**
+ * A select whose entity reports `unknown` or `unavailable` has no current
+ * option. Home Assistant uses those sentinel states when `current_option`
+ * is None, and they must not leak into the header as literal text.
+ */
+function selectCurrent(state: string | undefined): string {
+  if (!state || state === 'unknown' || state === 'unavailable') return '';
+  return state;
+}
+
 function readSelectModel(hass: HomeAssistant, entityId?: string): SelectModel | null {
   if (!entityId) return null;
   const stateObj = hass.states[entityId];
   if (!stateObj) return { current: '', options: [], available: false };
   return {
-    current: stateObj.state ?? '',
+    current: selectCurrent(stateObj.state),
     options: Array.isArray(stateObj.attributes.options)
       ? (stateObj.attributes.options as string[])
       : [],

@@ -21,7 +21,6 @@ export class State implements ReactiveController {
   private _showPresetSelect = true;
 
   private _isSceneDropdownOpen = false;
-  private _isProfileDropdownOpen = false;
 
   // Effect navigation controls
   private _showEffectControls = true;
@@ -183,15 +182,6 @@ export class State implements ReactiveController {
 
   set isSceneDropdownOpen(value: boolean) {
     this._isSceneDropdownOpen = value;
-    this._host.requestUpdate();
-  }
-
-  get isProfileDropdownOpen() {
-    return this._isProfileDropdownOpen;
-  }
-
-  set isProfileDropdownOpen(value: boolean) {
-    this._isProfileDropdownOpen = value;
     this._host.requestUpdate();
   }
 }

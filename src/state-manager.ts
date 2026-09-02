@@ -148,27 +148,18 @@ export class StateManager {
     }
   }
 
-  toggleProfileDropdown() {
-    this._state.isProfileDropdownOpen = !this._state.isProfileDropdownOpen;
-    if (this._state.isProfileDropdownOpen) {
-      this._closeOtherDropdowns('profile');
-    }
-  }
-
   closeAllDropdowns() {
     this._state.isDropdownOpen = false;
     this._state.isLayoutDropdownOpen = false;
     this._state.isPresetDropdownOpen = false;
     this._state.isSceneDropdownOpen = false;
-    this._state.isProfileDropdownOpen = false;
   }
 
-  private _closeOtherDropdowns(keep: 'effect' | 'layout' | 'preset' | 'scene' | 'profile') {
+  private _closeOtherDropdowns(keep: 'effect' | 'layout' | 'preset' | 'scene') {
     if (keep !== 'effect') this._state.isDropdownOpen = false;
     if (keep !== 'layout') this._state.isLayoutDropdownOpen = false;
     if (keep !== 'preset') this._state.isPresetDropdownOpen = false;
     if (keep !== 'scene') this._state.isSceneDropdownOpen = false;
-    if (keep !== 'profile') this._state.isProfileDropdownOpen = false;
   }
 
   async setScene(value: string) {
@@ -176,13 +167,6 @@ export class StateManager {
     if (!ctx) return;
     await this._backend.setScene?.(ctx, value);
     this._state.isSceneDropdownOpen = false;
-  }
-
-  async setProfile(value: string) {
-    const ctx = this._ctx;
-    if (!ctx) return;
-    await this._backend.setProfile?.(ctx, value);
-    this._state.isProfileDropdownOpen = false;
   }
 
   /**

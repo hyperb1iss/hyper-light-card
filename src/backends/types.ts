@@ -152,7 +152,7 @@ export interface ZoneModel {
  * (SignalRGB, Hypercolor, future ones) behind view models. Render code
  * consumes the view models and never reads `stateObj.attributes` directly.
  *
- * Optional methods (`scenes`, `profiles`, `liveControls`, etc.) signal that
+ * Optional methods (`scenes`, `liveControls`, etc.) signal that
  * the backend exposes a richer surface; the card gates UI accordingly.
  */
 export interface LightBackend {
@@ -166,7 +166,6 @@ export interface LightBackend {
   layouts(ctx: BackendContext): SelectModel | null;
   presets(ctx: BackendContext): SelectModel | null;
   scenes?(ctx: BackendContext): SelectModel | null;
-  profiles?(ctx: BackendContext): SelectModel | null;
 
   navigation(ctx: BackendContext): NavigationModel;
   liveControls?(ctx: BackendContext): LiveControlModel[];
@@ -183,7 +182,6 @@ export interface LightBackend {
   setLayout(ctx: BackendContext, value: string): Promise<void>;
   setPreset(ctx: BackendContext, value: string): Promise<void>;
   setScene?(ctx: BackendContext, value: string): Promise<void>;
-  setProfile?(ctx: BackendContext, value: string): Promise<void>;
   setLiveControl?(ctx: BackendContext, id: string, value: number | string | boolean): Promise<void>;
   /** Toggle audio-reactive processing on/off. */
   setAudioReactive?(ctx: BackendContext, on: boolean): Promise<void>;
