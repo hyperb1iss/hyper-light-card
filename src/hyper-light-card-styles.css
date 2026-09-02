@@ -1018,15 +1018,13 @@ ha-switch {
   cursor: not-allowed;
 }
 
-/* Scene + profile selector wrappers reuse the existing dropdown styles */
-.scene-select-wrapper,
-.profile-select-wrapper {
+/* The scene selector wrapper reuses the existing dropdown styles */
+.scene-select-wrapper {
   position: relative;
   z-index: 5;
 }
 
-.scene-select-wrapper .dropdown-header,
-.profile-select-wrapper .dropdown-header {
+.scene-select-wrapper .dropdown-header {
   border-width: 1px;
   padding: 6px 10px;
   background-color: rgba(var(--background-color-rgb, 255, 255, 255), 0.5);

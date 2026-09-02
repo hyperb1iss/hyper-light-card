@@ -47,7 +47,6 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
       show_preset_select: true,
       show_effect_controls: true,
       show_scene_select: true,
-      show_profile_select: false,
       show_live_controls: true,
       show_status_chips: true,
       show_per_device: false,
@@ -152,7 +151,6 @@ function buildSchema(
   const hypercolorVisibilitySchema: FormSchemaEntry[] = isHypercolor
     ? [
         { name: 'show_scene_select', selector: { boolean: {} } },
-        { name: 'show_profile_select', selector: { boolean: {} } },
         { name: 'show_live_controls', selector: { boolean: {} } },
         { name: 'show_audio_controls', selector: { boolean: {} } },
         { name: 'show_zones', selector: { boolean: {} } },
@@ -220,7 +218,6 @@ const LABELS: Record<string, string> = {
   show_preset_select: 'Show preset selector',
   show_effect_controls: 'Show effect navigation',
   show_scene_select: 'Show scene selector',
-  show_profile_select: 'Show profile selector',
   show_live_controls: 'Show live effect controls',
   show_audio_controls: 'Show audio controls (reactive toggle, input device)',
   show_zones: 'Show scene zones',

@@ -113,7 +113,7 @@ export class HyperLightCard extends LitElement {
     }
 
     // Scroll each newly-opened list to its active row exactly once, and re-arm
-    // when it closes. Scene and profile were previously left out entirely.
+    // when it closes.
     for (const [isOpen, selector] of this._dropdownScrollTargets()) {
       if (isOpen && !this._scrolledDropdowns.has(selector)) {
         this._scrolledDropdowns.add(selector);
@@ -130,7 +130,6 @@ export class HyperLightCard extends LitElement {
       [this.state.isLayoutDropdownOpen, '.layout-select-wrapper'],
       [this.state.isPresetDropdownOpen, '.preset-select-wrapper'],
       [this.state.isSceneDropdownOpen, '.scene-select-wrapper'],
-      [this.state.isProfileDropdownOpen, '.profile-select-wrapper'],
     ];
   }
 
@@ -156,7 +155,6 @@ export class HyperLightCard extends LitElement {
     const layouts = backend.layouts(ctx);
     const presets = backend.presets(ctx);
     const scenes = backend.scenes?.(ctx) ?? null;
-    const profiles = backend.profiles?.(ctx) ?? null;
     const navigation = backend.navigation(ctx);
     const liveControls = backend.liveControls?.(ctx) ?? [];
     const connectivity = backend.connectivity?.(ctx) ?? null;
@@ -168,7 +166,6 @@ export class HyperLightCard extends LitElement {
 
     const showStatusChips = this.config.show_status_chips !== false;
     const showSceneSelect = this.config.show_scene_select !== false && scenes !== null;
-    const showProfileSelect = this.config.show_profile_select === true && profiles !== null;
     const showLiveControls = this.config.show_live_controls !== false && liveControls.length > 0;
     const showAudioControls = this.config.show_audio_controls !== false && audioControls !== null;
     const showPerDevice = this.config.show_per_device === true && devices.length > 0;
@@ -193,10 +190,8 @@ export class HyperLightCard extends LitElement {
           ${this.state.showEffectParameters
             ? this._renderAttributes(effect, layouts, presets, {
                 scenes,
-                profiles,
                 liveControls,
                 showSceneSelect,
-                showProfileSelect,
                 showLiveControls,
               })
             : ''}
@@ -336,7 +331,7 @@ export class HyperLightCard extends LitElement {
   /**
    * One dropdown row. Every selector renders through this so selection
    * highlighting, keyboard activation, and ARIA stay identical across the
-   * effect, layout, preset, scene, and profile pickers.
+   * effect, layout, preset, and scene pickers.
    */
   private _renderDropdownItem(label: string, selected: boolean, activate: () => void) {
     return html`
@@ -502,10 +497,8 @@ export class HyperLightCard extends LitElement {
     presets: SelectModel | null,
     extras: {
       scenes: SelectModel | null;
-      profiles: SelectModel | null;
       liveControls: LiveControlModel[];
       showSceneSelect: boolean;
-      showProfileSelect: boolean;
       showLiveControls: boolean;
     }
   ) {
@@ -513,17 +506,8 @@ export class HyperLightCard extends LitElement {
     const hasLayouts = Boolean(layouts?.options.length) && this.state.showLayoutSelect;
     const hasPresets = Boolean(presets?.options.length) && this.state.showPresetSelect;
     const hasScenes = extras.scenes && extras.scenes.options.length > 0 && extras.showSceneSelect;
-    const hasProfiles =
-      extras.profiles && extras.profiles.options.length > 0 && extras.showProfileSelect;
     const hasLiveControls = extras.showLiveControls && extras.liveControls.length > 0;
-    if (
-      !hasParameters &&
-      !hasLayouts &&
-      !hasPresets &&
-      !hasScenes &&
-      !hasProfiles &&
-      !hasLiveControls
-    ) {
+    if (!hasParameters && !hasLayouts && !hasPresets && !hasScenes && !hasLiveControls) {
       return html``;
     }
 
@@ -533,8 +517,7 @@ export class HyperLightCard extends LitElement {
     const nestedDropdownOpen =
       this.state.isLayoutDropdownOpen ||
       this.state.isPresetDropdownOpen ||
-      this.state.isSceneDropdownOpen ||
-      this.state.isProfileDropdownOpen;
+      this.state.isSceneDropdownOpen;
 
     return html`
       <div
@@ -547,7 +530,6 @@ export class HyperLightCard extends LitElement {
           <div class="attributes-selectors">
             ${this._renderLayoutSelect(layouts)} ${this._renderPresetSelect(presets)}
             ${hasScenes ? this._renderSceneSelect(extras.scenes!) : ''}
-            ${hasProfiles ? this._renderProfileSelect(extras.profiles!) : ''}
           </div>
           ${hasLiveControls
             ? this._renderLiveControls(extras.liveControls)
@@ -676,14 +658,14 @@ export class HyperLightCard extends LitElement {
   }
 
   /**
-   * Shared renderer for the compact selectors (layout, preset, scene,
-   * profile). A selector whose entity exposes no options renders nothing at
+   * Shared renderer for the compact selectors (layout, preset, scene).
+   * A selector whose entity exposes no options renders nothing at
    * all rather than a dead "No X available" row. Hypercolor's preset entity
    * legitimately has an empty option list for most effects, and a permanently
    * disabled control reads as breakage.
    */
   private _renderSelect(
-    kind: 'layout' | 'preset' | 'scene' | 'profile',
+    kind: 'layout' | 'preset' | 'scene',
     model: SelectModel | null,
     spec: {
       icon: string;
@@ -730,16 +712,6 @@ export class HyperLightCard extends LitElement {
       empty: 'No active scene',
       isOpen: this.state.isSceneDropdownOpen,
       select: scene => this._selectScene(scene),
-    });
-  }
-
-  private _renderProfileSelect(profiles: SelectModel) {
-    return this._renderSelect('profile', profiles, {
-      icon: 'mdi:account-cog',
-      title: 'Profile',
-      empty: 'No active profile',
-      isOpen: this.state.isProfileDropdownOpen,
-      select: profile => this._selectProfile(profile),
     });
   }
 
@@ -1000,7 +972,7 @@ export class HyperLightCard extends LitElement {
     this.stateManager.toggleDropdown();
   }
 
-  private _toggleSelectDropdown(e: Event, kind: 'layout' | 'preset' | 'scene' | 'profile') {
+  private _toggleSelectDropdown(e: Event, kind: 'layout' | 'preset' | 'scene') {
     e.stopPropagation();
     switch (kind) {
       case 'layout':
@@ -1009,8 +981,6 @@ export class HyperLightCard extends LitElement {
         return this.stateManager.togglePresetDropdown();
       case 'scene':
         return this.stateManager.toggleSceneDropdown();
-      case 'profile':
-        return this.stateManager.toggleProfileDropdown();
     }
   }
 
@@ -1022,10 +992,6 @@ export class HyperLightCard extends LitElement {
 
   private async _selectScene(scene: string) {
     await this.stateManager.setScene(scene);
-  }
-
-  private async _selectProfile(profile: string) {
-    await this.stateManager.setProfile(profile);
   }
 
   private async _identifyDevice(entityId: string) {
@@ -1098,11 +1064,6 @@ export class HyperLightCard extends LitElement {
         this.state.isSceneDropdownOpen,
         '.scene-select-wrapper .dropdown',
         () => this.stateManager.toggleSceneDropdown(),
-      ],
-      [
-        this.state.isProfileDropdownOpen,
-        '.profile-select-wrapper .dropdown',
-        () => this.stateManager.toggleProfileDropdown(),
       ],
     ];
     for (const [isOpen, selector, close] of dropdowns) {

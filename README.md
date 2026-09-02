@@ -24,7 +24,7 @@ _A dazzling custom card for controlling SignalRGB and Hypercolor lights through 
 - ℹ️ Rich effect info: description, publisher, and tag chips
 - 🎛️ Full effect controls: sliders, toggles, palette pickers, and color swatches
 - 📊 Layout and preset selection for SignalRGB
-- 🎬 Scenes and profiles for Hypercolor, with live runtime controls
+- 🎬 Scenes for Hypercolor, with live runtime controls
 - 🗺️ Scene zone controls for tuning each render group's brightness and power
 - 🎧 Audio controls for toggling reactivity and picking the input device
 - 🛰️ Status chips for FPS, audio reactivity, and connectivity (Hypercolor)
@@ -140,7 +140,6 @@ name: 'Living Room'
 show_status_chips: true
 show_live_controls: true
 show_scene_select: true
-show_profile_select: true
 show_audio_controls: true
 show_zones: true
 show_per_device: false
@@ -163,7 +162,6 @@ entity: light.hypercolor_hyperia
 backend: hypercolor
 hypercolor:
   scene_entity: select.hypercolor_hyperia_scene
-  profile_entity: select.hypercolor_hyperia_profile
   stop_effect_entity: button.hypercolor_hyperia_stop_effect
   fps_entity: sensor.hypercolor_hyperia_fps
   connected_entity: binary_sensor.hypercolor_hyperia_connected
@@ -221,7 +219,6 @@ These default to the device-scoped helpers exposed by the SignalRGB integration,
 | Option                | Type    | Default | Description                                              |
 | --------------------- | ------- | ------- | -------------------------------------------------------- |
 | `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
-| `show_profile_select` | boolean | `false` | Show the profile selector dropdown                       |
 | `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette + color pickers) |
 | `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
 | `show_zones`          | boolean | `true`  | Show scene zone controls for per-group brightness and power (when present) |
@@ -242,7 +239,6 @@ discovery.
 | Option                         | Type     | Description                                             |
 | ------------------------------ | -------- | ------------------------------------------------------- |
 | `scene_entity`                 | string   | Scene `select` entity                                   |
-| `profile_entity`               | string   | Profile `select` entity                                 |
 | `stop_effect_entity`           | string   | Stop-effect `button` entity                             |
 | `fps_entity`                   | string   | Render-rate `sensor` for the FPS chip                   |
 | `connected_entity`             | string   | Daemon connectivity `binary_sensor`                     |
@@ -264,7 +260,7 @@ hyper-light-card adapts to whichever backend it detects:
 
 - **Power Toggle**: Click the light icon to turn the light on or off.
 - **Effect Selection**: Use the dropdown to choose from available effects.
-- **Layout & Preset / Scene & Profile**: SignalRGB exposes layouts and presets; Hypercolor exposes scenes and (optionally) profiles.
+- **Layout & Preset / Scene**: SignalRGB exposes layouts and presets; Hypercolor exposes scenes.
 - **Effect Navigation**: Cycle through effects with next, previous, and random buttons.
 - **Brightness Control**: Adjust brightness with the slider.
 - **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus. Input is coalesced while you drag and committed on release.

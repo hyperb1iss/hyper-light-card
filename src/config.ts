@@ -2,7 +2,6 @@ export type HypercolorLiveControlId = 'brightness' | 'speed' | 'hue_shift' | 'in
 
 export interface HypercolorConfigAddenda {
   scene_entity?: string;
-  profile_entity?: string;
   stop_effect_entity?: string;
   fps_entity?: string;
   connected_entity?: string;
@@ -45,7 +44,6 @@ export interface Config {
 
   /** Hypercolor-only feature toggles (Phase 4). */
   show_scene_select?: boolean;
-  show_profile_select?: boolean;
   show_live_controls?: boolean;
   show_status_chips?: boolean;
   show_per_device?: boolean;
