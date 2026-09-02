@@ -1,7 +1,7 @@
 {
   "name": "hyper-light-card",
   "version": "1.0.0",
-  "description": "A custom Lovelace card for Home Assistant to control SignalRGB",
+  "description": "A custom Lovelace card for Home Assistant that controls SignalRGB and Hypercolor lighting",
   "author": "Stefanie Jane <stef@hyperbliss.tech>",
   "license": "Apache 2.0",
   "keywords": [

@@ -22,7 +22,7 @@ _A dazzling custom card for controlling SignalRGB and Hypercolor lights through 
 - 🔀 Effect switching with an intelligent dropdown menu that highlights and scrolls to the running effect
 - ⌨️ Keyboard-navigable selectors with visible focus rings
 - ℹ️ Rich effect info: description, publisher, and tag chips
-- 🎛️ Full effect controls: sliders, toggles, palette pickers, and color swatches
+- 🎛️ Live effect controls: sliders, toggles, and read-only palette and color swatches
 - 📊 Layout and preset selection for SignalRGB
 - 🎬 Scenes for Hypercolor, with live runtime controls
 - 🗺️ Scene zone controls for tuning each render group's brightness and power
@@ -219,7 +219,7 @@ These default to the device-scoped helpers exposed by the SignalRGB integration,
 | Option                | Type    | Default | Description                                              |
 | --------------------- | ------- | ------- | -------------------------------------------------------- |
 | `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
-| `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette + color pickers) |
+| `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette and color swatches) |
 | `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
 | `show_zones`          | boolean | `true`  | Show scene zone controls for per-group brightness and power (when present) |
 | `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
@@ -266,7 +266,7 @@ hyper-light-card adapts to whichever backend it detects:
 - **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus. Input is coalesced while you drag and committed on release.
 - **Keyboard**: Tab to any selector, then Enter or Space to open it and to pick a row.
 - **Status Chips**: Hypercolor surfaces FPS, audio reactivity, and connectivity at a glance.
-- **Per-Device Drilldown**: Expand grouped Hypercolor installs to see and toggle each child light.
+- **Per-Device Drilldown**: Expand grouped Hypercolor installs to see each child light's brightness and flash it with Identify.
 - **Effect Info & Parameters**: Description, publisher, and current parameter values for the running effect.
 
 The card pulls its accent palette from the running effect image, giving each effect its own coherent look. The extracted background is measured against the WCAG relative-luminance threshold to pick black or white foreground text, so labels stay readable on any cover art.
