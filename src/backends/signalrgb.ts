@@ -198,12 +198,22 @@ export const signalRgbBackend: LightBackend = {
   },
 };
 
+/**
+ * A select whose entity reports `unknown` or `unavailable` has no current
+ * option. Home Assistant uses those sentinel states when `current_option`
+ * is None, and they must not leak into the header as literal text.
+ */
+function selectCurrent(state: string | undefined): string {
+  if (!state || state === 'unknown' || state === 'unavailable') return '';
+  return state;
+}
+
 function readSelectModel(hass: HomeAssistant, entityId?: string): SelectModel | null {
   if (!entityId) return null;
   const stateObj = hass.states[entityId];
   if (!stateObj) return { current: '', options: [], available: false };
   return {
-    current: stateObj.state ?? '',
+    current: selectCurrent(stateObj.state),
     options: Array.isArray(stateObj.attributes.options)
       ? (stateObj.attributes.options as string[])
       : [],

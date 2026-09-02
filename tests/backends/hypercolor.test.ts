@@ -542,6 +542,52 @@ describe('hypercolorBackend.autoDiscover', () => {
   });
 });
 
+describe('hypercolorBackend select models', () => {
+  const config = {
+    entity: 'light.hypercolor',
+    preset_entity: 'select.hypercolor_preset',
+    hypercolor: { scene_entity: 'select.hypercolor_scene' },
+  } as Config;
+
+  it('treats an unknown scene state as no current option', () => {
+    const { hass } = hassWithStates({
+      'select.hypercolor_scene': {
+        state: 'unknown',
+        attributes: { options: ['Studio Session', 'Movie Night'] },
+      },
+    });
+    expect(hypercolorBackend.scenes?.({ hass, config })).toEqual({
+      current: '',
+      options: ['Studio Session', 'Movie Night'],
+      available: true,
+    });
+  });
+
+  it('keeps the options of an unavailable preset select but drops its state', () => {
+    const { hass } = hassWithStates({
+      'select.hypercolor_preset': {
+        state: 'unavailable',
+        attributes: { options: ['Hyperkandi'] },
+      },
+    });
+    expect(hypercolorBackend.presets({ hass, config })).toEqual({
+      current: '',
+      options: ['Hyperkandi'],
+      available: false,
+    });
+  });
+
+  it('passes a real option through untouched', () => {
+    const { hass } = hassWithStates({
+      'select.hypercolor_scene': {
+        state: 'Movie Night',
+        attributes: { options: ['Studio Session', 'Movie Night'] },
+      },
+    });
+    expect(hypercolorBackend.scenes?.({ hass, config })?.current).toBe('Movie Night');
+  });
+});
+
 describe('hypercolorBackend.liveControls', () => {
   it('labels effect brightness distinctly from the card brightness slider', () => {
     const hass = hassWith(['light.hypercolor', 'number.hypercolor_brightness']);
