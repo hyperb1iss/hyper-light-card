@@ -23,6 +23,7 @@ on:
         default: false
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -130,6 +131,48 @@ jobs:
           git push origin HEAD:${{ github.ref_name }}
           git push origin "v${{ steps.version.outputs.version }}"
 
+      # A tag pushed with GITHUB_TOKEN never fires cicd.yml's push trigger
+      # (GitHub suppresses workflow runs caused by that token), so the build
+      # and release job is dispatched by hand on the tag ref and watched
+      # here until it finishes.
+      - name: Dispatch and watch the build and release
+        id: publish
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          candidate_sha="$(git rev-parse HEAD)"
+          before_id="$(
+            gh run list --workflow cicd.yml --event workflow_dispatch \
+              --branch "${TAG}" --commit "${candidate_sha}" --limit 1 \
+              --json databaseId --jq '.[0].databaseId // empty'
+          )"
+          gh workflow run cicd.yml --ref "${TAG}" -f release_run_id="${GITHUB_RUN_ID}"
+
+          run_id=""
+          for _ in {1..30}; do
+            candidate_id="$(
+              gh run list --workflow cicd.yml --event workflow_dispatch \
+                --branch "${TAG}" --commit "${candidate_sha}" --limit 1 \
+                --json databaseId --jq '.[0].databaseId // empty'
+            )"
+            if [[ -n "${candidate_id}" && "${candidate_id}" != "${before_id}" ]]; then
+              run_id="${candidate_id}"
+              break
+            fi
+            sleep 2
+          done
+          if [[ -z "${run_id}" ]]; then
+            echo "::error::Timed out locating the cicd.yml run for ${TAG}"
+            exit 1
+          fi
+
+          run_url="$(gh run view "${run_id}" --json url --jq '.url')"
+          echo "run_url=${run_url}" >> "${GITHUB_OUTPUT}"
+          gh run watch "${run_id}" --exit-status
+
       - name: Summary
         run: |
           echo "## Release ${{ inputs.dry_run && '[DRY RUN] ' || '' }}v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
@@ -139,5 +182,5 @@ jobs:
           else
             echo "Version bumped: ${{ steps.version.outputs.current }} -> ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
             echo "Tag pushed: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-            echo "The tag push will run cicd.yml and attach the release artifact." >> $GITHUB_STEP_SUMMARY
+            echo "Build and release run: ${{ steps.publish.outputs.run_url }}" >> $GITHUB_STEP_SUMMARY
           fi
