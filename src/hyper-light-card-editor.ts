@@ -16,6 +16,28 @@ interface FormSchemaEntry {
   default?: unknown;
 }
 
+/**
+ * Sentinel the backend dropdown uses for "no override". The card config
+ * never stores it: an absent `backend` key means auto-detect, and the form
+ * needs a concrete value to show that state as selected.
+ */
+export const AUTO_BACKEND = 'auto';
+
+type BackendChoice = NonNullable<Config['backend']> | typeof AUTO_BACKEND;
+type FormData = Omit<Config, 'backend'> & { backend: BackendChoice };
+
+/** Shape the stored config into what ha-form displays. */
+export function toFormData(config: Config): FormData {
+  return { ...config, backend: config.backend || AUTO_BACKEND };
+}
+
+/** Turn a form value back into a card config, dropping the auto sentinel. */
+export function fromFormData(value: Omit<Config, 'backend'> & { backend?: string }): Config {
+  const { backend, ...rest } = value;
+  if (!backend || backend === AUTO_BACKEND) return rest as Config;
+  return { ...rest, backend: backend as Config['backend'] };
+}
+
 export class HyperLightCardEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config: Config = {
@@ -66,7 +88,7 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this._config}
+        .data=${toFormData(this._config)}
         .schema=${schema}
         .computeLabel=${computeLabel}
         .computeHelper=${computeHelper}
@@ -76,7 +98,7 @@ export class HyperLightCardEditor extends LitElement implements LovelaceCardEdit
   }
 
   private _valueChanged(ev: CustomEvent) {
-    const next = ev.detail.value as Config;
+    const next = fromFormData(ev.detail.value as Config);
     this._config = next;
     fireEvent(this, 'config-changed', { config: next });
   }
@@ -106,6 +128,7 @@ function buildSchema(
         select: {
           mode: 'dropdown',
           options: [
+            { value: AUTO_BACKEND, label: 'Auto-detect' },
             { value: 'signalrgb', label: 'SignalRGB' },
             { value: 'hypercolor', label: 'Hypercolor' },
           ],
@@ -205,7 +228,7 @@ const LABELS: Record<string, string> = {
   entity: 'Light entity',
   name: 'Card name (optional)',
   icon: 'Icon (optional)',
-  backend: 'Backend (auto-detected)',
+  backend: 'Backend',
   layout_entity: 'Layout select entity',
   preset_entity: 'Preset select entity',
   next_effect_entity: 'Next-effect button',
@@ -232,7 +255,7 @@ function computeLabel(schema: FormSchemaEntry): string {
 }
 
 const HELPERS: Record<string, string> = {
-  backend: 'Override backend detection. Leave on the auto value unless something is off.',
+  backend: 'Auto-detect picks the backend from the entity. Override only if detection is wrong.',
   show_per_device: 'Adds an expandable list of child lights below the main card. Off by default.',
   allowed_effects: 'Limit the effect dropdown. Empty means all available effects.',
 };
