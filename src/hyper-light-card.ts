@@ -454,10 +454,6 @@ export class HyperLightCard extends LitElement {
       <div
         class="brightness-slider"
         style=${styleMap({ '--slider-percentage': `${this.state.brightness}%` })}
-        role="slider"
-        aria-valuemin="1"
-        aria-valuemax="100"
-        aria-valuenow="${this.state.brightness}"
       >
         <ha-icon icon="mdi:brightness-6" aria-hidden="true"></ha-icon>
         <input
@@ -482,7 +478,9 @@ export class HyperLightCard extends LitElement {
       <div
         class="attributes-toggle"
         @click=${this._toggleAttributes}
+        @keydown=${this._handleDropdownKeydown}
         role="button"
+        tabindex="0"
         aria-expanded="${this.state.isAttributesExpanded}"
         aria-label="Toggle effect parameters"
       >

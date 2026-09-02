@@ -493,6 +493,11 @@ ha-card {
   background-color: rgba(var(--rgb-primary-text-color, 225, 225, 225), 0.2);
 }
 
+.attributes-toggle:focus-visible {
+  outline: 2px solid var(--accent-color, var(--primary-color, #03a9f4));
+  outline-offset: 2px;
+}
+
 .attributes-toggle ha-icon {
   display: block;
   transition: transform 0.3s ease;
