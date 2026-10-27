@@ -406,11 +406,25 @@ export const hypercolorBackend: LightBackend = {
     return patch;
   },
 
-  stubConfig(_hass, entities) {
-    const masters = entities.filter(
+  stubConfig(hass, entities) {
+    const registries = hypercolorRegistries(hass);
+    const candidates = entities.filter(id => {
+      if (!id.startsWith('light.')) return false;
+      if (typeof hass.states[id]?.attributes.zone_id === 'string') return false;
+      const deviceId = registries.entities?.[id]?.device_id;
+      return !deviceId || !registries.devices?.[deviceId]?.via_device_id;
+    });
+    const identifiedMaster = candidates.find(id => {
+      const attributes = hass.states[id]?.attributes;
+      return (
+        attributes &&
+        ['effect_controls', 'active_effect_id', 'zone_count'].some(key => key in attributes)
+      );
+    });
+    const masters = candidates.filter(
       id => id === 'light.hypercolor' || id.startsWith('light.hypercolor_')
     );
-    const master = masters.find(id => id === 'light.hypercolor') ?? masters[0];
+    const master = identifiedMaster ?? masters.find(id => id === 'light.hypercolor') ?? masters[0];
     if (!master) return null;
     return {
       entity: master,
