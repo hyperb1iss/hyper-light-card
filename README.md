@@ -15,7 +15,7 @@ running effect's colors, and provides a visual configuration editor.
 
 | Compact | Live controls | Phone width |
 | --- | --- | --- |
-| ![Compact Hypercolor card with Borealis and three zones](images/hypercolor-compact.png) | ![Expanded Hypercolor card with Hyperbloom live controls](images/hypercolor-controls.png) | ![Hypercolor card at a 390-pixel phone viewport](images/hypercolor-mobile.png) |
+| ![Compact Hypercolor card with Borealis and collapsed zones](images/hypercolor-compact.png) | ![Expanded Hypercolor card with Borealis live controls](images/hypercolor-controls.png) | ![Hypercolor card at a 390-pixel phone viewport](images/hypercolor-mobile.png) |
 
 [Watch the demo](https://github.com/hyperb1iss/hyper-light-card/releases/download/v1.2.0/hyper-light-card-demo.mp4)
 · [Demo setup](docs/demo.md)

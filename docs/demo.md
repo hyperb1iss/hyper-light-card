@@ -21,8 +21,10 @@ show_zones: true
 The [recording](https://github.com/hyperb1iss/hyper-light-card/releases/download/v1.2.0/hyper-light-card-demo.mp4)
 demonstrates keyboard navigation in the effect picker, scene selection, live
 parameter changes, and zone power. Screenshots also show the card at phone width.
-The captures use card 1.2.0, Home Assistant 2026.9.4, integration 0.7.1, and
-Hypercolor 0.8.0. The phone screenshot uses a 390-pixel browser viewport;
+The screenshots use card 1.2.1; the recording uses 1.2.0. Both use Home
+Assistant 2026.9.4, integration 0.7.1, and Hypercolor 0.8.0. In 1.2.1, select
+**Zones** to expand its controls before the zone-power step.
+The phone screenshot uses a 390-pixel browser viewport;
 physical touch-device testing is not part of this capture.
 No physical lights are attached to the recording environment; card actions go
 through real Home Assistant services to real daemon scene and effect state.

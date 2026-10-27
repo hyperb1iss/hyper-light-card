@@ -1289,7 +1289,7 @@ ha-switch {
 }
 
 .zones-title:focus-visible {
-  outline: 2px solid var(--accent-color, var(--primary-color, #03a9f4));
+  outline: 2px solid var(--text-color, var(--primary-text-color, white));
   outline-offset: 2px;
   border-radius: 4px;
 }
