@@ -90,6 +90,8 @@ export class HyperLightCard extends LitElement {
     this.config = this._sourceConfig;
     this.stateManager.cleanup();
     this.stateManager = new StateManager(this.config, this.state);
+    this.stateManager.hass = this.hass;
+    this._runAutoDiscovery();
   }
 
   getCardSize(): number {
@@ -141,7 +143,7 @@ export class HyperLightCard extends LitElement {
     const stateObj = this.hass.states[this.config.entity];
     if (!stateObj) {
       return html`
-        <ha-card>
+        <ha-card role="region" aria-label=${this.config.name || this.config.entity}>
           <div class="card">Entity not found: ${this.config.entity}</div>
         </ha-card>
       `;
@@ -173,7 +175,7 @@ export class HyperLightCard extends LitElement {
     const beating = audio?.reactiveActive && audio?.beat;
 
     return html`
-      <ha-card>
+      <ha-card role="region" aria-label=${card.name}>
         <div class="card ${beating ? 'beat' : ''}" style=${styleMap(this._paletteStyle())}>
           ${this._renderBackground(card)}
           ${this._renderHeader(card, showStatusChips ? { connectivity, fps, audio } : null)}
@@ -187,14 +189,16 @@ export class HyperLightCard extends LitElement {
             ${this.state.showBrightnessControl ? this._renderBrightnessSlider() : ''}
             ${this.state.showEffectParameters ? this._renderAttributesToggle() : ''}
           </div>
-          ${this.state.showEffectParameters
-            ? this._renderAttributes(effect, layouts, presets, {
-                scenes,
-                liveControls,
-                showSceneSelect,
-                showLiveControls,
-              })
-            : ''}
+          ${
+            this.state.showEffectParameters
+              ? this._renderAttributes(effect, layouts, presets, {
+                  scenes,
+                  liveControls,
+                  showSceneSelect,
+                  showLiveControls,
+                })
+              : ''
+          }
           ${showZones ? this._renderZones(zones) : ''}
           ${showPerDevice ? this._renderPerDevice(devices) : ''}
         </div>
@@ -250,11 +254,9 @@ export class HyperLightCard extends LitElement {
         </div>
         <div class="light-name" title="${card.name}">${card.name}</div>
         ${status ? this._renderStatusChips(status) : ''}
-        <ha-switch
-          .checked=${this.state.isOn}
-          @change=${this._toggleLight}
-          aria-label="Toggle light"
-        ></ha-switch>
+        <ha-switch .checked=${this.state.isOn} @change=${this._toggleLight}
+          ><span class="sr-only">Toggle light</span></ha-switch
+        >
       </div>
     `;
   }
@@ -275,26 +277,33 @@ export class HyperLightCard extends LitElement {
     const { connectivity, fps, audio } = status;
     if (!connectivity && fps === null && !audio) return '';
     return html`
-      <div class="status-chips" aria-label="Status">
-        ${connectivity
-          ? html`<span
-              class="status-chip status-connectivity ${connectivity.connected
-                ? 'connected'
-                : 'disconnected'}"
-              title="${connectivity.connected ? 'Connected' : 'Disconnected'}"
-              aria-label="${connectivity.connected ? 'Connected' : 'Disconnected'}"
-            ></span>`
-          : ''}
-        ${fps !== null
-          ? html`<span class="status-chip status-fps" title="Render rate">
-              ${Math.round(fps)} <small>fps</small>
-            </span>`
-          : ''}
-        ${audio?.reactiveActive
-          ? html`<span class="status-chip status-audio" title="Audio reactive">
-              <ha-icon icon="mdi:music"></ha-icon>
-            </span>`
-          : ''}
+      <div class="status-chips" role="group" aria-label="Status">
+        ${
+          connectivity
+            ? html`<span
+                class="status-chip status-connectivity ${
+                  connectivity.connected ? 'connected' : 'disconnected'
+                }"
+                title="${connectivity.connected ? 'Connected' : 'Disconnected'}"
+                role="img"
+                aria-label="${connectivity.connected ? 'Connected' : 'Disconnected'}"
+              ></span>`
+            : ''
+        }
+        ${
+          fps !== null
+            ? html`<span class="status-chip status-fps" title="Render rate">
+                ${Math.round(fps)} <small>fps</small>
+              </span>`
+            : ''
+        }
+        ${
+          audio?.reactiveActive
+            ? html`<span class="status-chip status-audio" title="Audio reactive">
+                <ha-icon icon="mdi:music"></ha-icon>
+              </span>`
+            : ''
+        }
       </div>
     `;
   }
@@ -303,11 +312,14 @@ export class HyperLightCard extends LitElement {
     const isOpen = this.state.isDropdownOpen;
     return html`
       <div class="effect-select-wrapper">
-        <div class="dropdown ${isOpen ? 'open' : ''}">
+        <div
+          class="dropdown ${isOpen ? 'open' : ''}"
+          @keydown=${this._handlePickerKeydown}
+          @focusout=${this._handlePickerFocusOut}
+        >
           <div
             class="dropdown-header"
             @click=${this._toggleDropdown}
-            @keydown=${this._handleDropdownKeydown}
             aria-label="Current effect: ${this.state.currentEffect}"
             aria-haspopup="listbox"
             aria-expanded="${isOpen}"
@@ -316,7 +328,7 @@ export class HyperLightCard extends LitElement {
           >
             <span class="dropdown-header-label">${this.state.currentEffect}</span>
           </div>
-          <div class="dropdown-content" role="listbox" aria-label="Effects">
+          <div class="dropdown-content" role="listbox" aria-label="Effects" ?inert=${!isOpen}>
             ${effectList.allowed.map(effect =>
               this._renderDropdownItem(effect, effect === this.state.currentEffect, () =>
                 this._selectEffect(effect)
@@ -333,20 +345,18 @@ export class HyperLightCard extends LitElement {
    * highlighting, keyboard activation, and ARIA stay identical across the
    * effect, layout, preset, and scene pickers.
    */
-  private _renderDropdownItem(label: string, selected: boolean, activate: () => void) {
+  private _renderDropdownItem(
+    label: string,
+    selected: boolean,
+    activate: () => void | Promise<void>
+  ) {
     return html`
       <div
         class="dropdown-item ${selected ? 'selected' : ''}"
-        @click=${activate}
-        @keydown=${(e: KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            activate();
-          }
-        }}
+        @click=${(e: Event) => this._activateDropdownItem(e, activate)}
         role="option"
         aria-selected="${selected}"
-        tabindex="0"
+        tabindex="-1"
       >
         ${label}
       </div>
@@ -365,46 +375,54 @@ export class HyperLightCard extends LitElement {
 
     return html`
       <div class="effect-controls fade-in">
-        ${navigation.hasPrevious
-          ? html`
-              <button
-                class="effect-button"
-                @click=${this._previousEffect}
-                aria-label="Previous effect"
-              >
-                <ha-icon icon="mdi:chevron-left"></ha-icon>
-              </button>
-            `
-          : ''}
-        ${navigation.hasRandom
-          ? html`
-              <button
-                class="effect-button random"
-                @click=${this._randomEffect}
-                aria-label="Random effect"
-              >
-                <ha-icon icon="mdi:shuffle-variant"></ha-icon>
-              </button>
-            `
-          : ''}
-        ${navigation.hasNext
-          ? html`
-              <button class="effect-button" @click=${this._nextEffect} aria-label="Next effect">
-                <ha-icon icon="mdi:chevron-right"></ha-icon>
-              </button>
-            `
-          : ''}
-        ${navigation.hasStop
-          ? html`
-              <button
-                class="effect-button stop"
-                @click=${this._stopEffect}
-                aria-label="Stop effect"
-              >
-                <ha-icon icon="mdi:stop"></ha-icon>
-              </button>
-            `
-          : ''}
+        ${
+          navigation.hasPrevious
+            ? html`
+                <button
+                  class="effect-button"
+                  @click=${this._previousEffect}
+                  aria-label="Previous effect"
+                >
+                  <ha-icon icon="mdi:chevron-left"></ha-icon>
+                </button>
+              `
+            : ''
+        }
+        ${
+          navigation.hasRandom
+            ? html`
+                <button
+                  class="effect-button random"
+                  @click=${this._randomEffect}
+                  aria-label="Random effect"
+                >
+                  <ha-icon icon="mdi:shuffle-variant"></ha-icon>
+                </button>
+              `
+            : ''
+        }
+        ${
+          navigation.hasNext
+            ? html`
+                <button class="effect-button" @click=${this._nextEffect} aria-label="Next effect">
+                  <ha-icon icon="mdi:chevron-right"></ha-icon>
+                </button>
+              `
+            : ''
+        }
+        ${
+          navigation.hasStop
+            ? html`
+                <button
+                  class="effect-button stop"
+                  @click=${this._stopEffect}
+                  aria-label="Stop effect"
+                >
+                  <ha-icon icon="mdi:stop"></ha-icon>
+                </button>
+              `
+            : ''
+        }
       </div>
     `;
   }
@@ -420,30 +438,42 @@ export class HyperLightCard extends LitElement {
           <div class="effect-publisher">
             Published by: ${publisher}${effect.category ? html` · ${effect.category}` : ''}
           </div>
-          ${effect.tags.length > 0
-            ? html`<div class="effect-tags" aria-label="Tags">
-                ${effect.tags.map(tag => html`<span class="effect-tag">${tag}</span>`)}
-              </div>`
-            : ''}
+          ${
+            effect.tags.length > 0
+              ? html`<div class="effect-tags" aria-label="Tags">
+                  ${effect.tags.map(tag => html`<span class="effect-tag">${tag}</span>`)}
+                </div>`
+              : ''
+          }
         </div>
-        <div class="effect-features" aria-label="Effect features">
-          ${effect.usesAudio
-            ? html`<ha-icon
-                icon="mdi:volume-high"
-                title="Uses Audio"
-                aria-label="Uses Audio"
-              ></ha-icon>`
-            : ''}
-          ${effect.usesInput
-            ? html`<ha-icon
-                icon="mdi:gamepad-variant"
-                title="Uses Input"
-                aria-label="Uses Input"
-              ></ha-icon>`
-            : ''}
-          ${effect.usesVideo
-            ? html`<ha-icon icon="mdi:video" title="Uses Video" aria-label="Uses Video"></ha-icon>`
-            : ''}
+        <div class="effect-features" role="group" aria-label="Effect features">
+          ${
+            effect.usesAudio
+              ? html`<ha-icon
+                  icon="mdi:volume-high"
+                  title="Uses Audio"
+                  aria-label="Uses Audio"
+                ></ha-icon>`
+              : ''
+          }
+          ${
+            effect.usesInput
+              ? html`<ha-icon
+                  icon="mdi:gamepad-variant"
+                  title="Uses Input"
+                  aria-label="Uses Input"
+                ></ha-icon>`
+              : ''
+          }
+          ${
+            effect.usesVideo
+              ? html`<ha-icon
+                  icon="mdi:video"
+                  title="Uses Video"
+                  aria-label="Uses Video"
+                ></ha-icon>`
+              : ''
+          }
         </div>
       </div>
     `;
@@ -519,19 +549,22 @@ export class HyperLightCard extends LitElement {
 
     return html`
       <div
-        class="attributes ${this.state.isAttributesExpanded ? 'expanded' : ''} ${nestedDropdownOpen
-          ? 'dropdown-open'
-          : ''}"
+        class="attributes ${this.state.isAttributesExpanded ? 'expanded' : ''} ${
+          nestedDropdownOpen ? 'dropdown-open' : ''
+        }"
         aria-hidden="${!this.state.isAttributesExpanded}"
+        ?inert=${!this.state.isAttributesExpanded}
       >
         <div class="attributes-content">
           <div class="attributes-selectors">
             ${this._renderLayoutSelect(layouts)} ${this._renderPresetSelect(presets)}
             ${hasScenes ? this._renderSceneSelect(extras.scenes!) : ''}
           </div>
-          ${hasLiveControls
-            ? this._renderLiveControls(extras.liveControls)
-            : this._renderAttributesList(effect.parameters)}
+          ${
+            hasLiveControls
+              ? this._renderLiveControls(extras.liveControls)
+              : this._renderAttributesList(effect.parameters)
+          }
         </div>
       </div>
     `;
@@ -604,8 +637,8 @@ export class HyperLightCard extends LitElement {
               control.id,
               (e.target as HTMLInputElement).checked
             )}
-          aria-label="${control.label}"
-        ></ha-switch>
+          ><span class="sr-only">${control.label}</span></ha-switch
+        >
       </div>
     `;
   }
@@ -670,7 +703,7 @@ export class HyperLightCard extends LitElement {
       title: string;
       empty: string;
       isOpen: boolean;
-      select: (v: string) => void;
+      select: (v: string) => void | Promise<void>;
     }
   ) {
     if (!model || model.options.length === 0) return html``;
@@ -680,11 +713,14 @@ export class HyperLightCard extends LitElement {
         <div class="select-section-title">
           <ha-icon icon="${spec.icon}"></ha-icon> ${spec.title}
         </div>
-        <div class="dropdown ${spec.isOpen ? 'open' : ''}">
+        <div
+          class="dropdown ${spec.isOpen ? 'open' : ''}"
+          @keydown=${this._handlePickerKeydown}
+          @focusout=${this._handlePickerFocusOut}
+        >
           <div
             class="dropdown-header"
             @click=${(e: Event) => this._toggleSelectDropdown(e, kind)}
-            @keydown=${this._handleDropdownKeydown}
             aria-label="Current ${kind}: ${model.current || spec.empty}"
             aria-haspopup="listbox"
             aria-expanded="${spec.isOpen}"
@@ -693,7 +729,12 @@ export class HyperLightCard extends LitElement {
           >
             <span class="dropdown-header-label">${model.current || spec.empty}</span>
           </div>
-          <div class="dropdown-content" role="listbox" aria-label="${spec.title}">
+          <div
+            class="dropdown-content"
+            role="listbox"
+            aria-label="${spec.title}"
+            ?inert=${!spec.isOpen}
+          >
             ${model.options.map(option =>
               this._renderDropdownItem(option, option === model.current, () => spec.select(option))
             )}
@@ -718,43 +759,47 @@ export class HyperLightCard extends LitElement {
     const deviceOptions = device?.options ?? [];
     return html`
       <div class="audio-controls" aria-label="Audio controls">
-        ${reactive
-          ? html`
-              <div class="audio-control-reactive">
-                <ha-icon icon="mdi:music-note" aria-hidden="true"></ha-icon>
-                <span class="audio-control-label">Audio reactive</span>
-                <ha-switch
-                  .checked=${reactive.on}
-                  ?disabled=${!reactive.available}
-                  @change=${(e: Event) =>
-                    this._setAudioReactive((e.target as HTMLInputElement).checked)}
-                  aria-label="Toggle audio reactive"
-                ></ha-switch>
-              </div>
-            `
-          : ''}
-        ${device && deviceOptions.length > 0
-          ? html`
-              <div class="audio-control-device">
-                <span class="audio-control-label">Input</span>
-                <select
-                  class="live-control-select"
-                  .value=${live(device.current)}
-                  ?disabled=${!device.available}
-                  @change=${(e: Event) =>
-                    this._setAudioDevice((e.target as HTMLSelectElement).value)}
-                  aria-label="Audio input device"
-                >
-                  ${deviceOptions.map(
-                    option =>
-                      html`<option value=${option} ?selected=${option === device.current}>
-                        ${option}
-                      </option>`
-                  )}
-                </select>
-              </div>
-            `
-          : ''}
+        ${
+          reactive
+            ? html`
+                <div class="audio-control-reactive">
+                  <ha-icon icon="mdi:music-note" aria-hidden="true"></ha-icon>
+                  <span class="audio-control-label">Audio reactive</span>
+                  <ha-switch
+                    .checked=${reactive.on}
+                    ?disabled=${!reactive.available}
+                    @change=${(e: Event) =>
+                      this._setAudioReactive((e.target as HTMLInputElement).checked)}
+                    ><span class="sr-only">Toggle audio reactive</span></ha-switch
+                  >
+                </div>
+              `
+            : ''
+        }
+        ${
+          device && deviceOptions.length > 0
+            ? html`
+                <div class="audio-control-device">
+                  <span class="audio-control-label">Input</span>
+                  <select
+                    class="live-control-select"
+                    .value=${live(device.current)}
+                    ?disabled=${!device.available}
+                    @change=${(e: Event) =>
+                      this._setAudioDevice((e.target as HTMLSelectElement).value)}
+                    aria-label="Audio input device"
+                  >
+                    ${deviceOptions.map(
+                      option =>
+                        html`<option value=${option} ?selected=${option === device.current}>
+                          ${option}
+                        </option>`
+                    )}
+                  </select>
+                </div>
+              `
+            : ''
+        }
       </div>
     `;
   }
@@ -779,33 +824,35 @@ export class HyperLightCard extends LitElement {
           ${zone.effect ? html`<div class="zone-effect">${zone.effect}</div>` : ''}
         </div>
         <div class="zone-actions">
-          ${zone.brightness !== null
-            ? html`
-                <div class="live-control-slider zone-slider" style=${styleMap(sliderStyle)}>
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    step="1"
-                    .value=${(zone.brightness ?? 0).toString()}
-                    ?disabled=${!zone.available || !zone.enabled}
-                    @change=${(e: Event) =>
-                      this._setZoneBrightness(
-                        zone.id,
-                        Number((e.target as HTMLInputElement).value)
-                      )}
-                    aria-label="${zone.name} brightness"
-                  />
-                </div>
-              `
-            : ''}
+          ${
+            zone.brightness !== null
+              ? html`
+                  <div class="live-control-slider zone-slider" style=${styleMap(sliderStyle)}>
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      step="1"
+                      .value=${(zone.brightness ?? 0).toString()}
+                      ?disabled=${!zone.available || !zone.enabled}
+                      @change=${(e: Event) =>
+                        this._setZoneBrightness(
+                          zone.id,
+                          Number((e.target as HTMLInputElement).value)
+                        )}
+                      aria-label="${zone.name} brightness"
+                    />
+                  </div>
+                `
+              : ''
+          }
           <ha-switch
             .checked=${zone.enabled}
             ?disabled=${!zone.available}
             @change=${(e: Event) =>
               this._setZoneEnabled(zone.id, (e.target as HTMLInputElement).checked)}
-            aria-label="Toggle ${zone.name}"
-          ></ha-switch>
+            ><span class="sr-only">Toggle ${zone.name}</span></ha-switch
+          >
         </div>
       </div>
     `;
@@ -835,18 +882,22 @@ export class HyperLightCard extends LitElement {
             <div class="per-device-row">
               <div class="per-device-name" title="${device.name}">${device.name}</div>
               <div class="per-device-actions">
-                ${device.brightness !== null
-                  ? html`<span class="per-device-brightness">${device.brightness}%</span>`
-                  : ''}
-                ${device.identifyEntity
-                  ? html`<button
-                      class="per-device-identify"
-                      @click=${() => this._identifyDevice(device.identifyEntity!)}
-                      aria-label="Identify ${device.name}"
-                    >
-                      <ha-icon icon="mdi:eye"></ha-icon>
-                    </button>`
-                  : ''}
+                ${
+                  device.brightness !== null
+                    ? html`<span class="per-device-brightness">${device.brightness}%</span>`
+                    : ''
+                }
+                ${
+                  device.identifyEntity
+                    ? html`<button
+                        class="per-device-identify"
+                        @click=${() => this._identifyDevice(device.identifyEntity!)}
+                        aria-label="Identify ${device.name}"
+                      >
+                        <ha-icon icon="mdi:eye"></ha-icon>
+                      </button>`
+                    : ''
+                }
               </div>
             </div>
           `
@@ -989,6 +1040,66 @@ export class HyperLightCard extends LitElement {
     (e.currentTarget as HTMLElement).click();
   }
 
+  private _activateDropdownItem(e: Event, activate: () => void | Promise<void>) {
+    const item = e.currentTarget as HTMLElement;
+    const header = item.closest('.dropdown')?.querySelector<HTMLElement>('.dropdown-header');
+    if (this.shadowRoot?.activeElement === item) header?.focus();
+    return activate();
+  }
+
+  private _handlePickerFocusOut(e: FocusEvent) {
+    const dropdown = e.currentTarget as HTMLElement;
+    if (!(e.relatedTarget instanceof Node) || !dropdown.contains(e.relatedTarget)) {
+      this.stateManager.closeAllDropdowns();
+    }
+  }
+
+  private async _handlePickerKeydown(e: KeyboardEvent) {
+    const dropdown = e.currentTarget as HTMLElement;
+    const target = e.target as HTMLElement;
+    const header = dropdown.querySelector<HTMLElement>('.dropdown-header');
+    if (!header) return;
+    if (e.key === 'Escape') {
+      if (!dropdown.classList.contains('open')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.stateManager.closeAllDropdowns();
+      header.focus();
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      target.click();
+      if (target !== header) return;
+      await this.updateComplete;
+      if (dropdown.classList.contains('open')) {
+        (
+          dropdown.querySelector<HTMLElement>('.dropdown-item.selected') ??
+          dropdown.querySelector<HTMLElement>('.dropdown-item')
+        )?.focus();
+      }
+      return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    if (!dropdown.classList.contains('open')) {
+      header.click();
+      await this.updateComplete;
+    }
+    const options = [...dropdown.querySelectorAll<HTMLElement>('.dropdown-item')];
+    if (options.length === 0) return;
+    const current = options.indexOf(target);
+    let next: number;
+    if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = options.length - 1;
+    else if (current >= 0) next = current + (e.key === 'ArrowDown' ? 1 : -1);
+    else {
+      const selected = options.findIndex(option => option.getAttribute('aria-selected') === 'true');
+      next = selected >= 0 ? selected : e.key === 'ArrowDown' ? 0 : options.length - 1;
+    }
+    options[Math.max(0, Math.min(options.length - 1, next))]?.focus();
+  }
+
   private async _selectScene(scene: string) {
     await this.stateManager.setScene(scene);
   }
@@ -1093,6 +1204,7 @@ export class HyperLightCard extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.stateManager.hass = this.hass;
     document.addEventListener('click', this._clickOutsideHandler);
   }
 

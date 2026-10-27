@@ -16,6 +16,10 @@ export class StateManager {
   private _pendingBrightness?: number;
   private _liveControlDebounce = new Map<string, number>();
   private _isDraggingBrightness = false;
+  private _navigationTimers = new Set<number>();
+  private _lifecycleGeneration = 0;
+  private _paletteGeneration = 0;
+  private _paletteSource: string | null | undefined;
 
   constructor(config: Config | undefined, state: State) {
     this._config = config;
@@ -99,15 +103,16 @@ export class StateManager {
 
     // Publish live state before awaiting artwork so an older image request
     // cannot restore a stale power, brightness, or effect snapshot.
-    if (card.paletteSource !== this._state.lastEffectImage) {
+    if (card.paletteSource !== this._paletteSource) {
       const requested = card.paletteSource;
-      this._state.lastEffectImage = requested;
+      this._paletteSource = requested;
+      const generation = ++this._paletteGeneration;
       if (requested) {
         try {
           const palette = await this._colorManager.extractColors(requested);
-          // Extraction is async, so a faster-resolving earlier request must not
-          // repaint the card for an effect that is no longer running.
-          if (this._state.lastEffectImage !== requested) return;
+          // A URL can become current again while its earlier request is still
+          // pending. Only the current request may publish its palette.
+          if (this._paletteGeneration !== generation) return;
           // A null palette means the cover was unreadable. Publish the null
           // rather than keeping the previous effect's colors: stale colors
           // misreport the running effect, while null falls back to the Home
@@ -167,7 +172,9 @@ export class StateManager {
   async setScene(value: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setScene?.(ctx, value);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isSceneDropdownOpen = false;
   }
 
@@ -284,21 +291,27 @@ export class StateManager {
     this._state.currentEffect = effect;
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setEffect(ctx, effect);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isDropdownOpen = false;
   }
 
   async setCurrentLayout(layout: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setLayout(ctx, layout);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isLayoutDropdownOpen = false;
   }
 
   async setCurrentPreset(preset: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setPreset(ctx, preset);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isPresetDropdownOpen = false;
   }
 
@@ -321,11 +334,25 @@ export class StateManager {
   private async _press(action: 'next' | 'previous' | 'random' | 'stop') {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.pressNavigation(ctx, action);
-    setTimeout(() => this.updateState(), 300);
+    if (this._lifecycleGeneration !== generation) return;
+    const handle = window.setTimeout(() => {
+      this._navigationTimers.delete(handle);
+      void this.updateState();
+    }, 300);
+    this._navigationTimers.add(handle);
   }
 
   cleanup() {
+    this._lifecycleGeneration++;
+    this._paletteGeneration++;
+    this._paletteSource = undefined;
+    this._isDraggingBrightness = false;
+    for (const handle of this._navigationTimers) {
+      window.clearTimeout(handle);
+    }
+    this._navigationTimers.clear();
     if (this._brightnessDebounceTimer) {
       window.clearTimeout(this._brightnessDebounceTimer);
       this._brightnessDebounceTimer = undefined;

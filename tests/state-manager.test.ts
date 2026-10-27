@@ -49,7 +49,7 @@ describe('StateManager', () => {
     } as unknown as Mocked<HomeAssistant>;
 
     // Install before assigning hass: the setter runs updateState() eagerly and
-    // latches `lastEffectImage`, so a spy added afterwards is never consulted.
+    // starts palette extraction, so a spy added afterwards is never consulted.
     vi.spyOn(ColorManager.prototype, 'extractColors').mockResolvedValue({
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
@@ -63,7 +63,9 @@ describe('StateManager', () => {
   });
 
   afterEach(() => {
+    stateManager.cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('initializes without errors', () => {
@@ -71,6 +73,54 @@ describe('StateManager', () => {
   });
 
   describe('updateState', () => {
+    it('rejects a retired manager palette when its replacement uses the same cover', async () => {
+      await stateManager.updateState();
+      const fresh = mockState.palette;
+      let releaseOld: (() => void) | undefined;
+      vi.spyOn(ColorManager.prototype, 'extractColors')
+        .mockImplementationOnce(
+          () =>
+            new Promise(resolve => {
+              releaseOld = () => resolve(null);
+            })
+        )
+        .mockResolvedValueOnce(fresh);
+      mockHass.states['light.test_light'].attributes.effect_image = 'replacement.png';
+      const pending = stateManager.updateState();
+      stateManager.cleanup();
+      stateManager = new StateManager({ entity: 'light.test_light' }, mockState);
+      stateManager.hass = mockHass;
+      await stateManager.updateState();
+      releaseOld?.();
+      await pending;
+      expect(mockState.palette).toEqual(fresh);
+    });
+
+    it('ignores an older extraction after returning to the same cover', async () => {
+      await stateManager.updateState();
+      const fresh = mockState.palette;
+      let releaseOld: (() => void) | undefined;
+      vi.spyOn(ColorManager.prototype, 'extractColors')
+        .mockImplementationOnce(
+          () =>
+            new Promise(resolve => {
+              releaseOld = () => resolve(null);
+            })
+        )
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(fresh);
+      mockHass.states['light.test_light'].attributes.effect_image = 'a.png';
+      const old = stateManager.updateState();
+      mockHass.states['light.test_light'].attributes.effect_image = 'b.png';
+      await stateManager.updateState();
+      mockHass.states['light.test_light'].attributes.effect_image = 'a.png';
+      await stateManager.updateState();
+      expect(mockState.palette).toEqual(fresh);
+      releaseOld?.();
+      await old;
+      expect(mockState.palette).toEqual(fresh);
+    });
+
     it('updates the state correctly', async () => {
       await stateManager.updateState();
       await new Promise(process.nextTick);
@@ -264,6 +314,14 @@ describe('StateManager', () => {
   });
 
   describe('setBrightness', () => {
+    it('releases drag ownership when disconnected before pointer release', () => {
+      stateManager.startBrightnessDrag();
+      stateManager.cleanup();
+      mockHass.states['light.test_light'].attributes.brightness = convertCardBrightnessToHA(20);
+      stateManager.hass = mockHass;
+      expect(mockState.brightness).toBe(20);
+    });
+
     it('sets the brightness state', () => {
       stateManager.setBrightness(75);
       expect(mockState.brightness).toBe(75);
@@ -289,4 +347,71 @@ describe('StateManager', () => {
       expect(mockState.currentEffect).toBe('Effect2');
     });
   });
+
+  it.each([false, true])(
+    'retires navigation work when cleanup runs (pending service: %s)',
+    async pendingService => {
+      vi.useFakeTimers();
+      stateManager.cleanup();
+      stateManager = new StateManager(
+        { entity: 'light.test_light', next_effect_entity: 'button.next' },
+        mockState
+      );
+      stateManager.hass = mockHass;
+      let releaseService: (() => void) | undefined;
+      if (pendingService) {
+        mockHass.callService.mockImplementationOnce(
+          () =>
+            new Promise(resolve => {
+              releaseService = () => resolve(undefined as never);
+            })
+        );
+      }
+      const navigation = stateManager.nextEffect();
+      if (!pendingService) await navigation;
+      stateManager.cleanup();
+      mockState.currentEffect = 'Replacement';
+      releaseService?.();
+      await navigation;
+      await vi.advanceTimersByTimeAsync(300);
+      expect(mockState.currentEffect).toBe('Replacement');
+    }
+  );
+
+  it.each([
+    ['setCurrentEffect', 'isDropdownOpen'],
+    ['setCurrentLayout', 'isLayoutDropdownOpen'],
+    ['setCurrentPreset', 'isPresetDropdownOpen'],
+    ['setScene', 'isSceneDropdownOpen'],
+  ] as const)(
+    'retired %s completion cannot close a replacement picker',
+    async (method, openFlag) => {
+      stateManager.cleanup();
+      const config: Config = {
+        entity: 'light.test_light',
+        backend: 'hypercolor',
+        layout_entity: 'select.layout',
+        preset_entity: 'select.preset',
+        hypercolor: { scene_entity: 'select.scene' },
+      };
+      stateManager = new StateManager(config, mockState);
+      stateManager.hass = mockHass;
+      let release: (() => void) | undefined;
+      mockHass.callService.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            release = () => resolve(undefined as never);
+          })
+      );
+      const pending = stateManager[method]('Chosen');
+      expect(mockHass.callService).toHaveBeenCalledTimes(1);
+      stateManager.cleanup();
+      stateManager = new StateManager(config, mockState);
+      stateManager.hass = mockHass;
+      mockState[openFlag] = true;
+      release?.();
+      await pending;
+      expect(mockState[openFlag]).toBe(true);
+    }
+  );
 });

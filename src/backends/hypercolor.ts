@@ -675,7 +675,7 @@ function mapControlDescriptor(
       min: 0,
       max: Math.max(0, options.length - 1),
       step: 1,
-      value: index >= 0 ? index : 0,
+      value: Math.max(index, 0),
       text,
       options,
       available,

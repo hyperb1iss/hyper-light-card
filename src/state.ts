@@ -12,7 +12,6 @@ export class State implements ReactiveController {
   private _showEffectParameters = true;
   private _showBrightnessControl = true;
   private _brightness = 100;
-  private _lastEffectImage: string | null = null;
 
   private _isLayoutDropdownOpen = false;
   private _showLayoutSelect = true;
@@ -118,15 +117,6 @@ export class State implements ReactiveController {
 
   set brightness(value: number) {
     this._brightness = value;
-    this._host.requestUpdate();
-  }
-
-  get lastEffectImage() {
-    return this._lastEffectImage;
-  }
-
-  set lastEffectImage(value: string | null) {
-    this._lastEffectImage = value;
     this._host.requestUpdate();
   }
 

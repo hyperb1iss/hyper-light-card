@@ -20,7 +20,7 @@ describe('getAccessibleTextColors', () => {
 
     // Ensure text is in a valid rgb format
     const textRgb = textColors.map(Number);
-    if (!textRgb || textRgb.length !== 3) {
+    if (textRgb.length !== 3) {
       throw new Error(`Invalid RGB value returned: ${textColors}`);
     }
 
