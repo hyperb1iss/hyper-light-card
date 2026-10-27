@@ -36,7 +36,8 @@
     "test": "vitest run --config tests/config/vitest.config.ts",
     "test:watch": "vitest --config tests/config/vitest.config.ts",
     "test:coverage": "vitest run --coverage --config tests/config/vitest.config.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:build": "node --experimental-vm-modules scripts/check-build.js"
   },
   "dependencies": {
     "colorthief": "^2.6.0",
@@ -47,6 +48,7 @@
     "@biomejs/biome": "^2.6.3",
     "@testing-library/jest-dom": "^6.10.0",
     "@types/chroma-js": "^3.1.3",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^4.1.12",
     "chroma-js": "^3.2.0",

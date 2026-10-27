@@ -29,7 +29,6 @@ export default defineConfig(({ mode }) => {
         format: { comments: false, preamble: banner },
         compress: {
           arguments: true,
-          booleans_as_integers: true,
           drop_debugger: isProduction,
           expression: true,
           hoist_funs: true,
