@@ -126,7 +126,7 @@ Set an override only when automatic discovery does not find the intended entity.
 | `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
 | `show_live_controls`  | boolean | `true`  | Show numeric sliders, boolean switches, enum selectors, and read-only color swatches |
 | `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
-| `show_zones`          | boolean | `true`  | Show scene zone controls for per-group brightness and power (when present) |
+| `show_zones`          | boolean | `true`  | Show the Zones disclosure (collapsed by default) for per-group brightness and power |
 | `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
 | `show_per_device`     | boolean | `false` | Show child light brightness and Identify actions below the card   |
 
