@@ -223,6 +223,7 @@ export class HyperLightCard extends LitElement {
       '--text-color': palette.textColor,
       '--text-color-rgb': palette.textColorRgb,
       '--accent-color': palette.accentColor,
+      '--accent-text-color': palette.accentTextColor,
       '--accent-color-rgb': palette.accentColorRgb,
     };
   }
@@ -451,6 +452,7 @@ export class HyperLightCard extends LitElement {
             effect.usesAudio
               ? html`<ha-icon
                   icon="mdi:volume-high"
+                  role="img"
                   title="Uses Audio"
                   aria-label="Uses Audio"
                 ></ha-icon>`
@@ -460,6 +462,7 @@ export class HyperLightCard extends LitElement {
             effect.usesInput
               ? html`<ha-icon
                   icon="mdi:gamepad-variant"
+                  role="img"
                   title="Uses Input"
                   aria-label="Uses Input"
                 ></ha-icon>`
@@ -469,6 +472,7 @@ export class HyperLightCard extends LitElement {
             effect.usesVideo
               ? html`<ha-icon
                   icon="mdi:video"
+                  role="img"
                   title="Uses Video"
                   aria-label="Uses Video"
                 ></ha-icon>`
@@ -614,11 +618,12 @@ export class HyperLightCard extends LitElement {
           max="${control.max}"
           step="${control.step}"
           .value=${control.value.toString()}
+          data-live-control-id=${control.id}
           ?disabled=${!control.available}
           @change=${(e: Event) =>
-            this._handleLiveControlChange(control.id, (e.target as HTMLInputElement).value)}
+            this._handleLiveControlChange(control.id, e.target as HTMLInputElement)}
           @input=${(e: Event) =>
-            this._handleLiveControlInput(control.id, (e.target as HTMLInputElement).value)}
+            this._handleLiveControlInput(control.id, e.target as HTMLInputElement)}
           aria-label="${control.label}"
         />
         <div class="live-control-value">${formatLiveControlValue(control)}</div>
@@ -631,12 +636,14 @@ export class HyperLightCard extends LitElement {
       <div class="live-control-widget">
         <ha-switch
           .checked=${control.value === 1}
+          data-live-control-id=${control.id}
           ?disabled=${!control.available}
-          @change=${(e: Event) =>
-            this.stateManager.setLiveControlImmediate(
-              control.id,
-              (e.target as HTMLInputElement).checked
-            )}
+          @change=${(e: Event) => {
+            const input = e.target as HTMLInputElement;
+            this.stateManager.setLiveControlImmediate(control.id, input.checked, () =>
+              this._restoreLiveControl(control.id, input)
+            );
+          }}
           ><span class="sr-only">${control.label}</span></ha-switch
         >
       </div>
@@ -650,12 +657,14 @@ export class HyperLightCard extends LitElement {
         <select
           class="live-control-select"
           .value=${live(control.text ?? '')}
+          data-live-control-id=${control.id}
           ?disabled=${!control.available}
-          @change=${(e: Event) =>
-            this.stateManager.setLiveControlImmediate(
-              control.id,
-              (e.target as HTMLSelectElement).value
-            )}
+          @change=${(e: Event) => {
+            const input = e.target as HTMLSelectElement;
+            this.stateManager.setLiveControlImmediate(control.id, input.value, () =>
+              this._restoreLiveControl(control.id, input)
+            );
+          }}
           aria-label="${control.label}"
         >
           ${options.map(
@@ -675,12 +684,14 @@ export class HyperLightCard extends LitElement {
           type="color"
           class="live-control-color"
           .value=${value}
+          data-live-control-id=${control.id}
           ?disabled=${!control.available}
-          @change=${(e: Event) =>
-            this.stateManager.setLiveControlImmediate(
-              control.id,
-              (e.target as HTMLInputElement).value
-            )}
+          @change=${(e: Event) => {
+            const input = e.target as HTMLInputElement;
+            this.stateManager.setLiveControlImmediate(control.id, input.value, () =>
+              this._restoreLiveControl(control.id, input)
+            );
+          }}
           aria-label="${control.label}"
         />
         <span class="live-control-value">${value}</span>
@@ -1109,15 +1120,43 @@ export class HyperLightCard extends LitElement {
     await this.hass.callService('button', 'press', { entity_id: entityId });
   }
 
-  private _handleLiveControlChange(id: string, value: string) {
-    // `change` fires on release; commit the final value immediately so we
-    // don't sit on a queued debounce window.
-    this.stateManager.setLiveControlImmediate(id, Number(value));
+  private _restoreLiveControl(id: string, input: HTMLInputElement | HTMLSelectElement) {
+    if (
+      !this.hass ||
+      !this.config ||
+      !this.isConnected ||
+      !this.shadowRoot?.contains(input) ||
+      input.dataset.liveControlId !== id
+    ) {
+      return;
+    }
+    const control = this.stateManager.backend
+      .liveControls?.({ hass: this.hass, config: this.config })
+      .find(candidate => candidate.id === id);
+    if (!control) return;
+    if (control.kind === 'boolean') {
+      (input as HTMLInputElement).checked = control.value === 1;
+    } else {
+      input.value =
+        control.kind === 'number'
+          ? String(control.value)
+          : control.text || (control.kind === 'color' ? '#000000' : '');
+    }
   }
 
-  private _handleLiveControlInput(id: string, value: string) {
+  private _handleLiveControlChange(id: string, input: HTMLInputElement) {
+    // `change` fires on release; commit the final value immediately so we
+    // don't sit on a queued debounce window.
+    this.stateManager.setLiveControlImmediate(id, Number(input.value), () =>
+      this._restoreLiveControl(id, input)
+    );
+  }
+
+  private _handleLiveControlInput(id: string, input: HTMLInputElement) {
     // `input` fires per drag tick; debounced via the StateManager.
-    this.stateManager.setLiveControl(id, Number(value));
+    this.stateManager.setLiveControl(id, Number(input.value), () =>
+      this._restoreLiveControl(id, input)
+    );
   }
 
   private async _selectEffect(effect: string) {

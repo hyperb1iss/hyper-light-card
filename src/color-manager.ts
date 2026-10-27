@@ -11,6 +11,7 @@ export interface Palette {
   backgroundColor: string;
   textColor: string;
   accentColor: string;
+  accentTextColor: string;
   backgroundColorRgb: string;
   textColorRgb: string;
   accentColorRgb: string;
@@ -53,6 +54,7 @@ export class ColorManager {
               backgroundColor: rgb(background),
               textColor: rgb(text),
               accentColor: rgb(accent),
+              accentTextColor: rgb(getAccessibleTextColors(accent)),
               backgroundColorRgb: triplet(background),
               textColorRgb: triplet(text),
               accentColorRgb: triplet(accent),

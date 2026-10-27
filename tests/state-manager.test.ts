@@ -54,6 +54,7 @@ describe('StateManager', () => {
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
+      accentTextColor: 'rgb(0, 0, 0)',
       backgroundColorRgb: '255, 0, 0',
       textColorRgb: '0, 0, 0',
       accentColorRgb: '0, 255, 0',
@@ -129,6 +130,7 @@ describe('StateManager', () => {
         backgroundColor: 'rgb(255, 0, 0)',
         textColor: 'rgb(0, 0, 0)',
         accentColor: 'rgb(0, 255, 0)',
+        accentTextColor: 'rgb(0, 0, 0)',
         backgroundColorRgb: '255, 0, 0',
         textColorRgb: '0, 0, 0',
         accentColorRgb: '0, 255, 0',
@@ -162,6 +164,7 @@ describe('StateManager', () => {
         backgroundColor: 'rgb(1, 1, 1)',
         textColor: 'rgb(2, 2, 2)',
         accentColor: 'rgb(3, 3, 3)',
+        accentTextColor: 'rgb(255, 255, 255)',
         backgroundColorRgb: '1, 1, 1',
         textColorRgb: '2, 2, 2',
         accentColorRgb: '3, 3, 3',
@@ -170,6 +173,7 @@ describe('StateManager', () => {
         backgroundColor: 'rgb(9, 9, 9)',
         textColor: 'rgb(8, 8, 8)',
         accentColor: 'rgb(7, 7, 7)',
+        accentTextColor: 'rgb(255, 255, 255)',
         backgroundColorRgb: '9, 9, 9',
         textColorRgb: '8, 8, 8',
         accentColorRgb: '7, 7, 7',
@@ -345,6 +349,91 @@ describe('StateManager', () => {
     it('sets the current effect state', () => {
       stateManager.setCurrentEffect('Effect2');
       expect(mockState.currentEffect).toBe('Effect2');
+    });
+  });
+
+  describe('live control failures', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      stateManager.cleanup();
+      stateManager = new StateManager(
+        {
+          entity: 'light.test_light',
+          backend: 'hypercolor',
+        },
+        mockState
+      );
+      Object.assign(mockHass, { entities: { 'light.test_light': { config_entry_id: 'entry' } } });
+      stateManager.hass = mockHass;
+    });
+
+    it.each(['setLiveControl', 'setLiveControlImmediate'] as const)(
+      'handles rejection and restores the current edit through %s',
+      async method => {
+        const restore = vi.fn();
+        mockHass.callService.mockRejectedValueOnce(new Error('read-only scene'));
+        stateManager[method]('speed', 59, restore);
+        await vi.advanceTimersByTimeAsync(50);
+        expect(mockHass.callService).toHaveBeenCalledExactlyOnceWith('hypercolor', 'set_control', {
+          config_entry_id: 'entry',
+          control_name: 'speed',
+          value: 59,
+        });
+        expect(restore).toHaveBeenCalledOnce();
+      }
+    );
+
+    it.each(['setLiveControl', 'setLiveControlImmediate'] as const)(
+      'does not restore an old failure after a newer edit through %s',
+      async method => {
+        const oldRestore = vi.fn();
+        const newRestore = vi.fn();
+        let rejectOld: (error: Error) => void = () => {};
+        mockHass.callService.mockImplementationOnce(
+          () => new Promise((_resolve, reject) => (rejectOld = reject))
+        );
+        stateManager.setLiveControlImmediate('speed', 59, oldRestore);
+        stateManager[method]('speed', 60, newRestore);
+        rejectOld(new Error('old failure'));
+        await vi.advanceTimersByTimeAsync(0);
+        expect(oldRestore).not.toHaveBeenCalled();
+        expect(newRestore).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(50);
+        expect(mockHass.callService).toHaveBeenCalledTimes(2);
+      }
+    );
+
+    it('keeps independent controls eligible for rollback', async () => {
+      const restore = vi.fn();
+      mockHass.callService.mockRejectedValueOnce(new Error('failure'));
+      stateManager.setLiveControlImmediate('speed', 59, restore);
+      stateManager.setLiveControlImmediate('scale', 20);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(restore).toHaveBeenCalledOnce();
+    });
+
+    it('retires in-flight failure callbacks during cleanup', async () => {
+      const restore = vi.fn();
+      let rejectOld: (error: Error) => void = () => {};
+      mockHass.callService.mockImplementationOnce(
+        () => new Promise((_resolve, reject) => (rejectOld = reject))
+      );
+      stateManager.setLiveControlImmediate('speed', 59, restore);
+      stateManager.cleanup();
+      stateManager.setLiveControlImmediate('speed', 60);
+      rejectOld(new Error('old failure'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(restore).not.toHaveBeenCalled();
+    });
+
+    it('cancels queued edits during cleanup', async () => {
+      const restore = vi.fn();
+      stateManager.setLiveControl('speed', 59, restore);
+      stateManager.cleanup();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(mockHass.callService).not.toHaveBeenCalled();
+      expect(restore).not.toHaveBeenCalled();
     });
   });
 

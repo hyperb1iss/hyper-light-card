@@ -15,6 +15,7 @@ export class StateManager {
   private _brightnessDebounceTimer?: number;
   private _pendingBrightness?: number;
   private _liveControlDebounce = new Map<string, number>();
+  private _liveControlRevisions = new Map<string, number>();
   private _isDraggingBrightness = false;
   private _navigationTimers = new Set<number>();
   private _lifecycleGeneration = 0;
@@ -184,27 +185,55 @@ export class StateManager {
    * release because setLiveControlImmediate triggers the trailing
    * commit when a new debounce window opens.
    */
-  setLiveControl(id: string, value: number | string | boolean) {
+  setLiveControl(id: string, value: number | string | boolean, onFailure?: () => void) {
+    const revision = this._nextLiveControlRevision(id);
     const existing = this._liveControlDebounce.get(id);
     if (existing) window.clearTimeout(existing);
     const handle = window.setTimeout(() => {
       this._liveControlDebounce.delete(id);
-      const ctx = this._ctx;
-      if (!ctx) return;
-      void this._backend.setLiveControl?.(ctx, id, value);
+      void this._commitLiveControl(id, value, revision, onFailure);
     }, 50);
     this._liveControlDebounce.set(id, handle);
   }
 
-  setLiveControlImmediate(id: string, value: number | string | boolean) {
+  setLiveControlImmediate(id: string, value: number | string | boolean, onFailure?: () => void) {
+    const revision = this._nextLiveControlRevision(id);
     const existing = this._liveControlDebounce.get(id);
     if (existing) {
       window.clearTimeout(existing);
       this._liveControlDebounce.delete(id);
     }
+    void this._commitLiveControl(id, value, revision, onFailure);
+  }
+
+  private _nextLiveControlRevision(id: string): number {
+    const revision = (this._liveControlRevisions.get(id) ?? 0) + 1;
+    this._liveControlRevisions.set(id, revision);
+    return revision;
+  }
+
+  private async _commitLiveControl(
+    id: string,
+    value: number | string | boolean,
+    revision: number,
+    onFailure?: () => void
+  ) {
     const ctx = this._ctx;
     if (!ctx) return;
-    void this._backend.setLiveControl?.(ctx, id, value);
+    const generation = this._lifecycleGeneration;
+    try {
+      await this._backend.setLiveControl?.(ctx, id, value);
+    } catch (error) {
+      // Home Assistant displays the service error. Only the current edit may
+      // restore its widget; an older rejection must not undo newer input.
+      log.error('StateManager: Error setting live control', error);
+      if (
+        this._lifecycleGeneration === generation &&
+        this._liveControlRevisions.get(id) === revision
+      ) {
+        onFailure?.();
+      }
+    }
   }
 
   async setAudioReactive(on: boolean) {
@@ -364,5 +393,6 @@ export class StateManager {
       window.clearTimeout(handle);
     }
     this._liveControlDebounce.clear();
+    this._liveControlRevisions.clear();
   }
 }

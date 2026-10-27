@@ -54,6 +54,7 @@ describe('HyperLightCard', () => {
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
+      accentTextColor: 'rgb(0, 0, 0)',
       backgroundColorRgb: '255, 0, 0',
       textColorRgb: '0, 0, 0',
       accentColorRgb: '0, 255, 0',
@@ -250,6 +251,24 @@ describe('HyperLightCard', () => {
   });
 
   describe('render', () => {
+    it('gives labeled effect feature icons image semantics', async () => {
+      Object.assign(mockHass.states['light.test_light'].attributes, {
+        effect_uses_audio: true,
+        effect_uses_input: true,
+        effect_uses_video: true,
+      });
+      card.hass = { ...mockHass };
+      await card.updateComplete;
+      const icons = [...(card.shadowRoot?.querySelectorAll('.effect-features ha-icon') ?? [])];
+      expect(
+        icons.map(icon => [icon.getAttribute('role'), icon.getAttribute('aria-label')])
+      ).toEqual([
+        ['img', 'Uses Audio'],
+        ['img', 'Uses Input'],
+        ['img', 'Uses Video'],
+      ]);
+    });
+
     it('names the card region from the configured card name', async () => {
       card.setConfig({ entity: 'light.test_light', name: 'Desk lights' });
       await card.updateComplete;

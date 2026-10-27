@@ -217,7 +217,7 @@ ha-card {
 
 .dropdown-header:hover {
   background-color: var(--accent-color, var(--secondary-background-color, #f0f0f0));
-  color: var(--background-color, var(--primary-text-color, black));
+  color: var(--accent-text-color, var(--primary-text-color, black));
 }
 
 .dropdown-header:focus-visible {
@@ -294,7 +294,7 @@ ha-card {
 
 .dropdown-item:hover {
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
 }
 
 .dropdown-item:focus-visible {
@@ -317,7 +317,7 @@ ha-card {
 
 .dropdown-item.selected:hover {
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
 }
 
 /* Effect info section */
@@ -676,7 +676,7 @@ ha-card {
   align-items: center;
   justify-content: center;
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
@@ -684,6 +684,11 @@ ha-card {
   outline: none;
   position: relative;
   overflow: hidden;
+}
+
+.effect-button:focus-visible {
+  outline: 2px solid var(--text-color, var(--primary-text-color, white));
+  outline-offset: 3px;
 }
 
 .effect-button::before {
