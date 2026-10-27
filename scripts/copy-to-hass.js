@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import config from '../config.js';
 
+if (!config.hassConfigPath) {
+  throw new Error('Set HASS_CONFIG_PATH to your Home Assistant configuration directory');
+}
+
 const sourceDir = path.join(process.cwd(), 'target');
 const destDir = path.join(config.hassConfigPath, 'www', 'hyper-light-card');
 
@@ -14,8 +18,8 @@ if (!fs.existsSync(destDir)) {
 }
 
 // Vite inlines the styles into hyper-light-card.js via the `?inline` CSS
-// import, so there's no separate stylesheet to copy. The sourcemap only
-// shows up on production builds; treat its absence as fine.
+// import, so there's no separate stylesheet to copy. A sourcemap is
+// optional when copying an artifact built without one.
 const filesToCopy = [
   { name: 'hyper-light-card.js', required: true },
   { name: 'hyper-light-card.js.map', required: false },

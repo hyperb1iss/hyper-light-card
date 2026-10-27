@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -15,10 +15,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, '../../src'),
+      '@': fileURLToPath(new URL('../../src', import.meta.url)),
       // Map CSS imports to mock
-      '\\.css$': resolve(__dirname, '../../__mocks__/styleMock.js'),
-      colorthief: resolve(__dirname, '../../__mocks__/colorthief.js'),
+      '\\.css$': fileURLToPath(new URL('../../__mocks__/styleMock.js', import.meta.url)),
+      colorthief: fileURLToPath(new URL('../../__mocks__/colorthief.js', import.meta.url)),
     },
   },
 });
