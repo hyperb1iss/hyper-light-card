@@ -54,6 +54,7 @@ describe('HyperLightCard', () => {
       backgroundColor: 'rgb(255, 0, 0)',
       textColor: 'rgb(0, 0, 0)',
       accentColor: 'rgb(0, 255, 0)',
+      accentTextColor: 'rgb(0, 0, 0)',
       backgroundColorRgb: '255, 0, 0',
       textColorRgb: '0, 0, 0',
       accentColorRgb: '0, 255, 0',
@@ -80,7 +81,39 @@ describe('HyperLightCard', () => {
     expect(card).toBeInstanceOf(HyperLightCard);
   });
 
+  it('resumes brightness synchronization when reconnected after an interrupted drag', async () => {
+    await card.updateComplete;
+    const slider = card.shadowRoot?.querySelector<HTMLInputElement>('.brightness-slider input');
+    expect(slider).not.toBeNull();
+    slider?.dispatchEvent(new Event('mousedown'));
+    card.remove();
+    mockHass.states['light.test_light'].attributes.brightness = convertCardBrightnessToHA(20);
+    document.body.appendChild(card);
+    await card.updateComplete;
+    expect(slider?.value).toBe('20');
+  });
+
   describe('setConfig', () => {
+    it('rebinds controls and visibility without waiting for a new hass object', async () => {
+      await card.updateComplete;
+      mockHass.states['light.other'] = {
+        ...mockHass.states['light.test_light'],
+        entity_id: 'light.other',
+        state: 'off',
+      };
+      card.setConfig({ entity: 'light.other', show_effect_info: false });
+      await card.updateComplete;
+      await card.updateComplete;
+
+      expect(card.shadowRoot?.querySelector('.effect-info')).toBeNull();
+      const toggle = card.shadowRoot?.querySelector('.header ha-switch');
+      expect(toggle).not.toBeNull();
+      toggle?.dispatchEvent(new Event('change'));
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
+        entity_id: 'light.other',
+      });
+    });
+
     it('sets the configuration correctly', () => {
       const config = {
         entity: 'light.test_light',
@@ -218,6 +251,152 @@ describe('HyperLightCard', () => {
   });
 
   describe('render', () => {
+    it('gives labeled effect feature icons image semantics', async () => {
+      Object.assign(mockHass.states['light.test_light'].attributes, {
+        effect_uses_audio: true,
+        effect_uses_input: true,
+        effect_uses_video: true,
+      });
+      card.hass = { ...mockHass };
+      await card.updateComplete;
+      const icons = [...(card.shadowRoot?.querySelectorAll('.effect-features ha-icon') ?? [])];
+      expect(
+        icons.map(icon => [icon.getAttribute('role'), icon.getAttribute('aria-label')])
+      ).toEqual([
+        ['img', 'Uses Audio'],
+        ['img', 'Uses Input'],
+        ['img', 'Uses Video'],
+      ]);
+    });
+
+    it('names the card region from the configured card name', async () => {
+      card.setConfig({ entity: 'light.test_light', name: 'Desk lights' });
+      await card.updateComplete;
+      const region = card.shadowRoot?.querySelector('ha-card[role="region"]');
+      expect(region?.getAttribute('aria-label')).toBe('Desk lights');
+    });
+
+    it('supplies slotted labels for every Home Assistant switch', async () => {
+      mockHass.states['light.test_light'].attributes.effect_controls = [
+        { id: 'mirror', label: 'Mirror', kind: 'bool', value: true },
+      ];
+      mockHass.states['light.zone'] = {
+        ...mockHass.states['light.test_light'],
+        entity_id: 'light.zone',
+        attributes: { friendly_name: 'Desk', zone_id: 'desk', role: 'primary' },
+      };
+      mockHass.states['switch.audio'] = {
+        ...mockHass.states['light.test_light'],
+        entity_id: 'switch.audio',
+        attributes: {},
+      };
+      card.setConfig({
+        entity: 'light.test_light',
+        backend: 'hypercolor',
+        hypercolor: { zone_lights: ['light.zone'], audio_reactive_switch_entity: 'switch.audio' },
+      });
+      await card.updateComplete;
+      const labels = [...(card.shadowRoot?.querySelectorAll('ha-switch .sr-only') ?? [])].map(
+        label => label.textContent?.trim()
+      );
+      expect(labels).toEqual(['Toggle light', 'Toggle audio reactive', 'Mirror', 'Toggle Desk']);
+    });
+
+    it.each(['effect', 'layout', 'preset', 'scene'])(
+      'navigates and selects the %s picker using the keyboard',
+      async kind => {
+        mockHass.states['light.test_light'].attributes.effect_list = [
+          'Effect1',
+          'Effect2',
+          'Effect3',
+        ];
+        for (const name of ['layout', 'preset', 'scene']) {
+          mockHass.states[`select.${name}`] = {
+            ...mockHass.states['light.test_light'],
+            entity_id: `select.${name}`,
+            state: 'Effect1',
+            attributes: { options: ['Effect1', 'Effect2', 'Effect3'] },
+          };
+        }
+        card.setConfig({
+          entity: 'light.test_light',
+          backend: 'hypercolor',
+          layout_entity: 'select.layout',
+          preset_entity: 'select.preset',
+          hypercolor: { scene_entity: 'select.scene' },
+        });
+        await card.updateComplete;
+        card.shadowRoot?.querySelector<HTMLElement>('.attributes-toggle')?.click();
+        await card.updateComplete;
+        const dropdown = card.shadowRoot?.querySelector<HTMLElement>(
+          `.${kind}-select-wrapper .dropdown`
+        );
+        const header = dropdown?.querySelector<HTMLElement>('.dropdown-header');
+        expect(header).not.toBeNull();
+        header?.focus();
+        const press = async (key: string) => {
+          card.shadowRoot?.activeElement?.dispatchEvent(
+            new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+          );
+          await card.updateComplete;
+          await card.updateComplete;
+        };
+        await press('ArrowDown');
+        expect(card.shadowRoot?.activeElement?.textContent?.trim()).toBe('Effect1');
+        await press('End');
+        expect(card.shadowRoot?.activeElement?.textContent?.trim()).toBe('Effect3');
+        await press('Home');
+        await press('ArrowDown');
+        expect(card.shadowRoot?.activeElement?.textContent?.trim()).toBe('Effect2');
+        await press('Enter');
+        expect(mockHass.callService).toHaveBeenCalledWith(
+          kind === 'effect' ? 'light' : 'select',
+          kind === 'effect' ? 'turn_on' : 'select_option',
+          kind === 'effect'
+            ? { entity_id: 'light.test_light', effect: 'Effect2' }
+            : { entity_id: `select.${kind}`, option: 'Effect2' }
+        );
+        expect(dropdown?.classList.contains('open')).toBe(false);
+        expect(card.shadowRoot?.activeElement).toBe(header);
+      }
+    );
+
+    it('closes the effect picker with Escape and restores its trigger focus', async () => {
+      await card.updateComplete;
+      const header = card.shadowRoot?.querySelector<HTMLElement>(
+        '.effect-select-wrapper .dropdown-header'
+      );
+      header?.focus();
+      header?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+      );
+      await card.updateComplete;
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+      card.shadowRoot?.activeElement?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      );
+      await card.updateComplete;
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+      expect(card.shadowRoot?.activeElement).toBe(header);
+      expect(mockHass.callService).not.toHaveBeenCalled();
+    });
+
+    it('makes collapsed parameter controls inert', async () => {
+      mockHass.states['select.layout'] = {
+        ...mockHass.states['light.test_light'],
+        entity_id: 'select.layout',
+        state: 'Room',
+        attributes: { options: ['Room'] },
+      };
+      card.setConfig({ entity: 'light.test_light', layout_entity: 'select.layout' });
+      await card.updateComplete;
+      const panel = card.shadowRoot?.querySelector('.attributes');
+      expect(panel?.hasAttribute('inert')).toBe(true);
+      card.shadowRoot?.querySelector<HTMLElement>('.attributes-toggle')?.click();
+      await card.updateComplete;
+      expect(panel?.hasAttribute('inert')).toBe(false);
+    });
+
     it('renders without errors', () => {
       const renderResult = card.render();
       expect(renderResult).toBeDefined();

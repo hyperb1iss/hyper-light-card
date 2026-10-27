@@ -1,3 +1,15 @@
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Card Container */
 ha-card {
   overflow: visible !important;
@@ -205,7 +217,7 @@ ha-card {
 
 .dropdown-header:hover {
   background-color: var(--accent-color, var(--secondary-background-color, #f0f0f0));
-  color: var(--background-color, var(--primary-text-color, black));
+  color: var(--accent-text-color, var(--primary-text-color, black));
 }
 
 .dropdown-header:focus-visible {
@@ -255,7 +267,6 @@ ha-card {
   transform: scaleY(0);
   transition:
     opacity 0.18s ease,
-    visibility 0.18s ease,
     transform 0.18s ease;
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.45),
@@ -283,7 +294,7 @@ ha-card {
 
 .dropdown-item:hover {
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
 }
 
 .dropdown-item:focus-visible {
@@ -306,7 +317,7 @@ ha-card {
 
 .dropdown-item.selected:hover {
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
 }
 
 /* Effect info section */
@@ -503,7 +514,7 @@ ha-card {
   transition: transform 0.3s ease;
 }
 
-.attributes.expanded .attributes-toggle ha-icon {
+.attributes-toggle[aria-expanded="true"] ha-icon {
   transform: rotate(180deg);
 }
 
@@ -665,7 +676,7 @@ ha-card {
   align-items: center;
   justify-content: center;
   background-color: var(--accent-color, var(--primary-color, #03a9f4));
-  color: var(--background-color, white);
+  color: var(--accent-text-color, var(--text-primary-color, white));
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
@@ -673,6 +684,11 @@ ha-card {
   outline: none;
   position: relative;
   overflow: hidden;
+}
+
+.effect-button:focus-visible {
+  outline: 2px solid var(--text-color, var(--primary-text-color, white));
+  outline-offset: 3px;
 }
 
 .effect-button::before {

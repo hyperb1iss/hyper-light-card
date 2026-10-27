@@ -52,8 +52,7 @@ export interface EffectModel {
 }
 
 export type EffectParameter =
-  | string
-  | { label: string; type: string; value: string | number | boolean };
+  string | { label: string; type: string; value: string | number | boolean };
 
 export interface EffectListModel {
   /** Currently active effect name (matches EffectModel.name). */

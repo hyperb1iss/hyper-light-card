@@ -15,8 +15,11 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "typeRoots": ["./node_modules/@types", "./src"]
+    "typeRoots": ["./node_modules/@types", "./src"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "*.ts", "*.js", "scripts/**/*.ts", "scripts/**/*.js"],
   "exclude": ["node_modules"]
 }

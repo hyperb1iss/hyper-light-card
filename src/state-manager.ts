@@ -15,7 +15,12 @@ export class StateManager {
   private _brightnessDebounceTimer?: number;
   private _pendingBrightness?: number;
   private _liveControlDebounce = new Map<string, number>();
+  private _liveControlRevisions = new Map<string, number>();
   private _isDraggingBrightness = false;
+  private _navigationTimers = new Set<number>();
+  private _lifecycleGeneration = 0;
+  private _paletteGeneration = 0;
+  private _paletteSource: string | null | undefined;
 
   constructor(config: Config | undefined, state: State) {
     this._config = config;
@@ -99,15 +104,16 @@ export class StateManager {
 
     // Publish live state before awaiting artwork so an older image request
     // cannot restore a stale power, brightness, or effect snapshot.
-    if (card.paletteSource !== this._state.lastEffectImage) {
+    if (card.paletteSource !== this._paletteSource) {
       const requested = card.paletteSource;
-      this._state.lastEffectImage = requested;
+      this._paletteSource = requested;
+      const generation = ++this._paletteGeneration;
       if (requested) {
         try {
           const palette = await this._colorManager.extractColors(requested);
-          // Extraction is async, so a faster-resolving earlier request must not
-          // repaint the card for an effect that is no longer running.
-          if (this._state.lastEffectImage !== requested) return;
+          // A URL can become current again while its earlier request is still
+          // pending. Only the current request may publish its palette.
+          if (this._paletteGeneration !== generation) return;
           // A null palette means the cover was unreadable. Publish the null
           // rather than keeping the previous effect's colors: stale colors
           // misreport the running effect, while null falls back to the Home
@@ -167,7 +173,9 @@ export class StateManager {
   async setScene(value: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setScene?.(ctx, value);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isSceneDropdownOpen = false;
   }
 
@@ -177,27 +185,55 @@ export class StateManager {
    * release because setLiveControlImmediate triggers the trailing
    * commit when a new debounce window opens.
    */
-  setLiveControl(id: string, value: number | string | boolean) {
+  setLiveControl(id: string, value: number | string | boolean, onFailure?: () => void) {
+    const revision = this._nextLiveControlRevision(id);
     const existing = this._liveControlDebounce.get(id);
     if (existing) window.clearTimeout(existing);
     const handle = window.setTimeout(() => {
       this._liveControlDebounce.delete(id);
-      const ctx = this._ctx;
-      if (!ctx) return;
-      void this._backend.setLiveControl?.(ctx, id, value);
+      void this._commitLiveControl(id, value, revision, onFailure);
     }, 50);
     this._liveControlDebounce.set(id, handle);
   }
 
-  setLiveControlImmediate(id: string, value: number | string | boolean) {
+  setLiveControlImmediate(id: string, value: number | string | boolean, onFailure?: () => void) {
+    const revision = this._nextLiveControlRevision(id);
     const existing = this._liveControlDebounce.get(id);
     if (existing) {
       window.clearTimeout(existing);
       this._liveControlDebounce.delete(id);
     }
+    void this._commitLiveControl(id, value, revision, onFailure);
+  }
+
+  private _nextLiveControlRevision(id: string): number {
+    const revision = (this._liveControlRevisions.get(id) ?? 0) + 1;
+    this._liveControlRevisions.set(id, revision);
+    return revision;
+  }
+
+  private async _commitLiveControl(
+    id: string,
+    value: number | string | boolean,
+    revision: number,
+    onFailure?: () => void
+  ) {
     const ctx = this._ctx;
     if (!ctx) return;
-    void this._backend.setLiveControl?.(ctx, id, value);
+    const generation = this._lifecycleGeneration;
+    try {
+      await this._backend.setLiveControl?.(ctx, id, value);
+    } catch (error) {
+      // Home Assistant displays the service error. Only the current edit may
+      // restore its widget; an older rejection must not undo newer input.
+      log.error('StateManager: Error setting live control', error);
+      if (
+        this._lifecycleGeneration === generation &&
+        this._liveControlRevisions.get(id) === revision
+      ) {
+        onFailure?.();
+      }
+    }
   }
 
   async setAudioReactive(on: boolean) {
@@ -284,21 +320,27 @@ export class StateManager {
     this._state.currentEffect = effect;
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setEffect(ctx, effect);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isDropdownOpen = false;
   }
 
   async setCurrentLayout(layout: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setLayout(ctx, layout);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isLayoutDropdownOpen = false;
   }
 
   async setCurrentPreset(preset: string) {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.setPreset(ctx, preset);
+    if (this._lifecycleGeneration !== generation) return;
     this._state.isPresetDropdownOpen = false;
   }
 
@@ -321,11 +363,25 @@ export class StateManager {
   private async _press(action: 'next' | 'previous' | 'random' | 'stop') {
     const ctx = this._ctx;
     if (!ctx) return;
+    const generation = this._lifecycleGeneration;
     await this._backend.pressNavigation(ctx, action);
-    setTimeout(() => this.updateState(), 300);
+    if (this._lifecycleGeneration !== generation) return;
+    const handle = window.setTimeout(() => {
+      this._navigationTimers.delete(handle);
+      void this.updateState();
+    }, 300);
+    this._navigationTimers.add(handle);
   }
 
   cleanup() {
+    this._lifecycleGeneration++;
+    this._paletteGeneration++;
+    this._paletteSource = undefined;
+    this._isDraggingBrightness = false;
+    for (const handle of this._navigationTimers) {
+      window.clearTimeout(handle);
+    }
+    this._navigationTimers.clear();
     if (this._brightnessDebounceTimer) {
       window.clearTimeout(this._brightnessDebounceTimer);
       this._brightnessDebounceTimer = undefined;
@@ -337,5 +393,6 @@ export class StateManager {
       window.clearTimeout(handle);
     }
     this._liveControlDebounce.clear();
+    this._liveControlRevisions.clear();
   }
 }
