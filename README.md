@@ -23,8 +23,7 @@ running effect's colors, and provides a visual configuration editor.
 ## Installation
 
 Install either the Hypercolor or SignalRGB Home Assistant integration first.
-For Hypercolor 0.8, use the integration's 0.7.1 release and its supported Home
-Assistant version (2026.9.4 or newer).
+Follow that integration's installation requirements.
 
 ### HACS
 
@@ -48,8 +47,7 @@ register `/hacsfiles/hyper-light-card/hyper-light-card.js` as a module yourself.
 
 For resources managed in YAML, follow Home Assistant's
 [resource configuration guide](https://contributors.home-assistant.io/frontend/custom-ui/resources/).
-After an update, refresh the browser cache or change the resource URL's version
-query, for example `/local/hyper-light-card.js?v=1.2.0`.
+After an update, refresh the browser cache so the dashboard loads the new bundle.
 
 ## Configuration
 
