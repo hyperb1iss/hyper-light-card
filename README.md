@@ -1,391 +1,161 @@
-# 🌟 hyper-light-card for Home Assistant
-
-<div align="center">
+# hyper-light-card
 
 [![HACS Custom][hacs-shield]][hacs]
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 
-_A dazzling custom card for controlling SignalRGB and Hypercolor lights through Home Assistant_
+Control [Hypercolor](https://github.com/hyperb1iss/hypercolor-hass) and
+[SignalRGB](https://github.com/hyperb1iss/signalrgb-homeassistant) lights from a
+Home Assistant dashboard. The card discovers companion entities, follows the
+running effect's colors, and provides a visual configuration editor.
 
-[Installation](#installation) • [Configuration](#configuration) • [Usage](#usage) • [Troubleshooting](#troubleshooting) • [Contributing](#contributing) • [License](#license)
+[Install](#installation) · [Configure](#configuration) · [Configuration reference](docs/configuration.md) · [Develop](CONTRIBUTING.md)
 
-</div>
+## Screenshots
 
-## 🎮 Features
+| Compact | Live controls | Phone width |
+| --- | --- | --- |
+| ![Compact Hypercolor card with Borealis and three zones](images/hypercolor-compact.png) | ![Expanded Hypercolor card with Hyperbloom live controls](images/hypercolor-controls.png) | ![Hypercolor card at a 390-pixel phone viewport](images/hypercolor-mobile.png) |
 
-- 💅 Sleek, modern design that adapts to your effect's color palette
-- 🔮 Animated Hypercolor brand mark that glows to life with the light
-- 🎨 Dynamic color extraction with automatic UI theming, falling back cleanly to your Home Assistant theme when the effect art can't be read
-- 🔌 Auto-detects whether your light is a SignalRGB or Hypercolor entity
-- 📱 Responsive layout for desktop and mobile, with native HA section sizing
-- 🔀 Effect switching with an intelligent dropdown menu that highlights and scrolls to the running effect
-- ⌨️ Keyboard-navigable selectors with visible focus rings
-- ℹ️ Rich effect info: description, publisher, and tag chips
-- 🎛️ Live effect controls: sliders, toggles, and read-only palette and color swatches
-- 📊 Layout and preset selection for SignalRGB
-- 🎬 Scenes for Hypercolor, with live runtime controls
-- 🗺️ Scene zone controls for tuning each render group's brightness and power
-- 🎧 Audio controls for toggling reactivity and picking the input device
-- 🛰️ Status chips for FPS, audio reactivity, and connectivity (Hypercolor)
-- 🧩 Per-device drilldown for grouped Hypercolor installs
-- ⏭️ Effect navigation controls (next, previous, random)
-- 💡 Animated power toggle with color-aware feedback
-- 🔆 Smooth brightness control slider
-- 🔧 Visual editor with backend-aware schema (powered by `ha-form`)
+[Watch the demo](https://github.com/hyperb1iss/hyper-light-card/releases/download/v1.2.0/hyper-light-card-demo.mp4)
+· [Demo setup](docs/demo.md)
 
-## 🌈 Screenshots
+## Installation
 
-<table>
-  <tr>
-    <td><img src="images/dark_magic.png"/></td>
-    <td><img src="images/sakura.png"/></td>
-    <td><img src="images/rave_visualizer.png"/></td>
-  </tr>
-  <tr>
-    <td><img src="images/poison_expanded.png"/></td>
-    <td><img src="images/cyberpunk_2077_expanded.png"/></td>
-    <td><img src="images/corrosive_expanded.png"/></td>
-  </tr>
-</table>
+Install either the Hypercolor or SignalRGB Home Assistant integration first.
+For Hypercolor 0.8, use the integration's 0.7.1 release and its supported Home
+Assistant version (2026.9.4 or newer).
 
-## 🛠️ Installation
+### HACS
 
-<a name="installation"></a>
+1. Open HACS, then its top-right menu and **Custom repositories**.
+2. Add `https://github.com/hyperb1iss/hyper-light-card` with type **Dashboard**.
+3. Find **hyper-light-card** in HACS and download it.
+4. Reload your browser, then add **Hyper Light Card** to your dashboard.
 
-### Prerequisites
+See the [HACS custom repository instructions](https://www.hacs.dev/docs/faq/custom_repositories/)
+if your HACS interface differs. If you manage dashboard resources in YAML,
+register `/hacsfiles/hyper-light-card/hyper-light-card.js` as a module yourself.
 
-- Home Assistant 2024.2.0 or newer
-- One of the following light integrations:
-  - [SignalRGB Home Assistant Integration](https://github.com/hyperb1iss/signalrgb-homeassistant) (latest SignalRGB beta recommended for full functionality)
-  - [Hypercolor Home Assistant Integration](https://github.com/hyperb1iss/hypercolor-hass)
+### Manual installation
 
-### HACS Installation (Recommended)
+1. Download `hyper-light-card.js` from the [latest release][releases].
+2. Copy it to `www/hyper-light-card.js` inside your Home Assistant configuration
+   directory. Restart Home Assistant once if you just created the `www` folder.
+3. Open **Settings → Dashboards → Resources** and add
+   `/local/hyper-light-card.js` with type **JavaScript module**.
+4. Reload the browser.
 
-1. Make sure you have [HACS](https://hacs.xyz/) installed in your Home Assistant instance.
-2. Go to HACS → Frontend → "+ Explore & Download Repositories"
-3. Search for "hyper-light-card" and add it.
-4. Refresh your browser cache by holding down Ctrl and pressing F5.
+For resources managed in YAML, follow Home Assistant's
+[resource configuration guide](https://contributors.home-assistant.io/frontend/custom-ui/resources/).
+After an update, refresh the browser cache or change the resource URL's version
+query, for example `/local/hyper-light-card.js?v=1.2.0`.
 
-NOTE: This component isn't in the official HACS repository yet. You can add it as a custom
-repository for now- go to HACS, click on the 3 dots, click custom repositories, and enter
-"hyperb1iss/hyper-light-card" for the repository and select "Lovelace" for the
-category.
+## Configuration
 
-### Manual Installation
+Edit a dashboard, add **Hyper Light Card**, and select the integration's main
+light. The editor detects the backend and offers the relevant visibility
+options. You can also add a manual card:
 
-1. Download `hyper-light-card.js` from the [latest release](https://github.com/hyperb1iss/hyper-light-card/releases).
-2. Copy it into your `config/www` directory.
-3. Add the following to your `configuration.yaml`:
+```yaml
+type: custom:hyper-light-card
+entity: light.hypercolor_hyperia
+```
 
-   ```yaml
-   lovelace:
-     resources:
-       - url: /local/hyper-light-card.js
-         type: module
-   ```
-
-4. Restart Home Assistant.
-
-## ⚙️ Configuration
-
-<a name="configuration"></a>
-
-Add the card to your dashboard:
-
-1. Edit your dashboard
-2. Click "+ Add Card"
-3. Search for "Hyper Light Card" in Custom Cards
-4. Choose your light entity and configure options in the visual editor
-
-The visual editor adapts to whichever backend the card detects. Override detection with the `backend` option if you ever need to.
-
-### SignalRGB example
+For SignalRGB:
 
 ```yaml
 type: custom:hyper-light-card
 entity: light.signalrgb
-name: 'All The RGBeez'
-icon: mdi:led-strip-variant
-show_effect_info: true
-show_effect_parameters: true
-show_brightness_control: true
-background_opacity: 0.7
-layout_entity: select.signalrgb_layout
-preset_entity: select.signalrgb_preset
-next_effect_entity: button.signalrgb_next_effect
-previous_effect_entity: button.signalrgb_previous_effect
-random_effect_entity: button.signalrgb_random_effect
-show_layout_select: true
-show_preset_select: true
-show_effect_controls: true
-allowed_effects:
-  - 'Lava Lamp'
-  - 'Bubbles'
-  - 'Rave Visualizer'
 ```
 
-### Hypercolor example
+Use your actual entity ID. Hypercolor names its hub after the daemon instance,
+so a daemon named `Hyperia` creates `light.hypercolor_hyperia`. Companion controls
+are discovered through Home Assistant's device and entity registries, including
+renamed entities. Set `backend: hypercolor` or `backend: signalrgb` to override
+auto-detection.
 
-The Hypercolor integration namespaces each hub with the product and daemon
-instance name. A daemon called `Hyperia` appears as **Hypercolor Hyperia** and
-produces `light.hypercolor_hyperia` alongside
-`select.hypercolor_hyperia_layout`, `button.hypercolor_hyperia_next_effect`,
-and the rest of its hub entities:
+The [configuration reference](docs/configuration.md) covers visibility flags,
+allowed effects, colors, and explicit companion entity overrides.
 
-```yaml
-type: custom:hyper-light-card
-entity: light.hypercolor_hyperia
-name: 'Living Room'
-show_status_chips: true
-show_live_controls: true
-show_scene_select: true
-show_audio_controls: true
-show_zones: true
-show_per_device: false
-background_opacity: 0.7
-```
+## Controls
 
-> Companion entities are auto-discovered through Home Assistant's device and
-> entity registries. Hub controls, scene zones, and physical child devices stay
-> attached to the correct Hypercolor instance even when their entity ids are
-> renamed. Effect description, publisher, tags, and the full control set come
-> from the master light's attributes, so the info panel and controls populate
-> automatically.
+- **Power and brightness:** toggle the light with the power switch; drag the brightness
+  slider to set the level.
+- **Effects:** choose an effect, or use previous, next, and random navigation.
+  The information panel shows the effect's description, publisher, and tags.
+- **Hypercolor:** select scenes, adjust live parameters, control scene zones,
+  and toggle audio reactivity. Optional device rows show brightness and provide
+  Identify for individual lights.
+- **SignalRGB:** select layouts and presets exposed by the integration.
+- **Keyboard:** use Tab to reach controls, Enter or Space to open a selector or
+  choose an option, and arrow keys or Home/End to navigate. Escape closes the
+  selector and returns focus.
 
-Discovery only fills in options you haven't set, so any helper that lives
-somewhere unexpected can be pinned by hand under `hypercolor`:
+Controls appear when the integration provides their entities and options.
+Hypercolor numeric controls use sliders, boolean controls use switches, and
+enum controls use selectors. Color values appear as read-only swatches;
+unsupported control types are omitted.
+The card uses the running effect's artwork for its accent colors and falls back
+to the Home Assistant theme when the image cannot be read.
 
-```yaml
-type: custom:hyper-light-card
-entity: light.hypercolor_hyperia
-backend: hypercolor
-hypercolor:
-  scene_entity: select.hypercolor_hyperia_scene
-  stop_effect_entity: button.hypercolor_hyperia_stop_effect
-  fps_entity: sensor.hypercolor_hyperia_fps
-  connected_entity: binary_sensor.hypercolor_hyperia_connected
-  audio_beat_entity: binary_sensor.hypercolor_hyperia_audio_beat
-  audio_reactive_active_entity: binary_sensor.hypercolor_hyperia_audio_reactive_active
-  audio_energy_entity: sensor.hypercolor_hyperia_audio_energy
-  audio_reactive_switch_entity: switch.hypercolor_hyperia_audio_reactive
-  audio_device_entity: select.hypercolor_hyperia_audio_device
-  live_control_entities:
-    brightness: number.hypercolor_hyperia_brightness
-    speed: number.hypercolor_hyperia_speed
-    hue_shift: number.hypercolor_hyperia_hue_shift
-    intensity: number.hypercolor_hyperia_intensity
-  zone_lights:
-    - light.hypercolor_hyperia_default_zone
-  per_device_lights:
-    - light.lamp_1
-  per_device_identify_buttons:
-    - button.lamp_1_identify
-```
+## Troubleshooting
 
-### Configuration Options
+### The card is missing from the picker
 
-#### Shared
+Check that the JavaScript resource URL loads successfully in your browser and
+is registered as a module. Reload the page after adding or updating the
+resource. Home Assistant safe mode does not load custom dashboard resources.
 
-| Option                    | Type                       | Default                   | Description                                                                |
-| ------------------------- | -------------------------- | ------------------------- | -------------------------------------------------------------------------- |
-| `entity`                  | string                     | **Required**              | The entity_id of your SignalRGB or Hypercolor light                        |
-| `backend`                 | `signalrgb` \| `hypercolor` | _auto-detected_           | Override backend detection. Leave unset unless detection picks the wrong one. |
-| `name`                    | string                     | `friendly_name` of entity | Card title                                                                 |
-| `icon`                    | string                     | backend default           | Icon to display (SignalRGB uses the brand icon URL; Hypercolor uses the animated Hypercolor brand mark). Set any `mdi:` token or image URL to override. |
-| `background_opacity`      | number                     | `0.7`                     | Opacity of the effect image background (0-1)                               |
-| `show_effect_info`        | boolean                    | `true`                    | Show effect description and publisher                                      |
-| `show_effect_parameters`  | boolean                    | `true`                    | Display effect parameters                                                  |
-| `show_brightness_control` | boolean                    | `true`                    | Display brightness slider                                                  |
-| `show_effect_controls`    | boolean                    | `true`                    | Show effect navigation (next, previous, random)                            |
-| `show_layout_select`      | boolean                    | `true`                    | Show layout dropdown when a layout source is available                     |
-| `show_preset_select`      | boolean                    | `true`                    | Show preset dropdown when a preset source is available                     |
-| `allowed_effects`         | string[]                   | _all effects_             | Limit the effect dropdown. Empty means all available effects.              |
+### Effect colors fall back to my Home Assistant theme
 
-#### SignalRGB
+Palette extraction needs browser access to the cover image. For Hypercolor,
+add your Home Assistant origin (scheme, host, and port) to the daemon's
+`web.cors_origins`, for example `http://homeassistant.local:8123`. The browser
+must also be able to reach the daemon's image URL. An HTTPS dashboard cannot
+load insecure HTTP artwork without the browser blocking it.
 
-| Option                   | Type   | Default     | Description                                        |
-| ------------------------ | ------ | ----------- | -------------------------------------------------- |
-| `layout_entity`          | string | _auto_      | Override the SignalRGB layout `select` entity      |
-| `preset_entity`          | string | _auto_      | Override the SignalRGB preset `select` entity      |
-| `next_effect_entity`     | string | _auto_      | Override the next-effect `button` entity           |
-| `previous_effect_entity` | string | _auto_      | Override the previous-effect `button` entity       |
-| `random_effect_entity`   | string | _auto_      | Override the random-effect `button` entity         |
+### The Preset selector is missing
 
-These default to the device-scoped helpers exposed by the SignalRGB integration, so they're rarely needed.
+Hypercolor lists presets for the running effect. Save a preset for that effect
+to populate the selector; an empty list hides it.
 
-#### Hypercolor
+### A live control returns to its previous value
 
-| Option                | Type    | Default | Description                                              |
-| --------------------- | ------- | ------- | -------------------------------------------------------- |
-| `show_scene_select`   | boolean | `true`  | Show the scene selector dropdown                         |
-| `show_live_controls`  | boolean | `true`  | Show effect controls (sliders, toggles, palette and color swatches) |
-| `show_audio_controls` | boolean | `true`  | Show the audio-reactive toggle and input device selector (when present) |
-| `show_zones`          | boolean | `true`  | Show scene zone controls for per-group brightness and power (when present) |
-| `show_status_chips`   | boolean | `true`  | Show FPS, audio reactivity, and connectivity chips       |
-| `show_per_device`     | boolean | `false` | Show an expandable list of child lights below the card   |
+Home Assistant reports a service error when the daemon rejects a change. The
+card restores the latest confirmed value. Snapshot scenes are locked; choose
+an editable live scene for parameter changes. Edits to live scenes persist.
 
-Every selector hides itself when its entity exposes no options, so a card never
-shows a dead control. Hypercolor's preset list, for instance, is empty for
-effects that have no saved presets, and the Preset dropdown simply won't appear
-for those.
+### The wrong backend is selected
 
-#### Hypercolor helper entities
+An unavailable light may lack the attributes used for detection. Set
+`backend: hypercolor` or `backend: signalrgb` explicitly.
 
-All of these live under the `hypercolor:` key and are auto-discovered from Home
-Assistant's device and entity registries. Set one only when you need to override
-discovery.
+### Companion controls are missing
 
-| Option                         | Type     | Description                                             |
-| ------------------------------ | -------- | ------------------------------------------------------- |
-| `scene_entity`                 | string   | Scene `select` entity                                   |
-| `stop_effect_entity`           | string   | Stop-effect `button` entity                             |
-| `fps_entity`                   | string   | Render-rate `sensor` for the FPS chip                   |
-| `connected_entity`             | string   | Daemon connectivity `binary_sensor`                     |
-| `audio_beat_entity`            | string   | Beat `binary_sensor`; drives the icon pulse             |
-| `audio_reactive_active_entity` | string   | Audio-reactive `binary_sensor` for the status chip      |
-| `audio_energy_entity`          | string   | Audio energy `sensor`                                   |
-| `audio_reactive_switch_entity` | string   | Audio-reactive `switch` shown in the audio controls     |
-| `audio_device_entity`          | string   | Audio input device `select`                             |
-| `live_control_entities`        | map      | `brightness` / `speed` / `hue_shift` / `intensity` to `number` entities |
-| `zone_lights`                  | string[] | Scene render-group lights backing the Zones section     |
-| `per_device_lights`            | string[] | Child lights for the per-device drilldown               |
-| `per_device_identify_buttons`  | string[] | Identify `button` entities matched to those children    |
+Discovery waits for the device and entity registries. Helpers attached to a
+different device cannot be associated automatically. Use the overrides in the
+[configuration reference](docs/configuration.md) to pin their entity IDs.
+Unavailable live, audio, and zone controls are disabled; scene zones absent
+from the current scene are hidden.
 
-## 🚀 Usage
+## Development
 
-<a name="usage"></a>
+See [Contributing](CONTRIBUTING.md) for local Home Assistant setup, checks, and
+release builds. Bug reports should include the card version, Home Assistant
+version, backend integration version, and a minimal card configuration.
 
-hyper-light-card adapts to whichever backend it detects:
+## License and credits
 
-- **Power Toggle**: Click the light icon to turn the light on or off.
-- **Effect Selection**: Use the dropdown to choose from available effects.
-- **Layout & Preset / Scene**: SignalRGB exposes layouts and presets; Hypercolor exposes scenes.
-- **Effect Navigation**: Cycle through effects with next, previous, and random buttons.
-- **Brightness Control**: Adjust brightness with the slider.
-- **Live Controls**: Drag Hypercolor's intensity, speed, and parameter sliders without flooding the bus. Input is coalesced while you drag and committed on release.
-- **Keyboard**: Tab to any selector, then Enter or Space to open it and to pick a row.
-- **Status Chips**: Hypercolor surfaces FPS, audio reactivity, and connectivity at a glance.
-- **Per-Device Drilldown**: Expand grouped Hypercolor installs to see each child light's brightness and flash it with Identify.
-- **Effect Info & Parameters**: Description, publisher, and current parameter values for the running effect.
+Licensed under [Apache-2.0](LICENSE). Built with [Lit](https://lit.dev/) and
+[ColorThief](https://lokeshdhakar.com/projects/color-thief/) for
+[Home Assistant](https://www.home-assistant.io/).
 
-The card pulls its accent palette from the running effect image, giving each effect its own coherent look. The extracted background is measured against the WCAG relative-luminance threshold to pick black or white foreground text, so labels stay readable on any cover art.
-
-When the effect image can't be read, the card leaves its color variables unset and inherits your Home Assistant theme instead. See [Troubleshooting](#troubleshooting) if you expected palette colors and got theme colors.
-
-## 🩺 Troubleshooting
-
-<a name="troubleshooting"></a>
-
-**The card uses my Home Assistant theme colors instead of the effect's palette.**
-Palette extraction reads the effect cover image through a canvas, which browsers
-only allow for images served with permissive CORS headers. Hypercolor serves
-cover art from the daemon's own origin, and the daemon allows loopback origins
-plus anything listed in its `web.cors_origins` config. If you reach Home
-Assistant at a hostname rather than `localhost`, add that exact origin (scheme,
-host, and port, for example `http://homeassistant.local:8123`) to the daemon's
-`cors_origins` and reload. Until then the card degrades to your theme rather
-than rendering unstyled.
-
-**The Preset dropdown never appears.**
-Hypercolor's preset `select` lists only presets saved for the effect that is
-currently running, so it is empty for effects you have never saved a preset for.
-The card hides selectors with no options, so the dropdown is absent rather than
-disabled. Save a preset for the running effect and it appears.
-
-**A Hypercolor light is detected as SignalRGB.**
-Detection uses attributes the Hypercolor light publishes (`effect_controls`,
-`active_effect_id`, `zone_count`). A light that is unavailable at page load may
-not expose them yet. Set `backend: hypercolor` to pin it.
-
-**Companion entities aren't discovered.**
-Discovery waits for Home Assistant's device and entity registries, so helpers
-may appear after the card's first paint. A helper attached to a different device
-cannot be associated with the Hypercolor hub automatically. Pin that helper
-explicitly under `hypercolor:`.
-
-## 👩‍💻 Development
-
-<a name="development"></a>
-
-This project uses a modern toolchain:
-
-- **[Bun](https://bun.com/)** as package manager and script runner
-- **[Vite 8](https://vite.dev/) (Rolldown)** for production builds
-- **[Vitest 4](https://vitest.dev/)** with V8 coverage for tests
-- **[Biome 2](https://biomejs.dev/)** for linting plus JSON/CSS formatting
-- **[Prettier 3](https://prettier.io/)** scoped to TS/JS (Lit `html` template formatting)
-- **TypeScript 6** with strict mode and Lit's experimental decorators
-- **[Lit 3](https://lit.dev/)** for reactive web components
-- **ColorThief** for palette extraction, with a WCAG luminance check picking the foreground color
-
-### Getting Started
-
-```bash
-# Install dependencies
-bun install
-
-# Build + copy to your Home Assistant www folder
-bun run dev
-
-# Run the test suite
-bun run test
-
-# Lint, format, and typecheck
-bun run lint
-bun run format:check
-bun run typecheck
-
-# Production build
-bun run build
-```
-
-`bun run dev` reads `config.js` for your Home Assistant config path and copies the built bundle into `<hass>/www/hyper-light-card/`. Refresh your dashboard to pick up changes.
-
-### Releases
-
-Tagging `vX.Y.Z` on `main` triggers the GitHub Actions workflow, which builds, runs the gates, and attaches the bundle to a GitHub release via [shared-workflows](https://github.com/hyperb1iss/shared-workflows). HACS picks it up automatically.
-
-## 🤝 Contributing
-
-<a name="contributing"></a>
-
-Contributions are what make the open-source community such a fantastic place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for more details on how to get started.
-
-## 📄 License
-
-<a name="license"></a>
-
-Distributed under the Apache License 2.0. See `LICENSE` for more information.
-
----
-
-<div align="center">
-
-📚 [Documentation](https://github.com/hyperb1iss/hyper-light-card/wiki) • 🐛 [Report Bug](https://github.com/hyperb1iss/hyper-light-card/issues) • 💡 [Request Feature](https://github.com/hyperb1iss/hyper-light-card/issues)
-
-</div>
-
-## 💖 Acknowledgements
-
-- [SignalRGB](https://www.signalrgb.com/) for their amazing RGB control software
-- [Hypercolor](https://github.com/hyperb1iss/hypercolor-hass) for the multi-light orchestration backend
-- [Home Assistant](https://www.home-assistant.io/) for the incredible smart home platform
-- [ColorThief](https://lokeshdhakar.com/projects/color-thief/) for color extraction capabilities
-- [Lit](https://lit.dev/) for the powerful web components framework
-
----
-
-<div align="center">
-
-Created by [Stefanie Jane 🌠](https://github.com/hyperb1iss)
-
-If you find this project useful, [buy me a Monster Ultra Violet!](https://ko-fi.com/hyperb1iss) ⚡️
-
-</div>
+Created by [Stefanie Jane](https://github.com/hyperb1iss).
+[Buy me a Monster Ultra Violet](https://ko-fi.com/hyperb1iss).
 
 [hacs-shield]: https://img.shields.io/badge/HACS-Custom-pink.svg?style=for-the-badge
-[hacs]: https://github.com/custom-components/hacs
+[hacs]: https://www.hacs.dev/
 [releases-shield]: https://img.shields.io/github/release/hyperb1iss/hyper-light-card.svg?style=for-the-badge
-[releases]: https://github.com/hyperb1iss/hyper-light-card/releases
+[releases]: https://github.com/hyperb1iss/hyper-light-card/releases/latest
 [license-shield]: https://img.shields.io/github/license/hyperb1iss/hyper-light-card.svg?style=for-the-badge

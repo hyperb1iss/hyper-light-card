@@ -1,128 +1,95 @@
-# 🌟 Contributing to hyper-light-card
+# Contributing
 
-🌠🌠🌠 Let's make beautiful pixels together! 🌠🌠🌠
+Use a separate Home Assistant development instance with a configured Hypercolor
+or SignalRGB integration. The card calls real Home Assistant services, so choose
+lights you can safely change during testing.
 
+## Setup
 
-## 🚀 Getting Started
+Install Node.js 24 or newer and the Bun version declared in `package.json`
+(`packageManager`). From the checkout:
 
-### Issues and Features
+```sh
+bun install --frozen-lockfile
+bun run build:dev
+```
 
-- 🔍 Check our [Issues](https://github.com/hyperb1iss/hyper-light-card/issues) page to see if your idea or bug report is already there.
-- 💡 If not, feel free to [create a new issue](https://github.com/hyperb1iss/hyper-light-card/issues/new).
+The bundle is written to `target/hyper-light-card.js`. To copy it into your
+Home Assistant configuration directory:
 
-### Forking and Branching
+```sh
+export HASS_CONFIG_PATH=/path/to/homeassistant/config
+bun run dev
+```
 
-1. 🍴 [Fork the hyper-light-card repository](https://help.github.com/articles/fork-a-repo).
-2. 🌿 Create a branch with a descriptive name:
-   ```sh
-   git checkout -b add-new-effect-selector
-   ```
+The copy script requires an explicit path. It writes the bundle and source map
+to `www/hyper-light-card/` beneath that directory. Register
+`/local/hyper-light-card/hyper-light-card.js` as a **JavaScript module** in Home
+Assistant's dashboard resources, then add the card to a dashboard. Restart Home
+Assistant once if the `www` directory did not exist when it started.
 
-## 🛠️ Development Environment
+After each change, run `bun run dev` and reload the dashboard. The card needs
+Home Assistant's frontend components, entity state, and service connection;
+`bun run start` alone does not provide a standalone card demo.
 
-### Prerequisites
+## Checks
 
-- 📦 [Bun](https://bun.com/) `>=1.3.0`: used as the package manager and script runner
-- 🟢 [Node.js](https://nodejs.org/) `>=24.0.0`: Vite still runs on Node for the production build
-
-### Setup
-
-1. Clone your fork:
-   ```sh
-   git clone https://github.com/YOUR_USERNAME/hyper-light-card.git
-   ```
-2. Navigate to the project directory:
-   ```sh
-   cd hyper-light-card
-   ```
-3. Install dependencies:
-   ```sh
-   bun install
-   ```
-
-## 💻 Development Workflow
-
-We use Bun scripts for everything:
-
-- `bun run dev`: Builds in development mode and copies the bundle into your local Home Assistant `www/` folder.
-- `bun run build:dev`: One-shot development build (no copy).
-- `bun run build`: Production build (minified, terser, prod constants).
-- `bun run lint`: Biome lint (also checks JSON/CSS formatting).
-- `bun run lint:fix`: Apply Biome autofixes.
-- `bun run format:check`: Prettier check on TS/JS sources.
-- `bun run format`: Apply Prettier (TS/JS) and Biome formatting.
-- `bun run typecheck`: `tsc --noEmit`.
-- `bun run test`: Run the Vitest suite once.
-- `bun run test:watch`: Vitest in watch mode.
-- `bun run test:coverage`: Vitest with V8 coverage output.
-
-### Getting Started with Development
-
-1. Point the dev build at your Home Assistant config directory by setting `HASS_CONFIG_PATH`:
-   ```sh
-   export HASS_CONFIG_PATH=/path/to/your/homeassistant/config
-   ```
-   `config.js` reads this env var; the bundle is copied into `<HASS_CONFIG_PATH>/www/hyper-light-card/`.
-2. Run the dev build + copy:
-   ```sh
-   bun run dev
-   ```
-3. Make your changes to the code.
-4. Re-run `bun run dev` (or use `bun run build:dev && bun run copy:hass`) to push the new bundle.
-5. Refresh your Home Assistant dashboard to see your changes.
-
-## ✅ QA
-
-Before submitting your changes, run the same gates that CI runs:
+Run the same gates as CI before opening a pull request:
 
 ```sh
 bun run lint
 bun run format:check
 bun run typecheck
 bun run test
-```
-
-If lint flags issues that are autofixable, run `bun run lint:fix` and `bun run format`.
-
-## 🏗️ Building for Production
-
-```sh
 bun run build
+bun run test:build
 ```
 
-This produces the optimized `target/hyper-light-card.js` bundle. The release workflow bumps
-`package.json`, pushes the tag, and lets the tag-triggered CI/CD workflow build and attach the
-release asset. Non-dry-run releases need `ANTHROPIC_API_KEY` configured for shared release notes.
-
-## 🎉 Submitting a Pull Request
-
-1. Sync your fork with the main repository:
-   ```sh
-   git remote add upstream git@github.com:hyperb1iss/hyper-light-card.git
-   git checkout main
-   git pull upstream main
-   ```
-2. Update your feature branch:
-   ```sh
-   git checkout add-new-effect-selector
-   git rebase main
-   git push --set-upstream origin add-new-effect-selector
-   ```
-3. Go to GitHub and [create a Pull Request](https://help.github.com/articles/creating-a-pull-request).
-
-## 🔄 Keeping Your PR Updated
-
-If asked to rebase your PR, update your branch like this:
+Biome checks source, tests, and tooling. Prettier formats TypeScript and
+JavaScript, including Lit templates. Use `bun run lint:fix` and `bun run format`
+for fixes, then inspect the diff. For focused test work:
 
 ```sh
-git checkout add-new-effect-selector
-git pull --rebase upstream main
-git push --force-with-lease add-new-effect-selector
+bun run test -- tests/state-manager.test.ts
+bun run test:watch
+bun run test:coverage
 ```
 
-## 💡 Best Practices
+Browser-check user-facing changes in Home Assistant at desktop and phone
+widths. Exercise power, brightness, effect selection, keyboard navigation, and
+the card editor. Check both backends when changing shared behavior. Reconfigure
+and remove/re-add the card to catch lifecycle bugs that a fresh mount misses.
 
-- 📚 Update documentation for user-facing changes.
-- ✨ Add tests for new features or bug fixes.
-- 🎯 Keep pull requests focused on a single feature or bug fix.
-- 🧪 Run the full QA suite before opening or updating a PR.
+## Code layout
+
+| Area | Responsibility |
+| --- | --- |
+| `src/hyper-light-card.ts` | Card rendering, events, and Home Assistant lifecycle |
+| `src/hyper-light-card-editor.ts` | Backend-aware visual editor |
+| `src/backends/` | Entity discovery, backend state, and service calls |
+| `src/state-manager.ts` | State synchronization, pending controls, and palette requests |
+| `src/state.ts` | Reactive presentation state |
+| `tests/` | Vitest regressions and Home Assistant fixtures |
+
+Keep entity discovery scoped to the selected integration instance. Async work
+must not publish into a replaced or disconnected card manager. Cover behavioral
+fixes with tests that exercise the public lifecycle where practical.
+
+## Production builds and releases
+
+`bun run build` produces a single minified ES module and its source map in
+`target/`. The version banner comes from `package.json`. `bun run build:hacs`
+uses the same build, so local and release artifacts follow one path.
+
+Maintainers can use the Release workflow to prepare a version bump and tag.
+Its dry-run mode validates the version and runs the checks and build without pushing. A `vX.Y.Z` tag triggers
+CI/CD, runs the checks, builds the card, and publishes `hyper-light-card.js`
+with its source map and GitHub-generated release notes. Releases use the
+repository's GitHub token; no external model API key is required.
+
+## Pull requests
+
+Explain the user-visible problem and resulting behavior. Include the checks you
+ran and screenshots or a short recording for visual changes. Update the
+[configuration reference](docs/configuration.md) when options change, and keep
+installation instructions consistent with the released bundle.
