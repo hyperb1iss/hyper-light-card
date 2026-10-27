@@ -760,6 +760,46 @@ describe('hypercolorBackend.describeCard', () => {
 });
 
 describe('hypercolorBackend.zones', () => {
+  it('excludes absent zones but keeps off and disconnected current zones', async () => {
+    const { hass, calls } = hassWithStates({
+      'light.old': {
+        state: 'unavailable',
+        attributes: { zone_id: 'old', role: null },
+      },
+      'light.current': {
+        state: 'off',
+        attributes: { zone_id: 'current', role: 'custom', brightness: 128 },
+      },
+      'light.disconnected': {
+        state: 'unavailable',
+        attributes: { zone_id: 'disconnected', role: 'primary', brightness: 128 },
+      },
+      'light.unknown': { state: 'unknown', attributes: { zone_id: 'unknown' } },
+    });
+    const ctx = {
+      hass,
+      config: {
+        entity: 'light.hypercolor',
+        hypercolor: { zone_lights: Object.keys(hass.states) },
+      } as Config,
+    };
+
+    expect(hypercolorBackend.zones?.(ctx)).toMatchObject([
+      { id: 'light.current', enabled: false, available: true },
+      { id: 'light.disconnected', enabled: false, available: false },
+      { id: 'light.unknown', enabled: false, available: false },
+    ]);
+    for (const id of ['light.old', 'light.disconnected', 'light.unknown', 'light.missing']) {
+      await hypercolorBackend.setZoneEnabled?.(ctx, id, true);
+      await hypercolorBackend.setZoneBrightness?.(ctx, id, 50);
+    }
+    expect(calls).toEqual([]);
+    await hypercolorBackend.setZoneEnabled?.(ctx, 'light.current', true);
+    expect(calls).toEqual([
+      { domain: 'light', service: 'turn_on', data: { entity_id: 'light.current' } },
+    ]);
+  });
+
   it('maps zone lights to zone models', () => {
     const { hass } = hassWithStates({
       'light.hypercolor_main': {
