@@ -788,7 +788,7 @@ export class HyperLightCard extends LitElement {
                     max="100"
                     step="1"
                     .value=${(zone.brightness ?? 0).toString()}
-                    ?disabled=${!zone.enabled}
+                    ?disabled=${!zone.available || !zone.enabled}
                     @change=${(e: Event) =>
                       this._setZoneBrightness(
                         zone.id,
@@ -801,6 +801,7 @@ export class HyperLightCard extends LitElement {
             : ''}
           <ha-switch
             .checked=${zone.enabled}
+            ?disabled=${!zone.available}
             @change=${(e: Event) =>
               this._setZoneEnabled(zone.id, (e.target as HTMLInputElement).checked)}
             aria-label="Toggle ${zone.name}"

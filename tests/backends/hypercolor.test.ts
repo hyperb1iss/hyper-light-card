@@ -41,6 +41,52 @@ function hassWithStates(entities: Record<string, StateStub>): HassWithSpy {
   return { hass: { states, callService } as unknown as HomeAssistant, calls };
 }
 
+describe('hypercolorBackend.stubConfig', () => {
+  it('prefers a renamed master over named zones and child devices', () => {
+    const { hass } = hassWithStates({
+      'light.hypercolor_strip': {},
+      'light.hypercolor_main': { attributes: { zone_id: 'main', role: 'primary' } },
+      'light.living_room': { attributes: { zone_count: 1, active_effect_id: null } },
+    });
+    Object.assign(hass, {
+      entities: {
+        'light.hypercolor_strip': { device_id: 'strip' },
+        'light.hypercolor_main': { device_id: 'hub' },
+        'light.living_room': { device_id: 'hub' },
+      },
+      devices: { hub: {}, strip: { via_device_id: 'hub' } },
+    });
+    const config = hypercolorBackend.stubConfig?.(hass, Object.keys(hass.states));
+    expect(config?.entity).toBe('light.living_room');
+    expect(hypercolorBackend.autoDiscover?.({ hass, config: config as Config })).toMatchObject({
+      hypercolor: {
+        zone_lights: ['light.hypercolor_main'],
+        per_device_lights: ['light.hypercolor_strip'],
+      },
+    });
+  });
+
+  it('rejects known zones and child devices when the master is absent', () => {
+    const { hass } = hassWithStates({
+      'light.hypercolor_main': { attributes: { zone_id: 'main', role: null } },
+      'light.hypercolor_strip': {},
+      'light.signalrgb': { attributes: { effect_image: '/cover.jpg' } },
+    });
+    Object.assign(hass, {
+      entities: { 'light.hypercolor_strip': { device_id: 'strip' } },
+      devices: { strip: { via_device_id: 'hub' } },
+    });
+    expect(hypercolorBackend.stubConfig?.(hass, Object.keys(hass.states))).toBeNull();
+  });
+
+  it('preserves the default-name fallback before attributes or registries load', () => {
+    const entities = ['light.hypercolor_hyperia', 'light.hypercolor'];
+    expect(hypercolorBackend.stubConfig?.(hassWith(entities), entities)?.entity).toBe(
+      'light.hypercolor'
+    );
+  });
+});
+
 describe('hypercolorBackend.autoDiscover', () => {
   it('skips entities outside the hypercolor namespace', () => {
     const ctx = {
@@ -760,6 +806,46 @@ describe('hypercolorBackend.describeCard', () => {
 });
 
 describe('hypercolorBackend.zones', () => {
+  it('excludes absent zones but keeps off and disconnected current zones', async () => {
+    const { hass, calls } = hassWithStates({
+      'light.old': {
+        state: 'unavailable',
+        attributes: { zone_id: 'old', role: null },
+      },
+      'light.current': {
+        state: 'off',
+        attributes: { zone_id: 'current', role: 'custom', brightness: 128 },
+      },
+      'light.disconnected': {
+        state: 'unavailable',
+        attributes: { zone_id: 'disconnected', role: 'primary', brightness: 128 },
+      },
+      'light.unknown': { state: 'unknown', attributes: { zone_id: 'unknown' } },
+    });
+    const ctx = {
+      hass,
+      config: {
+        entity: 'light.hypercolor',
+        hypercolor: { zone_lights: Object.keys(hass.states) },
+      } as Config,
+    };
+
+    expect(hypercolorBackend.zones?.(ctx)).toMatchObject([
+      { id: 'light.current', enabled: false, available: true },
+      { id: 'light.disconnected', enabled: false, available: false },
+      { id: 'light.unknown', enabled: false, available: false },
+    ]);
+    for (const id of ['light.old', 'light.disconnected', 'light.unknown', 'light.missing']) {
+      await hypercolorBackend.setZoneEnabled?.(ctx, id, true);
+      await hypercolorBackend.setZoneBrightness?.(ctx, id, 50);
+    }
+    expect(calls).toEqual([]);
+    await hypercolorBackend.setZoneEnabled?.(ctx, 'light.current', true);
+    expect(calls).toEqual([
+      { domain: 'light', service: 'turn_on', data: { entity_id: 'light.current' } },
+    ]);
+  });
+
   it('maps zone lights to zone models', () => {
     const { hass } = hassWithStates({
       'light.hypercolor_main': {

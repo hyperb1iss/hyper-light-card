@@ -124,7 +124,7 @@ export const hypercolorBackend: LightBackend = {
     const zoneLights = addenda(ctx.config).zone_lights ?? [];
     return zoneLights.flatMap(entityId => {
       const stateObj = ctx.hass.states[entityId];
-      if (!stateObj) return [];
+      if (!stateObj || isAbsentZone(stateObj)) return [];
       const haBrightness = stateObj.attributes.brightness;
       const effect = stateObj.attributes.effect;
       return [
@@ -138,6 +138,7 @@ export const hypercolorBackend: LightBackend = {
           brightness:
             typeof haBrightness === 'number' ? convertHABrightnessToCard(haBrightness) : null,
           enabled: stateObj.state === 'on',
+          available: zoneAvailable(ctx.hass, entityId),
           effect: typeof effect === 'string' ? effect : '',
         } satisfies ZoneModel,
       ];
@@ -282,6 +283,7 @@ export const hypercolorBackend: LightBackend = {
   },
 
   async setZoneBrightness(ctx, zoneEntityId, value) {
+    if (!zoneAvailable(ctx.hass, zoneEntityId)) return;
     await ctx.hass.callService('light', 'turn_on', {
       entity_id: zoneEntityId,
       brightness: convertCardBrightnessToHA(value),
@@ -289,6 +291,7 @@ export const hypercolorBackend: LightBackend = {
   },
 
   async setZoneEnabled(ctx, zoneEntityId, on) {
+    if (!zoneAvailable(ctx.hass, zoneEntityId)) return;
     await ctx.hass.callService('light', on ? 'turn_on' : 'turn_off', {
       entity_id: zoneEntityId,
     });
@@ -403,11 +406,25 @@ export const hypercolorBackend: LightBackend = {
     return patch;
   },
 
-  stubConfig(_hass, entities) {
-    const masters = entities.filter(
+  stubConfig(hass, entities) {
+    const registries = hypercolorRegistries(hass);
+    const candidates = entities.filter(id => {
+      if (!id.startsWith('light.')) return false;
+      if (typeof hass.states[id]?.attributes.zone_id === 'string') return false;
+      const deviceId = registries.entities?.[id]?.device_id;
+      return !deviceId || !registries.devices?.[deviceId]?.via_device_id;
+    });
+    const identifiedMaster = candidates.find(id => {
+      const attributes = hass.states[id]?.attributes;
+      return (
+        attributes &&
+        ['effect_controls', 'active_effect_id', 'zone_count'].some(key => key in attributes)
+      );
+    });
+    const masters = candidates.filter(
       id => id === 'light.hypercolor' || id.startsWith('light.hypercolor_')
     );
-    const master = masters.find(id => id === 'light.hypercolor') ?? masters[0];
+    const master = identifiedMaster ?? masters.find(id => id === 'light.hypercolor') ?? masters[0];
     if (!master) return null;
     return {
       entity: master,
@@ -433,6 +450,17 @@ export const hypercolorBackend: LightBackend = {
 
 function addenda(config: Config): HypercolorConfigAddenda {
   return config.hypercolor ?? {};
+}
+
+function isAbsentZone(stateObj: HomeAssistant['states'][string]): boolean {
+  return typeof stateObj.attributes.zone_id === 'string' && stateObj.attributes.role === null;
+}
+
+function zoneAvailable(hass: HomeAssistant, entityId: string): boolean {
+  const stateObj = hass.states[entityId];
+  return Boolean(
+    stateObj && !isAbsentZone(stateObj) && (stateObj.state === 'on' || stateObj.state === 'off')
+  );
 }
 
 function liveControlLabel(id: string): string {

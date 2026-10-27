@@ -143,6 +143,8 @@ export interface ZoneModel {
   brightness: number | null;
   /** Whether the zone is currently enabled/on. */
   enabled: boolean;
+  /** Whether the current zone can accept commands. */
+  available: boolean;
   /** Active effect name for the zone; empty string when none. */
   effect: string;
 }

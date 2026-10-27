@@ -61,28 +61,6 @@ export class StateManager {
     const card = this._backend.describeCard(ctx);
     const effect = this._backend.describeEffect(ctx, stateObj);
 
-    if (card.paletteSource !== this._state.lastEffectImage) {
-      const requested = card.paletteSource;
-      this._state.lastEffectImage = requested;
-      if (requested) {
-        try {
-          const palette = await this._colorManager.extractColors(requested);
-          // Extraction is async, so a faster-resolving earlier request must not
-          // repaint the card for an effect that is no longer running.
-          if (this._state.lastEffectImage !== requested) return;
-          // A null palette means the cover was unreadable. Publish the null
-          // rather than keeping the previous effect's colors: stale colors
-          // misreport the running effect, while null falls back to the Home
-          // Assistant theme and self-corrects on the next readable cover.
-          this._state.palette = palette;
-        } catch (error) {
-          log.error('StateManager: Error extracting colors', error);
-        }
-      } else {
-        this._state.palette = null;
-      }
-    }
-
     const shouldUpdateBrightness =
       !this._isDraggingBrightness && this._state.brightness !== card.brightness;
 
@@ -117,6 +95,30 @@ export class StateManager {
       this._state.showLayoutSelect = cfg.show_layout_select !== false;
       this._state.showPresetSelect = cfg.show_preset_select !== false;
       this._state.showEffectControls = cfg.show_effect_controls !== false;
+    }
+
+    // Publish live state before awaiting artwork so an older image request
+    // cannot restore a stale power, brightness, or effect snapshot.
+    if (card.paletteSource !== this._state.lastEffectImage) {
+      const requested = card.paletteSource;
+      this._state.lastEffectImage = requested;
+      if (requested) {
+        try {
+          const palette = await this._colorManager.extractColors(requested);
+          // Extraction is async, so a faster-resolving earlier request must not
+          // repaint the card for an effect that is no longer running.
+          if (this._state.lastEffectImage !== requested) return;
+          // A null palette means the cover was unreadable. Publish the null
+          // rather than keeping the previous effect's colors: stale colors
+          // misreport the running effect, while null falls back to the Home
+          // Assistant theme and self-corrects on the next readable cover.
+          this._state.palette = palette;
+        } catch (error) {
+          log.error('StateManager: Error extracting colors', error);
+        }
+      } else {
+        this._state.palette = null;
+      }
     }
   }
 

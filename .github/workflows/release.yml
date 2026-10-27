@@ -86,8 +86,8 @@ jobs:
             exit 1
           fi
 
-          echo "current=$CURRENT" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Releasing: $CURRENT -> $VERSION"
 
       - name: Update package.json version
@@ -149,7 +149,7 @@ jobs:
               --branch "${TAG}" --commit "${candidate_sha}" --limit 1 \
               --json databaseId --jq '.[0].databaseId // empty'
           )"
-          gh workflow run cicd.yml --ref "${TAG}" -f release_run_id="${GITHUB_RUN_ID}"
+          gh workflow run cicd.yml --ref "${TAG}"
 
           run_id=""
           for _ in {1..30}; do
@@ -175,12 +175,14 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Release ${{ inputs.dry_run && '[DRY RUN] ' || '' }}v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "Build and tests passed. Run again without dry-run to publish." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Version bumped: ${{ steps.version.outputs.current }} -> ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-            echo "Tag pushed: v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-            echo "Build and release run: ${{ steps.publish.outputs.run_url }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## Release ${{ inputs.dry_run && '[DRY RUN] ' || '' }}v${{ steps.version.outputs.version }}"
+            echo ""
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "Build and tests passed. Run again without dry-run to publish."
+            else
+              echo "Version bumped: ${{ steps.version.outputs.current }} -> ${{ steps.version.outputs.version }}"
+              echo "Tag pushed: v${{ steps.version.outputs.version }}"
+              echo "Build and release run: ${{ steps.publish.outputs.run_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
