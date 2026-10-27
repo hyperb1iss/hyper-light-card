@@ -251,6 +251,51 @@ describe('HyperLightCard', () => {
   });
 
   describe('render', () => {
+    it('starts zones collapsed and preserves expansion across state updates', async () => {
+      mockHass.states['light.zone'] = {
+        ...mockHass.states['light.test_light'],
+        entity_id: 'light.zone',
+        attributes: { friendly_name: 'Desk', zone_id: 'desk', role: 'primary', brightness: 128 },
+      };
+      card.setConfig({
+        entity: 'light.test_light',
+        backend: 'hypercolor',
+        hypercolor: { zone_lights: ['light.zone'] },
+      });
+      await card.updateComplete;
+      const disclosure = card.shadowRoot?.querySelector<HTMLDetailsElement>('details.zones');
+      const summary = disclosure?.querySelector('summary');
+      expect(disclosure).not.toBeNull();
+      expect(disclosure?.open).toBe(false);
+      expect(summary?.textContent?.trim()).toBe('Zones');
+
+      summary?.click();
+      expect(disclosure?.open).toBe(true);
+      mockHass.states['light.zone'] = {
+        ...mockHass.states['light.zone'],
+        attributes: { ...mockHass.states['light.zone'].attributes, brightness: 255 },
+      };
+      card.hass = { ...mockHass };
+      await card.updateComplete;
+      expect(disclosure?.open).toBe(true);
+      const slider = disclosure?.querySelector<HTMLInputElement>('.zone-slider input');
+      expect(slider?.value).toBe('100');
+      if (slider) {
+        slider.value = '40';
+        slider.dispatchEvent(new Event('change'));
+      }
+      expect(mockHass.callService).toHaveBeenCalledWith('light', 'turn_on', {
+        entity_id: 'light.zone',
+        brightness: convertCardBrightnessToHA(40),
+      });
+
+      summary?.click();
+      expect(disclosure?.open).toBe(false);
+      card.setConfig({ entity: 'light.test_light', show_zones: false });
+      await card.updateComplete;
+      expect(card.shadowRoot?.querySelector('.zones')).toBeNull();
+    });
+
     it('gives labeled effect feature icons image semantics', async () => {
       Object.assign(mockHass.states['light.test_light'].attributes, {
         effect_uses_audio: true,

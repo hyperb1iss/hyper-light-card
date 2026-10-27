@@ -93,6 +93,7 @@ allowed effects, colors, and explicit companion entity overrides.
   selector and returns focus.
 
 Controls appear when the integration provides their entities and options.
+Zones start collapsed; select **Zones** to expand their controls.
 Hypercolor numeric controls use sliders, boolean controls use switches, and
 enum controls use selectors. Color values appear as read-only swatches;
 unsupported control types are omitted.

@@ -817,10 +817,12 @@ export class HyperLightCard extends LitElement {
 
   private _renderZones(zones: ZoneModel[]) {
     return html`
-      <div class="zones" aria-label="Scene zones">
-        <div class="zones-title"><ha-icon icon="mdi:grid"></ha-icon> Zones</div>
-        ${zones.map(zone => this._renderZone(zone))}
-      </div>
+      <details class="zones">
+        <summary class="zones-title">
+          <ha-icon icon="mdi:grid" aria-hidden="true"></ha-icon> Zones
+        </summary>
+        <div class="zone-list">${zones.map(zone => this._renderZone(zone))}</div>
+      </details>
     `;
   }
 
