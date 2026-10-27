@@ -149,6 +149,67 @@ describe('StateManager', () => {
       expect(mockState.palette).toEqual(fresh);
     });
 
+    it.each(['hypercolor', 'signalrgb'] as const)(
+      'keeps newer %s state when the same cover finishes loading',
+      async backend => {
+        await stateManager.updateState();
+        stateManager = new StateManager(
+          { entity: 'light.test_light', backend } as Config,
+          mockState
+        );
+        stateManager.hass = mockHass;
+
+        let finishCover: (() => void) | undefined;
+        const cover = new Promise<null>(resolve => {
+          finishCover = () => resolve(null);
+        });
+        vi.spyOn(ColorManager.prototype, 'extractColors').mockReturnValue(cover);
+        mockHass.states['light.test_light'].attributes.effect_image = 'http://a.test/slow.png';
+        const pending = stateManager.updateState();
+
+        mockHass.states['light.test_light'] = {
+          ...mockHass.states['light.test_light'],
+          state: 'off',
+          attributes: {
+            ...mockHass.states['light.test_light'].attributes,
+            effect: 'Effect2',
+            brightness: convertCardBrightnessToHA(20),
+          },
+        };
+        await stateManager.updateState();
+        expect(mockState.isOn).toBe(false);
+        expect(mockState.brightness).toBe(20);
+        expect(mockState.currentEffect).toBe('Effect2');
+
+        finishCover?.();
+        await pending;
+        expect(mockState.isOn).toBe(false);
+        expect(mockState.brightness).toBe(20);
+        expect(mockState.currentEffect).toBe('Effect2');
+      }
+    );
+
+    it('updates light state before the cover is available', async () => {
+      await stateManager.updateState();
+      let finishCover: (() => void) | undefined;
+      const cover = new Promise<null>(resolve => {
+        finishCover = () => resolve(null);
+      });
+      vi.spyOn(ColorManager.prototype, 'extractColors').mockReturnValue(cover);
+      const light = mockHass.states['light.test_light'];
+      light.state = 'off';
+      light.attributes.effect = 'Effect2';
+      light.attributes.brightness = convertCardBrightnessToHA(20);
+      light.attributes.effect_image = 'http://a.test/slow.png';
+      const pending = stateManager.updateState();
+
+      expect(mockState.isOn).toBe(false);
+      expect(mockState.currentEffect).toBe('Effect2');
+      expect(mockState.brightness).toBe(20);
+      finishCover?.();
+      await pending;
+    });
+
     it('syncs visibility flags from config', async () => {
       stateManager = new StateManager(
         {
